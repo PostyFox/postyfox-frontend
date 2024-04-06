@@ -16,13 +16,13 @@ const isIE = window.navigator.userAgent.indexOf('MSIE ') > -1 || window.navigato
  */
 export const b2cPolicies = {
     names: {
-        signUpSignIn: 'B2C_1_PostyFox',
+        signUpSignIn: 'B2C_1_Signin',
         resetPassword: 'B2C_1_reset_v3',
         editProfile: 'B2C_1_edit_profile_v2',
     },
     authorities: {
         signUpSignIn: {
-            authority: 'https://postyfoxdev.b2clogin.com/postyfoxdev.onmicrosoft.com/B2C_1_PostyFox',
+            authority: 'https://postyfoxdev.b2clogin.com/postyfoxdev.onmicrosoft.com/B2C_1_Signin',
         },
         resetPassword: {
             authority: 'https://postyfoxdev.b2clogin.com/postyfoxdev.onmicrosoft.com/B2C_1_reset_v3',
@@ -41,7 +41,7 @@ export const b2cPolicies = {
  */
 export const msalConfig: Configuration = {
     auth: {
-        clientId: '3fcf9c47-0590-4f99-8fcb-6c098aa386f7', // This is the ONLY mandatory field that you need to supply.
+        clientId: '2b89259d-3cc3-41fe-adbf-5f9acb15e622', // This is the ONLY mandatory field that you need to supply.
         authority: b2cPolicies.authorities.signUpSignIn.authority, // Defaults to "https://login.microsoftonline.com/common"
         knownAuthorities: [b2cPolicies.authorityDomain], // Mark your B2C tenant's domain as trusted.
         redirectUri: '/auth', // Points to window.location.origin by default. You must register this URI on Azure portal/App Registration.
