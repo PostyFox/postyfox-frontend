@@ -3,7 +3,11 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+    production: false,
+    endpoint: '/api',
+    auth: {
+        clientId: '2b89259d-3cc3-41fe-adbf-5f9acb15e622',
+    },
 };
 
 /*

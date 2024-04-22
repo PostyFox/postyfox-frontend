@@ -18,56 +18,18 @@ import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 
 import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
-import { IPublicClientApplication, PublicClientApplication, InteractionType } from '@azure/msal-browser';
+import { PublicClientApplication, InteractionType } from '@azure/msal-browser';
 import {
     MsalGuard,
     MsalInterceptor,
-    MsalBroadcastService,
-    MsalInterceptorConfiguration,
     MsalModule,
-    MsalService,
-    MSAL_GUARD_CONFIG,
-    MSAL_INSTANCE,
-    MSAL_INTERCEPTOR_CONFIG,
-    MsalGuardConfiguration,
     MsalRedirectComponent,
     ProtectedResourceScopes,
 } from '@azure/msal-angular';
 
 import { msalConfig, loginRequest, protectedResources } from './auth-config';
 
-/**
- * Here we pass the configuration parameters to create an MSAL instance.
- * For more info, visit: https://github.com/AzureAD/microsoft-authentication-library-for-js/blob/dev/lib/msal-angular/docs/v2-docs/configuration.md
- */
-export function MSALInstanceFactory(): IPublicClientApplication {
-    return new PublicClientApplication(msalConfig);
-}
-
-/**
- * MSAL Angular will automatically retrieve tokens for resources
- * added to protectedResourceMap. For more info, visit:
- * https://github.com/AzureAD/microsoft-authentication-library-for-js/blob/dev/lib/msal-angular/docs/v2-docs/initialization.md#get-tokens-for-web-api-calls
- */
-export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
-    const protectedResourceMap = new Map<string, Array<string | ProtectedResourceScopes> | null>();
-
-    return {
-        interactionType: InteractionType.Popup,
-        protectedResourceMap,
-    };
-}
-
-/**
- * Set your default interaction type for MSALGuard here. If you have any
- * additional scopes you want the user to consent upon login, add them here as well.
- */
-export function MSALGuardConfigFactory(): MsalGuardConfiguration {
-    return {
-        interactionType: InteractionType.Redirect,
-        authRequest: loginRequest,
-    };
-}
+// https://learn.microsoft.com/en-gb/entra/identity-platform/tutorial-v2-angular-auth-code
 
 @NgModule({
     declarations: [AppComponent, HomeComponent],
@@ -86,7 +48,19 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
         MatIconModule,
         HttpClientModule,
         FormsModule,
-        MsalModule,
+        MsalModule.forRoot(
+            new PublicClientApplication(msalConfig),
+            {
+                interactionType: InteractionType.Redirect,
+                authRequest: loginRequest,
+            },
+            {
+                interactionType: InteractionType.Redirect,
+                protectedResourceMap: new Map<string, Array<string | ProtectedResourceScopes> | null>(
+                    Object.entries(protectedResources),
+                ),
+            },
+        ),
     ],
     providers: [
         {
@@ -94,21 +68,7 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
             useClass: MsalInterceptor,
             multi: true,
         },
-        {
-            provide: MSAL_INSTANCE,
-            useFactory: MSALInstanceFactory,
-        },
-        {
-            provide: MSAL_GUARD_CONFIG,
-            useFactory: MSALGuardConfigFactory,
-        },
-        {
-            provide: MSAL_INTERCEPTOR_CONFIG,
-            useFactory: MSALInterceptorConfigFactory,
-        },
-        MsalService,
         MsalGuard,
-        MsalBroadcastService,
     ],
     bootstrap: [AppComponent, MsalRedirectComponent],
 })

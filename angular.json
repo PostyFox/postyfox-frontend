@@ -68,7 +68,8 @@
               "browserTarget": "SPA:build:production"
             },
             "development": {
-              "browserTarget": "SPA:build:development"
+              "browserTarget": "SPA:build:development",
+              "proxyConfig": "proxy.json"
             }
           },
           "defaultConfiguration": "development"
