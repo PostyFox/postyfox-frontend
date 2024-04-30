@@ -37,9 +37,8 @@ export class HomeComponent implements OnInit {
             .subscribe(() => {
                 this.setLoginDisplay();
                 this.getClaims(this.authService.instance.getActiveAccount()?.idTokenClaims);
+                this.getUser(); // Attempt to fetch the user data from PostyFox api
             });
-
-        this.getUser();
     }
 
     setLoginDisplay() {

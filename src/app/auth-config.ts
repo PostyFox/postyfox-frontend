@@ -45,7 +45,7 @@ export const msalConfig: Configuration = {
         clientId: environment.auth.clientId, // This is the ONLY mandatory field that you need to supply.
         authority: b2cPolicies.authorities.signUpSignIn.authority, // Defaults to "https://login.microsoftonline.com/common"
         knownAuthorities: [b2cPolicies.authorityDomain], // Mark your B2C tenant's domain as trusted.
-        redirectUri: 'http://localhost:4200/redirect', // Points to window.location.origin by default. You must register this URI on Azure portal/App Registration.
+        redirectUri: 'http://localhost:4200', // Points to window.location.origin by default. You must register this URI on Azure portal/App Registration.
         // postLogoutRedirectUri: '/', // Points to window.location.origin by default.
     },
     cache: {
@@ -72,8 +72,7 @@ export const msalConfig: Configuration = {
  * https://github.com/AzureAD/microsoft-authentication-library-for-js/blob/dev/lib/msal-browser/docs/resources-and-scopes.md
  */
 export const protectedResources = {
-    [`${environment.endpoint}/Services_GetUserService`]: ['profile'],
-    [`${environment.endpoint}/Services_GetAvailable`]: ['profile'],
+    ['/api/']: ['https://postyfoxdev.onmicrosoft.com/2b89259d-3cc3-41fe-adbf-5f9acb15e622/Postyfox.Use'],
 };
 
 /**
@@ -85,6 +84,7 @@ export const protectedResources = {
 export const loginRequest = {
     scopes: [
         'profile',
+        'https://postyfoxdev.onmicrosoft.com/2b89259d-3cc3-41fe-adbf-5f9acb15e622/Postyfox.Use',
         // 'user.get',
         // 'services.get'
     ],
