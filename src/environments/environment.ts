@@ -4,7 +4,7 @@
 
 export const environment = {
     production: false,
-    endpoint: '/api',
+    endpoint: 'https://dev.api.postyfox.com/api',
     auth: {
         clientId: '2b89259d-3cc3-41fe-adbf-5f9acb15e622',
     },
