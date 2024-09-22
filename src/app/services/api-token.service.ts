@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
     providedIn: 'root',
 })
 export class ApiTokenService {
-    private apiUrl = 'https://postyfox-func-app-dotnet-dev.azurewebsites.net/api/Profile_GenerateAPIToken';
+    private apiUrl = '${environment.endpoint}/Profile_GenerateAPIToken';
 
     constructor(private http: HttpClient) {}
 

@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
     providedIn: 'root',
 })
 export class ServicesService {
-    private servicesUrl = 'https://postyfox-func-app-dotnet-dev.azurewebsites.net/api//Services_GetAvailable';
+    private servicesUrl = '${environment.endpoint}/Services_GetAvailable';
 
     constructor(private http: HttpClient) {}
 
