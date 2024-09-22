@@ -23,3 +23,15 @@ p {
     margin: 10%;
     padding: 5%;
 }
+
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.service-item {
+    border: 1px solid #ccc;
+    padding: 16px;
+    border-radius: 8px;
+}
