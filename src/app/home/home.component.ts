@@ -4,6 +4,9 @@ import { filter } from 'rxjs/operators';
 import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
 import { EventMessage, EventType, AuthenticationResult, InteractionStatus } from '@azure/msal-browser';
 import { createClaimsTable } from '../claim-utils';
+
+import { ApiTokenService } from '../services/api-token.service';
+import { ServicesService } from '../services/services.service';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
 
@@ -17,11 +20,13 @@ export class HomeComponent implements OnInit {
     displayedColumns: string[] = ['claim', 'value', 'description'];
     dataSource: any = [];
     claimName: string = '';
+    services: any[] = [];
 
     constructor(
         private authService: MsalService,
         private msalBroadcastService: MsalBroadcastService,
-        private http: HttpClient,
+        private apiTokenService: ApiTokenService,
+        private servicesServce: ServicesService,
     ) {}
 
     ngOnInit(): void {
@@ -38,7 +43,7 @@ export class HomeComponent implements OnInit {
                 this.setLoginDisplay();
                 this.getClaims(this.authService.instance.getActiveAccount()?.idTokenClaims);
                 this.getUser(); // Attempt to fetch the user data from PostyFox api
-            });
+            });;
     }
 
     setLoginDisplay() {
@@ -54,6 +59,16 @@ export class HomeComponent implements OnInit {
     getClaims(claims: any) {
         console.log({ claims });
         if (claims) {
+            Object.keys(claims).map((key) => {
+                switch (key) {
+                    case 'name':
+                        this.claimName = claims[key];
+                        break;
+                }
+                // const claimsTable = createClaimsTable(claims);
+                // this.dataSource = [...claimsTable];
+            });
+        }
             const name_parts: string[] = [];
             if ('given_name' in claims) {
                 name_parts.push(claims.given_name);
@@ -63,5 +78,27 @@ export class HomeComponent implements OnInit {
             }
             this.claimName = name_parts.join(' ');
         }
+    }
+
+    generateApiToken() {
+        this.apiTokenService.generateToken().subscribe(
+            (response: any) => {
+                console.log('API Token generated:', response);
+            },
+            (error: any) => {
+                console.error('Error generating API Token:', error);
+            },
+        );
+    }
+
+    loadAvailableServices() {
+        this.servicesServce.getAvailableServices().subscribe(
+            (response: any) => {
+                this.services = response;
+            },
+            (error: any) => {
+                console.error('Error fetching services:', error);
+            },
+        );
     }
 }
