@@ -1,3 +1,7 @@
 export const environment = {
-  production: true
+    production: true,
+    endpoint: 'TODO',
+    auth: {
+        clientId: 'TODO',
+    },
 };

@@ -6,6 +6,7 @@
  */
 
 import { LogLevel, Configuration, BrowserCacheLocation } from '@azure/msal-browser';
+import { environment } from 'src/environments/environment';
 
 const isIE = window.navigator.userAgent.indexOf('MSIE ') > -1 || window.navigator.userAgent.indexOf('Trident/') > -1;
 
@@ -41,11 +42,11 @@ export const b2cPolicies = {
  */
 export const msalConfig: Configuration = {
     auth: {
-        clientId: '2b89259d-3cc3-41fe-adbf-5f9acb15e622', // This is the ONLY mandatory field that you need to supply.
+        clientId: environment.auth.clientId, // This is the ONLY mandatory field that you need to supply.
         authority: b2cPolicies.authorities.signUpSignIn.authority, // Defaults to "https://login.microsoftonline.com/common"
         knownAuthorities: [b2cPolicies.authorityDomain], // Mark your B2C tenant's domain as trusted.
-        redirectUri: '/auth', // Points to window.location.origin by default. You must register this URI on Azure portal/App Registration.
-        postLogoutRedirectUri: '/', // Points to window.location.origin by default.
+        redirectUri: 'http://localhost:4200', // Points to window.location.origin by default. You must register this URI on Azure portal/App Registration.
+        // postLogoutRedirectUri: '/', // Points to window.location.origin by default.
     },
     cache: {
         cacheLocation: BrowserCacheLocation.LocalStorage, // Configures cache location. "sessionStorage" is more secure, but "localStorage" gives you SSO between tabs.
@@ -70,7 +71,9 @@ export const msalConfig: Configuration = {
  * Add here the endpoints and scopes when obtaining an access token for protected web APIs. For more information, see:
  * https://github.com/AzureAD/microsoft-authentication-library-for-js/blob/dev/lib/msal-browser/docs/resources-and-scopes.md
  */
-export const protectedResources = {};
+export const protectedResources = {
+    ['/api/']: ['https://postyfoxdev.onmicrosoft.com/2b89259d-3cc3-41fe-adbf-5f9acb15e622/Postyfox.Use'],
+};
 
 /**
  * Scopes you add here will be prompted for user consent during sign-in.
@@ -79,5 +82,10 @@ export const protectedResources = {};
  * https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-permissions-and-consent#openid-connect-scopes
  */
 export const loginRequest = {
-    scopes: [],
+    scopes: [
+        'profile',
+        'https://postyfoxdev.onmicrosoft.com/2b89259d-3cc3-41fe-adbf-5f9acb15e622/Postyfox.Use',
+        // 'user.get',
+        // 'services.get'
+    ],
 };
