@@ -43,7 +43,7 @@ jobs:
         path: dist/spa
 
     - name: Build - Development
-      run: npm run build-dev--if-present
+      run: npm run build-dev --if-present
 
     - name: Azure Login
       shell: pwsh
