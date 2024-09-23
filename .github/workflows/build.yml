@@ -33,7 +33,7 @@ jobs:
     - name: Lint
       run: npm run lint --if-present
 
-    - name: Build
+    - name: Build - Production
       run: npm run build --if-present
 
     - name: Archive production artifacts
@@ -41,6 +41,9 @@ jobs:
       with:
         name: dist
         path: dist/spa
+
+    - name: Build - Development
+      run: npm run build-dev--if-present
 
     - name: Azure Login
       shell: pwsh
