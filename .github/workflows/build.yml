@@ -56,4 +56,4 @@ jobs:
       uses: azure/CLI@v1
       with:
         inlineScript: |
-          az storage blob upload-batch --account-name postyfoxspastordev  --auth-mode login -d '$web' -s ./dist/spa
+          az storage blob upload-batch --account-name postyfoxspastordev  --auth-mode login -d '$web' -s ./dist/spa --overwrite
