@@ -50,16 +50,6 @@ jobs:
         name: dev-spa
         path: dist/spa
 
-    - name: Azure Login
-      shell: pwsh
-      run: |
-        az login --service-principal -u $env:ARM_CLIENT_ID -p $env:ARM_CLIENT_SECRET --tenant $env:ARM_TENANT_ID
-      env:
-        ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
-        ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-        ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }}
-        ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
-
   deploy:
     name: 'Deploy environment'
     runs-on: ubuntu-latest
@@ -70,6 +60,16 @@ jobs:
       with:
         name: dev-spa
         path: ./dist/spa
+
+    - name: Azure Login
+      shell: pwsh
+      run: |
+        az login --service-principal -u $env:ARM_CLIENT_ID -p $env:ARM_CLIENT_SECRET --tenant $env:ARM_TENANT_ID
+      env:
+        ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+        ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }}
+        ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
 
     - name: Upload to blob storage
       uses: azure/CLI@v1
