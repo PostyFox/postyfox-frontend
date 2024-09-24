@@ -2,7 +2,7 @@
 // `ng build` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
 
-// This file is for the settings LOCAL development
+// This file is for settings which will be used for deploying to the DEV environment
 
 export const environment = {
     production: false,

@@ -45,7 +45,7 @@ export const msalConfig: Configuration = {
         clientId: environment.auth.clientId, // This is the ONLY mandatory field that you need to supply.
         authority: b2cPolicies.authorities.signUpSignIn.authority, // Defaults to "https://login.microsoftonline.com/common"
         knownAuthorities: [b2cPolicies.authorityDomain], // Mark your B2C tenant's domain as trusted.
-        redirectUri: 'http://localhost:4200', // Points to window.location.origin by default. You must register this URI on Azure portal/App Registration.
+        redirectUri: '/', // Points to window.location.origin by default. You must register this URI on Azure portal/App Registration.
         // postLogoutRedirectUri: '/', // Points to window.location.origin by default.
     },
     cache: {
