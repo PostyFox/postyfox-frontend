@@ -21,6 +21,7 @@ export class HomeComponent implements OnInit {
     dataSource: any = [];
     claimName: string = '';
     services: any[] = [];
+    userServices: any[] = [];
 
     constructor(
         private authService: MsalService,
@@ -99,6 +100,15 @@ export class HomeComponent implements OnInit {
             },
             (error: any) => {
                 console.error('Error fetching services:', error);
+            },
+        );
+
+        this.servicesService.getUserServices().subscribe(
+            (response: any) => {
+                this.userServices = response;
+            },
+            (error: any) => {
+                console.error('Error fetching user services:', error);
             },
         );
     }

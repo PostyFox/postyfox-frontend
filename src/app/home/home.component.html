@@ -31,5 +31,12 @@
                 <p>{{ service.description }}</p>
             </div>
         </div>
+
+        <h2>Your Configured Services</h2>
+        <div class="services-grid">
+            <div *ngFor="let service of services" class="service-item">
+                <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3>
+            </div>
+        </div>
     </mat-card-content>
 </mat-card>
