@@ -34,7 +34,7 @@
 
         <h2>Your Configured Services</h2>
         <div class="services-grid">
-            <div *ngFor="let service of services" class="service-item">
+            <div *ngFor="let service of userServices" class="service-item">
                 <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3>
             </div>
         </div>
