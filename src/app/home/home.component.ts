@@ -7,6 +7,7 @@ import { createClaimsTable } from '../claim-utils';
 
 import { ApiTokenService } from '../services/api-token.service';
 import { ServicesService } from '../services/services.service';
+import { TemplatesService } from '../services/templates.service';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
 
@@ -22,12 +23,14 @@ export class HomeComponent implements OnInit {
     claimName: string = '';
     services: any[] = [];
     userServices: any[] = [];
+    userTemplates: any[] = [];
 
     constructor(
         private authService: MsalService,
         private msalBroadcastService: MsalBroadcastService,
         private apiTokenService: ApiTokenService,
         private servicesService: ServicesService,
+        private templatesService: TemplatesService,
     ) {}
 
     ngOnInit(): void {
@@ -57,6 +60,7 @@ export class HomeComponent implements OnInit {
         // });
 
         this.loadAvailableServices();
+        this.loadPostingTemplates();
     }
 
     getClaims(claims: any) {
@@ -109,6 +113,17 @@ export class HomeComponent implements OnInit {
             },
             (error: any) => {
                 console.error('Error fetching user services:', error);
+            },
+        );
+    }
+
+    loadPostingTemplates() {
+        this.templatesService.getUserPostingTemplates().subscribe(
+            (response: any) => {
+                this.userTemplates = response;
+            },
+            (error: any) => {
+                console.error('Error fetching users templates:', error);
             },
         );
     }

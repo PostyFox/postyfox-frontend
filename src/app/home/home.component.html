@@ -38,5 +38,13 @@
                 <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3>
             </div>
         </div>
+
+        <h2>Templates</h2>
+        [Create a new posting template]
+        <div class="services-grid">
+            <div *ngFor="let template of userTemplates" class="service-item">
+                <!-- <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3> -->
+            </div>
+        </div>
     </mat-card-content>
 </mat-card>
