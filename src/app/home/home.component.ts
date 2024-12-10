@@ -11,6 +11,8 @@ import { TemplatesService } from '../services/templates.service';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
 
+import { MatButtonModule } from '@angular/material/button';
+
 @Component({
     selector: 'app-home',
     templateUrl: './home.component.html',

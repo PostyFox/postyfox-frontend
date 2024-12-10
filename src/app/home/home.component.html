@@ -24,27 +24,64 @@
         <a href="https://discord.gg/Nr9SCtU3sg" target="_blank">here</a>.<br /><br />
         Please activate the supported platforms below to enable posting.
 
-        <h2>Available Services</h2>
-        <div class="services-grid">
-            <div *ngFor="let service of services" class="service-item">
-                <h3>{{ service.serviceName }}</h3>
-                <p>{{ service.description }}</p>
+        <section>
+            <div>
+                <h2>Available Services</h2>
+                <p>
+                    <i
+                        >New services will be added regularly; if there is one you are particularly looking for please
+                        do not hesitate to ask!</i
+                    >
+                </p>
+                <div class="services-grid">
+                    <div *ngFor="let service of services" class="service-item">
+                        <h3>{{ service.serviceName }}</h3>
+                        <p>{{ service.description }}</p>
+                        <button mat-button>Add</button>
+                    </div>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <h2>Your Configured Services</h2>
-        <div class="services-grid">
-            <div *ngFor="let service of userServices" class="service-item">
-                <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3>
+        <section>
+            <h2>Your Configured Services</h2>
+            <div class="services-grid">
+                <div *ngFor="let service of userServices" class="service-item">
+                    <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3>
+                    <button mat-button>Edit</button> <button mat-button filled-container-color>Delete</button>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <h2>Templates</h2>
-        [Create a new posting template]
-        <div class="services-grid">
-            <div *ngFor="let template of userTemplates" class="service-item">
-                <!-- <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3> -->
+        <section>
+            <div>
+                <h2>Templates</h2>
+                <div>
+                    <i>You have no posting templates yet</i>
+                </div>
+                <div class="services-grid">
+                    <div *ngFor="let template of userTemplates" class="service-item">
+                        <!-- <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3> -->
+                    </div>
+                </div>
+                <button mat-stroked-button>Create new Posting Template</button>
             </div>
-        </div>
+        </section>
+
+        <section>
+            <div>
+                <h2>Posts</h2>
+                <p>
+                    <i
+                        >We will retain your posts for 30 days after posting, in order to combat abuse or misuse of our
+                        service.</i
+                    >
+                </p>
+                <div>
+                    <i>You have not posted anything yet</i>
+                </div>
+                <button mat-stroked-button>Create new Post</button>
+            </div>
+        </section>
     </mat-card-content>
 </mat-card>
