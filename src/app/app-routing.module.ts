@@ -4,6 +4,7 @@ import { MsalGuard, MsalRedirectComponent } from '@azure/msal-angular';
 import { BrowserUtils } from '@azure/msal-browser';
 
 import { HomeComponent } from './home/home.component';
+import { PostComponent } from './post/post.component';
 
 /**
  * MSAL Angular can protect routes in your application using MsalGuard. For more info, visit:
@@ -19,6 +20,10 @@ const routes: Routes = [
         path: '',
         component: HomeComponent,
     },
+    {
+        path: 'post',
+        component: PostComponent,
+    },    
 ];
 
 @NgModule({
