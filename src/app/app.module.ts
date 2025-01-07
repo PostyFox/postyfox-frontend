@@ -1,7 +1,7 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgModule } from '@angular/core';
-import { FormsModule, ReactiveFormsModule  } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -18,7 +18,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 
-import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { PublicClientApplication, InteractionType } from '@azure/msal-browser';
 import {
     MsalGuard,
@@ -37,6 +37,7 @@ import { AngularMarkdownEditorModule } from 'angular-markdown-editor';
 
 @NgModule({
     declarations: [AppComponent, HomeComponent, PostComponent],
+    bootstrap: [AppComponent, MsalRedirectComponent],
     imports: [
         BrowserModule,
         BrowserAnimationsModule,
@@ -51,7 +52,6 @@ import { AngularMarkdownEditorModule } from 'angular-markdown-editor';
         MatCheckboxModule,
         MatIconModule,
         MatSelectModule,
-        HttpClientModule,
         FormsModule,
         ReactiveFormsModule,
         MsalModule.forRoot(
@@ -70,8 +70,8 @@ import { AngularMarkdownEditorModule } from 'angular-markdown-editor';
         AngularMarkdownEditorModule.forRoot({
             // add any Global Options/Config you might want
             // to avoid passing the same options over and over in each components of your App
-            iconlibrary: 'fa'
-          })        
+            iconlibrary: 'fa',
+        }),
     ],
     providers: [
         {
@@ -80,7 +80,7 @@ import { AngularMarkdownEditorModule } from 'angular-markdown-editor';
             multi: true,
         },
         MsalGuard,
+        provideHttpClient(withInterceptorsFromDi()),
     ],
-    bootstrap: [AppComponent, MsalRedirectComponent],
 })
 export class AppModule {}
