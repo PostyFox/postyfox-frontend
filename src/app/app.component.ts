@@ -2,20 +2,21 @@ import { Component, OnInit, Inject, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 
-import { IdTokenClaims, PromptValue } from '@azure/msal-common';
+import { MsalService, MsalBroadcastService, MSAL_GUARD_CONFIG, MsalGuardConfiguration } from '@azure/msal-angular';
 import {
-    AccountInfo,
     AuthenticationResult,
-    EventMessage,
-    EventType,
     InteractionStatus,
-    InteractionType,
     PopupRequest,
     RedirectRequest,
+    EventMessage,
+    EventType,
+    InteractionType,
+    AccountInfo,
     SsoSilentRequest,
+    IdTokenClaims,
+    PromptValue,
 } from '@azure/msal-browser';
-import { MsalService, MsalBroadcastService, MSAL_GUARD_CONFIG, MsalGuardConfiguration } from '@azure/msal-angular';
-import { b2cPolicies } from './auth-config';
+import { environment } from '../environments/environment';
 
 type IdTokenClaimsWithPolicyId = IdTokenClaims & {
     acr?: string;
@@ -89,7 +90,10 @@ export class AppComponent implements OnInit, OnDestroy {
                 let payload = result.payload as AuthenticationResult;
                 let idtoken = payload.idTokenClaims as IdTokenClaimsWithPolicyId;
 
-                if (idtoken.acr === b2cPolicies.names.signUpSignIn || idtoken.tfp === b2cPolicies.names.signUpSignIn) {
+                if (
+                    idtoken.acr === environment.b2cPolicies.names.signUpSignIn ||
+                    idtoken.tfp === environment.b2cPolicies.names.signUpSignIn
+                ) {
                     this.authService.instance.setActiveAccount(payload.account);
                 }
 
@@ -98,7 +102,10 @@ export class AppComponent implements OnInit, OnDestroy {
                  * from SUSI flow. "acr" claim in the id token tells us the policy (NOTE: newer policies may use the "tfp" claim instead).
                  * To learn more about B2C tokens, visit https://docs.microsoft.com/en-us/azure/active-directory-b2c/tokens-overview
                  */
-                if (idtoken.acr === b2cPolicies.names.editProfile || idtoken.tfp === b2cPolicies.names.editProfile) {
+                if (
+                    idtoken.acr === environment.b2cPolicies.names.editProfile ||
+                    idtoken.tfp === environment.b2cPolicies.names.editProfile
+                ) {
                     // retrieve the account from initial sing-in to the app
                     const originalSignInAccount = this.authService.instance
                         .getAllAccounts()
@@ -107,13 +114,13 @@ export class AppComponent implements OnInit, OnDestroy {
                                 account.idTokenClaims?.oid === idtoken.oid &&
                                 account.idTokenClaims?.sub === idtoken.sub &&
                                 ((account.idTokenClaims as IdTokenClaimsWithPolicyId).acr ===
-                                    b2cPolicies.names.signUpSignIn ||
+                                    environment.b2cPolicies.names.signUpSignIn ||
                                     (account.idTokenClaims as IdTokenClaimsWithPolicyId).tfp ===
-                                        b2cPolicies.names.signUpSignIn),
+                                        environment.b2cPolicies.names.signUpSignIn),
                         );
 
                     let signUpSignInFlowRequest: SsoSilentRequest = {
-                        authority: b2cPolicies.authorities.signUpSignIn.authority,
+                        authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
                         account: originalSignInAccount,
                     };
 
@@ -129,13 +136,13 @@ export class AppComponent implements OnInit, OnDestroy {
                  * profile edit flow (see above ln. 74-92).
                  */
                 if (
-                    idtoken.acr === b2cPolicies.names.resetPassword ||
-                    idtoken.tfp === b2cPolicies.names.resetPassword
+                    idtoken.acr === environment.b2cPolicies.names.resetPassword ||
+                    idtoken.tfp === environment.b2cPolicies.names.resetPassword
                 ) {
                     let signUpSignInFlowRequest: RedirectRequest | PopupRequest = {
-                        authority: b2cPolicies.authorities.signUpSignIn.authority,
+                        authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
                         prompt: PromptValue.LOGIN, // force user to reauthenticate with their new password
-                        scopes: [],
+                        scopes: [...environment.apiConfig.scopes],
                     };
 
                     this.login(signUpSignInFlowRequest);
@@ -157,7 +164,7 @@ export class AppComponent implements OnInit, OnDestroy {
                 // https://learn.microsoft.com/azure/active-directory-b2c/error-codes
                 if (result.error && result.error.message.indexOf('AADB2C90118') > -1) {
                     let resetPasswordFlowRequest: RedirectRequest | PopupRequest = {
-                        authority: b2cPolicies.authorities.resetPassword.authority,
+                        authority: environment.b2cPolicies.authorities.resetPassword.authority,
                         scopes: [],
                     };
 
@@ -227,7 +234,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     editProfile() {
         let editProfileFlowRequest: RedirectRequest | PopupRequest = {
-            authority: b2cPolicies.authorities.editProfile.authority,
+            authority: environment.b2cPolicies.authorities.editProfile.authority,
             scopes: [],
         };
 
