@@ -2,20 +2,32 @@ import { Component, OnInit, Inject, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 
-import { IdTokenClaims, PromptValue } from '@azure/msal-common';
-import { AccountInfo, AuthenticationResult, EventMessage, EventType, InteractionStatus, InteractionType, PopupRequest, RedirectRequest, SsoSilentRequest } from '@azure/msal-browser';
 import { MsalService, MsalBroadcastService, MSAL_GUARD_CONFIG, MsalGuardConfiguration } from '@azure/msal-angular';
-import { b2cPolicies } from './auth-config';
+import {
+    AuthenticationResult,
+    InteractionStatus,
+    PopupRequest,
+    RedirectRequest,
+    EventMessage,
+    EventType,
+    InteractionType,
+    AccountInfo,
+    SsoSilentRequest,
+    IdTokenClaims,
+    PromptValue,
+} from '@azure/msal-browser';
+import { environment } from '../environments/environment';
 
 type IdTokenClaimsWithPolicyId = IdTokenClaims & {
-    acr?: string,
-    tfp?: string,
+    acr?: string;
+    tfp?: string;
 };
 
 @Component({
     selector: 'app-root',
     templateUrl: './app.component.html',
-    styleUrls: ['./app.component.css']
+    styleUrls: ['./app.component.css'],
+    standalone: false,
 })
 export class AppComponent implements OnInit, OnDestroy {
     title = 'PostyFox';
@@ -26,8 +38,8 @@ export class AppComponent implements OnInit, OnDestroy {
     constructor(
         @Inject(MSAL_GUARD_CONFIG) private msalGuardConfig: MsalGuardConfiguration,
         private authService: MsalService,
-        private msalBroadcastService: MsalBroadcastService
-    ) { }
+        private msalBroadcastService: MsalBroadcastService,
+    ) {}
 
     ngOnInit(): void {
         this.isIframe = window !== window.parent && !window.opener;
@@ -41,11 +53,14 @@ export class AppComponent implements OnInit, OnDestroy {
          */
         this.msalBroadcastService.msalSubject$
             .pipe(
-                filter((msg: EventMessage) => msg.eventType === EventType.ACCOUNT_ADDED || msg.eventType === EventType.ACCOUNT_REMOVED),
+                filter(
+                    (msg: EventMessage) =>
+                        msg.eventType === EventType.ACCOUNT_ADDED || msg.eventType === EventType.ACCOUNT_REMOVED,
+                ),
             )
             .subscribe((result: EventMessage) => {
                 if (this.authService.instance.getAllAccounts().length === 0) {
-                    window.location.pathname = "/";
+                    window.location.pathname = '/';
                 } else {
                     this.setLoginDisplay();
                 }
@@ -54,26 +69,31 @@ export class AppComponent implements OnInit, OnDestroy {
         this.msalBroadcastService.inProgress$
             .pipe(
                 filter((status: InteractionStatus) => status === InteractionStatus.None),
-                takeUntil(this._destroying$)
+                takeUntil(this._destroying$),
             )
             .subscribe(() => {
                 this.setLoginDisplay();
                 this.checkAndSetActiveAccount();
-            })
+            });
 
         this.msalBroadcastService.msalSubject$
             .pipe(
-                filter((msg: EventMessage) => msg.eventType === EventType.LOGIN_SUCCESS
-                    || msg.eventType === EventType.ACQUIRE_TOKEN_SUCCESS
-                    || msg.eventType === EventType.SSO_SILENT_SUCCESS),
-                takeUntil(this._destroying$)
+                filter(
+                    (msg: EventMessage) =>
+                        msg.eventType === EventType.LOGIN_SUCCESS ||
+                        msg.eventType === EventType.ACQUIRE_TOKEN_SUCCESS ||
+                        msg.eventType === EventType.SSO_SILENT_SUCCESS,
+                ),
+                takeUntil(this._destroying$),
             )
             .subscribe((result: EventMessage) => {
-
                 let payload = result.payload as AuthenticationResult;
                 let idtoken = payload.idTokenClaims as IdTokenClaimsWithPolicyId;
 
-                if (idtoken.acr === b2cPolicies.names.signUpSignIn || idtoken.tfp === b2cPolicies.names.signUpSignIn) {
+                if (
+                    idtoken.acr === environment.b2cPolicies.names.signUpSignIn ||
+                    idtoken.tfp === environment.b2cPolicies.names.signUpSignIn
+                ) {
                     this.authService.instance.setActiveAccount(payload.account);
                 }
 
@@ -82,20 +102,26 @@ export class AppComponent implements OnInit, OnDestroy {
                  * from SUSI flow. "acr" claim in the id token tells us the policy (NOTE: newer policies may use the "tfp" claim instead).
                  * To learn more about B2C tokens, visit https://docs.microsoft.com/en-us/azure/active-directory-b2c/tokens-overview
                  */
-                if (idtoken.acr === b2cPolicies.names.editProfile || idtoken.tfp === b2cPolicies.names.editProfile) {
-
+                if (
+                    idtoken.acr === environment.b2cPolicies.names.editProfile ||
+                    idtoken.tfp === environment.b2cPolicies.names.editProfile
+                ) {
                     // retrieve the account from initial sing-in to the app
-                    const originalSignInAccount = this.authService.instance.getAllAccounts()
-                        .find((account: AccountInfo) =>
-                            account.idTokenClaims?.oid === idtoken.oid
-                            && account.idTokenClaims?.sub === idtoken.sub
-                            && ((account.idTokenClaims as IdTokenClaimsWithPolicyId).acr === b2cPolicies.names.signUpSignIn
-                                || (account.idTokenClaims as IdTokenClaimsWithPolicyId).tfp === b2cPolicies.names.signUpSignIn)
+                    const originalSignInAccount = this.authService.instance
+                        .getAllAccounts()
+                        .find(
+                            (account: AccountInfo) =>
+                                account.idTokenClaims?.oid === idtoken.oid &&
+                                account.idTokenClaims?.sub === idtoken.sub &&
+                                ((account.idTokenClaims as IdTokenClaimsWithPolicyId).acr ===
+                                    environment.b2cPolicies.names.signUpSignIn ||
+                                    (account.idTokenClaims as IdTokenClaimsWithPolicyId).tfp ===
+                                        environment.b2cPolicies.names.signUpSignIn),
                         );
 
                     let signUpSignInFlowRequest: SsoSilentRequest = {
-                        authority: b2cPolicies.authorities.signUpSignIn.authority,
-                        account: originalSignInAccount
+                        authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
+                        account: originalSignInAccount,
                     };
 
                     // silently login again with the signUpSignIn policy
@@ -109,11 +135,14 @@ export class AppComponent implements OnInit, OnDestroy {
                  * you can replace the code below with the same pattern used for handling the return from
                  * profile edit flow (see above ln. 74-92).
                  */
-                if (idtoken.acr === b2cPolicies.names.resetPassword || idtoken.tfp === b2cPolicies.names.resetPassword) {
+                if (
+                    idtoken.acr === environment.b2cPolicies.names.resetPassword ||
+                    idtoken.tfp === environment.b2cPolicies.names.resetPassword
+                ) {
                     let signUpSignInFlowRequest: RedirectRequest | PopupRequest = {
-                        authority: b2cPolicies.authorities.signUpSignIn.authority,
+                        authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
                         prompt: PromptValue.LOGIN, // force user to reauthenticate with their new password
-                        scopes: []
+                        scopes: [...environment.apiConfig.scopes],
                     };
 
                     this.login(signUpSignInFlowRequest);
@@ -124,20 +153,23 @@ export class AppComponent implements OnInit, OnDestroy {
 
         this.msalBroadcastService.msalSubject$
             .pipe(
-                filter((msg: EventMessage) => msg.eventType === EventType.LOGIN_FAILURE || msg.eventType === EventType.ACQUIRE_TOKEN_FAILURE),
-                takeUntil(this._destroying$)
+                filter(
+                    (msg: EventMessage) =>
+                        msg.eventType === EventType.LOGIN_FAILURE || msg.eventType === EventType.ACQUIRE_TOKEN_FAILURE,
+                ),
+                takeUntil(this._destroying$),
             )
             .subscribe((result: EventMessage) => {
                 // Checking for the forgot password error. Learn more about B2C error codes at
                 // https://learn.microsoft.com/azure/active-directory-b2c/error-codes
                 if (result.error && result.error.message.indexOf('AADB2C90118') > -1) {
                     let resetPasswordFlowRequest: RedirectRequest | PopupRequest = {
-                        authority: b2cPolicies.authorities.resetPassword.authority,
+                        authority: environment.b2cPolicies.authorities.resetPassword.authority,
                         scopes: [],
                     };
 
                     this.login(resetPasswordFlowRequest);
-                };
+                }
             });
     }
 
@@ -163,19 +195,22 @@ export class AppComponent implements OnInit, OnDestroy {
     login(userFlowRequest?: RedirectRequest | PopupRequest) {
         if (this.msalGuardConfig.interactionType === InteractionType.Popup) {
             if (this.msalGuardConfig.authRequest) {
-                this.authService.loginPopup({ ...this.msalGuardConfig.authRequest, ...userFlowRequest } as PopupRequest)
+                this.authService
+                    .loginPopup({ ...this.msalGuardConfig.authRequest, ...userFlowRequest } as PopupRequest)
                     .subscribe((response: AuthenticationResult) => {
                         this.authService.instance.setActiveAccount(response.account);
                     });
             } else {
-                this.authService.loginPopup(userFlowRequest)
-                    .subscribe((response: AuthenticationResult) => {
-                        this.authService.instance.setActiveAccount(response.account);
-                    });
+                this.authService.loginPopup(userFlowRequest).subscribe((response: AuthenticationResult) => {
+                    this.authService.instance.setActiveAccount(response.account);
+                });
             }
         } else {
             if (this.msalGuardConfig.authRequest) {
-                this.authService.loginRedirect({ ...this.msalGuardConfig.authRequest, ...userFlowRequest } as RedirectRequest);
+                this.authService.loginRedirect({
+                    ...this.msalGuardConfig.authRequest,
+                    ...userFlowRequest,
+                } as RedirectRequest);
             } else {
                 this.authService.loginRedirect(userFlowRequest);
             }
@@ -184,23 +219,22 @@ export class AppComponent implements OnInit, OnDestroy {
 
     logout() {
         const activeAccount =
-          this.authService.instance.getActiveAccount() ||
-          this.authService.instance.getAllAccounts()[0];
+            this.authService.instance.getActiveAccount() || this.authService.instance.getAllAccounts()[0];
 
         if (this.msalGuardConfig.interactionType === InteractionType.Popup) {
-          this.authService.logoutPopup({
-            account: activeAccount,
-          });
+            this.authService.logoutPopup({
+                account: activeAccount,
+            });
         } else {
-          this.authService.logoutRedirect({
-            account: activeAccount,
-          });
+            this.authService.logoutRedirect({
+                account: activeAccount,
+            });
         }
     }
 
     editProfile() {
         let editProfileFlowRequest: RedirectRequest | PopupRequest = {
-            authority: b2cPolicies.authorities.editProfile.authority,
+            authority: environment.b2cPolicies.authorities.editProfile.authority,
             scopes: [],
         };
 

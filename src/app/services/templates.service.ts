@@ -6,13 +6,13 @@ import { environment } from 'src/environments/environment';
 @Injectable({
     providedIn: 'root',
 })
-export class ApiTokenService {
-    private apiUrl = `${environment.endpoint}/Profile_GenerateAPIToken`;
+export class TemplatesService {
+    private templatesGetTemplatesUrl = `${environment.endpoint}/PostingTemplates_GetTemplates`;
 
     constructor(private http: HttpClient) {}
 
-    generateToken(): Observable<any> {
-        return this.http.post(this.apiUrl, {});
+    getUserPostingTemplates(): Observable<any> {
+        return this.http.get(this.templatesGetTemplatesUrl);
     }
 
     // Add other CRUD methods if needed

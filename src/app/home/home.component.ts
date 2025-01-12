@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
@@ -7,13 +8,17 @@ import { createClaimsTable } from '../claim-utils';
 
 import { ApiTokenService } from '../services/api-token.service';
 import { ServicesService } from '../services/services.service';
+import { TemplatesService } from '../services/templates.service';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
+
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
     selector: 'app-home',
     templateUrl: './home.component.html',
     styleUrls: ['./home.component.css'],
+    standalone: false,
 })
 export class HomeComponent implements OnInit {
     loginDisplay = false;
@@ -21,12 +26,16 @@ export class HomeComponent implements OnInit {
     dataSource: any = [];
     claimName: string = '';
     services: any[] = [];
+    userServices: any[] = [];
+    userTemplates: any[] = [];
 
     constructor(
         private authService: MsalService,
         private msalBroadcastService: MsalBroadcastService,
         private apiTokenService: ApiTokenService,
         private servicesService: ServicesService,
+        private templatesService: TemplatesService,
+        private router: Router,
     ) {}
 
     ngOnInit(): void {
@@ -56,6 +65,7 @@ export class HomeComponent implements OnInit {
         // });
 
         this.loadAvailableServices();
+        this.loadPostingTemplates();
     }
 
     getClaims(claims: any) {
@@ -101,5 +111,29 @@ export class HomeComponent implements OnInit {
                 console.error('Error fetching services:', error);
             },
         );
+
+        this.servicesService.getUserServices().subscribe(
+            (response: any) => {
+                this.userServices = response;
+            },
+            (error: any) => {
+                console.error('Error fetching user services:', error);
+            },
+        );
+    }
+
+    loadPostingTemplates() {
+        this.templatesService.getUserPostingTemplates().subscribe(
+            (response: any) => {
+                this.userTemplates = response;
+            },
+            (error: any) => {
+                console.error('Error fetching users templates:', error);
+            },
+        );
+    }
+
+    btnCreateQuickPost() {
+        this.router.navigateByUrl('/post');
     }
 }
