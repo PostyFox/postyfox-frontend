@@ -1,4 +1,5 @@
 import { BrowserModule } from '@angular/platform-browser';
+import { MarkdownModule, MarkedOptions } from 'ngx-markdown';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -126,6 +127,7 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
         //         ),
         //     },
         // ),
+        MarkdownModule.forRoot(),
         AngularMarkdownEditorModule.forRoot({
             // add any Global Options/Config you might want
             // to avoid passing the same options over and over in each components of your App

@@ -2,6 +2,7 @@ import { Component, OnInit, ViewEncapsulation } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { EditorInstance, EditorOption } from 'angular-markdown-editor';
 import { ServicesService } from '../services/services.service';
+import { MarkdownService } from 'ngx-markdown';
 
 @Component({
     selector: 'app-post',
@@ -20,6 +21,7 @@ export class PostComponent implements OnInit {
     constructor(
         private fb: FormBuilder,
         private servicesService: ServicesService,
+        private markdownService: MarkdownService,
     ) {}
 
     ngOnInit(): void {
@@ -37,24 +39,14 @@ export class PostComponent implements OnInit {
             iconlibrary: 'fa',
             savable: false,
             onShow: (e) => (this.bsEditorInstance = e),
+            parser: (val) => this.parse(val),
         };
 
         // parser: (val) => this.parse(val)
         // put the text completely on the left to avoid extra white spaces
         this.markdownText = `### Markdown example
----
-This is an **example** where we bind a variable to the \`markdown\` component that is also bind to the editor.
-#### example.component.ts
-\`\`\`javascript
-function hello() {
-  alert('Hello World');
-}
-\`\`\`
-#### example.component.html
-\`\`\`html
-<textarea [(ngModel)]="markdown"></textarea>
-<markdown [data]="markdown"></markdown>
-\`\`\``;
+Post data here blah blah blah
+`;
 
         this.buildForm(this.markdownText);
         this.onFormChanges();
@@ -69,9 +61,9 @@ function hello() {
 
     /** highlight all code found, needs to be wrapped in timer to work properly */
     highlight() {
-        // setTimeout(() => {
-        //   this.markdownService.highlight();
-        // });
+        setTimeout(() => {
+            this.markdownService.highlight();
+        });
     }
 
     hidePreview() {
@@ -80,12 +72,12 @@ function hello() {
         }
     }
 
-    // parse(inputValue: string) {
-    //   // const markedOutput = this.markdownService.parse(inputValue.trim());
-    //   this.highlight();
+    parse(inputValue: string) {
+        const markedOutput = this.markdownService.parse(inputValue.trim());
+        this.highlight();
 
-    //   return markedOutput;
-    // }
+        return markedOutput;
+    }
 
     onFormChanges(): void {
         this.templateForm.valueChanges.subscribe((formData) => {

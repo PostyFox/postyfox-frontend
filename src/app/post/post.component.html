@@ -1,8 +1,9 @@
+<h3 class="text-success bold">Define your post</h3>
 <form [formGroup]="templateForm" novalidate>
     <div>
         <label>Quick Post to Service </label>
         <mat-form-field>
-            <mat-select formControlName="service">
+            <mat-select>
                 <mat-option *ngFor="let service of userServices" [value]="service.serviceID">
                     {{ service.serviceName }}
                 </mat-option>
@@ -10,14 +11,18 @@
         </mat-form-field>
     </div>
     <div class="editor">
-        <label>Post Body Content</label>
+        <label>Body Content</label>
         <angular-markdown-editor textareaId="bodyContent" [options]="editorOptions" formControlName="body">
         </angular-markdown-editor>
     </div>
 </form>
-
 <hr />
 <h3 class="text-success bold">Preview</h3>
-<!-- <div class="result-preview outline">
+<div class="result-preview outline">
     <markdown [data]="markdownText"></markdown>
-</div> -->
+</div>
+<hr />
+<div>
+    <button mat-stroked-button>POST NOW</button>&nbsp;&nbsp;<button mat-stroked-button>Schedule for Later</button
+    >&nbsp;&nbsp;<button mat-stroked-button>Save Draft</button>
+</div>

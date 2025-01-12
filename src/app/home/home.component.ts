@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
@@ -34,6 +35,7 @@ export class HomeComponent implements OnInit {
         private apiTokenService: ApiTokenService,
         private servicesService: ServicesService,
         private templatesService: TemplatesService,
+        private router: Router,
     ) {}
 
     ngOnInit(): void {
@@ -129,5 +131,9 @@ export class HomeComponent implements OnInit {
                 console.error('Error fetching users templates:', error);
             },
         );
+    }
+
+    btnCreateQuickPost() {
+        this.router.navigateByUrl('/post');
     }
 }
