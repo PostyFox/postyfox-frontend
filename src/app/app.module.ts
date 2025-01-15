@@ -14,6 +14,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatDialogModule } from '@angular/material/dialog';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -45,6 +46,7 @@ import { PostComponent } from './post/post.component';
 
 import { AngularMarkdownEditorModule } from 'angular-markdown-editor';
 import { environment } from 'src/environments/environment';
+import { UserservicedialogComponent } from './userservicedialog/userservicedialog.component';
 
 export function loggerCallback(logLevel: LogLevel, message: string) {
     console.log(message);
@@ -95,13 +97,14 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
 }
 
 @NgModule({
-    declarations: [AppComponent, HomeComponent, PostComponent],
+    declarations: [AppComponent, HomeComponent, PostComponent, UserservicedialogComponent],
     bootstrap: [AppComponent, MsalRedirectComponent],
     imports: [
         BrowserModule,
         BrowserAnimationsModule,
         AppRoutingModule,
         MatButtonModule,
+        MatDialogModule,
         MatToolbarModule,
         MatListModule,
         MatTableModule,
@@ -114,19 +117,6 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
         FormsModule,
         ReactiveFormsModule,
         MsalModule,
-        // .forRoot(
-        //     new PublicClientApplication(msalConfig),
-        //     {
-        //         interactionType: InteractionType.Redirect,
-        //         authRequest: loginRequest,
-        //     },
-        //     {
-        //         interactionType: InteractionType.Redirect,
-        //         protectedResourceMap: new Map<string, Array<string | ProtectedResourceScopes> | null>(
-        //             Object.entries(protectedResources),
-        //         ),
-        //     },
-        // ),
         MarkdownModule.forRoot(),
         AngularMarkdownEditorModule.forRoot({
             // add any Global Options/Config you might want
