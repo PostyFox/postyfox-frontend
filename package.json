@@ -48,7 +48,7 @@
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
     "eslint": "^9.18.0",
-    "eslint-plugin-react": "^7.37.3",
+    "eslint-plugin-react": "^7.37.4",
     "husky": "^9.1.7",
     "jasmine-core": "~5.5.0",
     "karma": "~6.3.0",
