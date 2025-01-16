@@ -4,7 +4,7 @@ import { filter } from 'rxjs/operators';
 
 import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
 import { EventMessage, EventType, AuthenticationResult, InteractionStatus } from '@azure/msal-browser';
-import { createClaimsTable } from '../claim-utils';
+import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 
 import { ApiTokenService } from '../services/api-token.service';
 import { ServicesService } from '../services/services.service';
@@ -13,6 +13,7 @@ import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
 
 import { MatButtonModule } from '@angular/material/button';
+import { UserservicedialogComponent } from '../userservicedialog/userservicedialog.component';
 
 @Component({
     selector: 'app-home',
@@ -36,6 +37,7 @@ export class HomeComponent implements OnInit {
         private servicesService: ServicesService,
         private templatesService: TemplatesService,
         private router: Router,
+        private dialog: MatDialog,
     ) {}
 
     ngOnInit(): void {
@@ -131,6 +133,23 @@ export class HomeComponent implements OnInit {
                 console.error('Error fetching users templates:', error);
             },
         );
+    }
+
+    editExistingUserService(serviceId: string) {
+        // Pop modal with the service form
+        // Buid the form with the service config definition
+        // Bind any existing user service data to the form
+        const dialogConfig = new MatDialogConfig();
+
+        dialogConfig.disableClose = true;
+        dialogConfig.autoFocus = true;
+        dialogConfig.width = '60%';
+        dialogConfig.data = {
+            serviceName: 'Testing',
+            serviceId: serviceId,
+        };
+
+        let dialogref = this.dialog.open(UserservicedialogComponent, dialogConfig);
     }
 
     btnCreateQuickPost() {
