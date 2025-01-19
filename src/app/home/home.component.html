@@ -48,8 +48,8 @@
             <div class="services-grid">
                 <div *ngFor="let service of userServices" class="service-item">
                     <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3>
+                    <button mat-button color="warn">Delete</button>
                     <button mat-button (click)="editExistingUserService(service.serviceID)">Edit</button>
-                    <button mat-button filled-container-color>Delete</button>
                 </div>
             </div>
         </section>

@@ -8,12 +8,17 @@ import { environment } from 'src/environments/environment';
 })
 export class ServicesService {
     private servicesUrl = `${environment.endpoint}/Services_GetAvailable`;
+    private serviceUrl = `${environment.endpoint}/Services_GetAvailableService`;
     private userServicesUrl = `${environment.endpoint}/Services_GetUserService`;
 
     constructor(private http: HttpClient) {}
 
     getAvailableServices(): Observable<any> {
         return this.http.get(this.servicesUrl);
+    }
+
+    getAvailableService(serviceName: string): Observable<any> {
+        return this.http.get(this.serviceUrl, { params: { serviceName } });
     }
 
     getUserServices(): Observable<any> {
