@@ -4,17 +4,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
-import { MatButtonModule } from '@angular/material/button';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatListModule } from '@angular/material/list';
-import { MatTableModule } from '@angular/material/table';
-import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { MatDialogModule } from '@angular/material/dialog';
+import { ClarityModule } from '@clr/angular';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -102,18 +92,8 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
     imports: [
         BrowserModule,
         BrowserAnimationsModule,
+        ClarityModule,
         AppRoutingModule,
-        MatButtonModule,
-        MatDialogModule,
-        MatToolbarModule,
-        MatListModule,
-        MatTableModule,
-        MatCardModule,
-        MatInputModule,
-        MatFormFieldModule,
-        MatCheckboxModule,
-        MatIconModule,
-        MatSelectModule,
         FormsModule,
         ReactiveFormsModule,
         MsalModule,

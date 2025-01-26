@@ -1,5 +1,4 @@
 import { Component, Inject } from '@angular/core';
-import { MatDialog, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { ServicesService } from '../services/services.service';
 import { TemplatesService } from '../services/templates.service';
 
@@ -11,21 +10,24 @@ import { TemplatesService } from '../services/templates.service';
 })
 export class UserservicedialogComponent {
     constructor(
-        public dialogRef: MatDialogRef<UserservicedialogComponent>,
+        // public dialogRef: MatDialogRef<UserservicedialogComponent>,
         private servicesService: ServicesService,
         private templatesService: TemplatesService,
-        @Inject(MAT_DIALOG_DATA) public data: any,
+        // @Inject(MAT_DIALOG_DATA) public data: any,
     ) {}
 
-    ngOnInit(): void {
-        console.log(this.data);
-        // Call out to the userService and get the configured detail if id is passed
-        // Otherwise call out and just get the template
+    // ngOnInit(): void {
+    //     // console.log(this.data);
+    //     // // Call out to the userService and get the configured detail if id is passed
+    //     // // Otherwise call out and just get the template
 
-        //this.templatesService
-    }
+    //     // this.servicesService.getAvailableService(this.data.serviceId).subscribe((service) => {
+    //     //  //   this.service = service;
+    //     //  console.log(service);
+    //     // });
+    // }
 
     closeClick() {
-        this.dialogRef.close();
+        // this.dialogRef.close();
     }
 }

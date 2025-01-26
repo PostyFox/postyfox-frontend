@@ -17,8 +17,8 @@ export class ServicesService {
         return this.http.get(this.servicesUrl);
     }
 
-    getAvailableService(serviceName: string): Observable<any> {
-        return this.http.get(this.serviceUrl, { params: { serviceName } });
+    getAvailableService(service: string): Observable<any> {
+        return this.http.get(this.serviceUrl, { params: { service } });
     }
 
     getUserServices(): Observable<any> {
