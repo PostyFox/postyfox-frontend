@@ -1,4 +1,4 @@
-import { Component, Inject } from '@angular/core';
+import { Component, Inject, Output, EventEmitter } from '@angular/core';
 import { ServicesService } from '../services/services.service';
 import { TemplatesService } from '../services/templates.service';
 
@@ -9,12 +9,23 @@ import { TemplatesService } from '../services/templates.service';
     standalone: false,
 })
 export class UserservicedialogComponent {
-    constructor(
-        // public dialogRef: MatDialogRef<UserservicedialogComponent>,
-        private servicesService: ServicesService,
-        private templatesService: TemplatesService,
-        // @Inject(MAT_DIALOG_DATA) public data: any,
-    ) {}
+    @Output() clickedOK: EventEmitter<string> = new EventEmitter<string>();
+    // constructor(
+    //     // public dialogRef: MatDialogRef<UserservicedialogComponent>,
+    //     private servicesService: ServicesService,
+    //     private templatesService: TemplatesService,
+    //     // @Inject(MAT_DIALOG_DATA) public data: any,
+    // ) {}
+
+    show = false;
+
+    open() {
+        this.show = true;
+    }
+
+    close() {
+        this.show = false;
+    }
 
     // ngOnInit(): void {
     //     // console.log(this.data);
@@ -26,6 +37,8 @@ export class UserservicedialogComponent {
     //     //  console.log(service);
     //     // });
     // }
+
+    onSubmit() {}
 
     closeClick() {
         // this.dialogRef.close();

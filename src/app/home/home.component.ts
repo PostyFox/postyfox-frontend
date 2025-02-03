@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
@@ -19,7 +19,10 @@ import { UserservicedialogComponent } from '../userservicedialog/userservicedial
     styleUrls: ['./home.component.css'],
     standalone: false,
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, AfterViewInit {
+    @ViewChild(UserservicedialogComponent)
+    userServiceDialog!: UserservicedialogComponent;
+
     loginDisplay = false;
     displayedColumns: string[] = ['claim', 'value', 'description'];
     dataSource: any = [];
@@ -35,7 +38,6 @@ export class HomeComponent implements OnInit {
         private servicesService: ServicesService,
         private templatesService: TemplatesService,
         private router: Router,
-        // private dialog: MatDialog,
     ) {}
 
     ngOnInit(): void {
@@ -53,6 +55,12 @@ export class HomeComponent implements OnInit {
                 this.getClaims(this.authService.instance.getActiveAccount()?.idTokenClaims);
                 this.getUser(); // Attempt to fetch the user data from PostyFox api
             });
+    }
+
+    ngAfterViewInit(): void {
+        this.userServiceDialog.clickedOK.subscribe((str) => {
+            this.userServiceDialog.close();
+        });
     }
 
     setLoginDisplay() {
@@ -150,6 +158,7 @@ export class HomeComponent implements OnInit {
         //     // Data back from dialog
         //     console.log({ res });
         // });
+        this.userServiceDialog.open();
     }
 
     btnCreateQuickPost() {
