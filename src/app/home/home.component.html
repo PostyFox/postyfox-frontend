@@ -28,7 +28,7 @@
 
     <section>
         <div>
-            <h3>Available Services</h3>
+            <h3 id="availableServices">Available Services</h3>
             <p>
                 <i
                     >New services will be added regularly; if there is one you are particularly looking for please do
@@ -46,7 +46,7 @@
     </section>
 
     <section>
-        <h2>Your Configured Services</h2>
+        <h2 id="configuredServices">Your Configured Services</h2>
         <div class="services-grid">
             <div *ngFor="let service of userServices" class="service-item">
                 <h4>{{ service.serviceID }}</h4>
@@ -64,7 +64,7 @@
 
     <section>
         <div>
-            <h3>Templates</h3>
+            <h3 id="templates">Templates</h3>
             <div>
                 <i>You have no posting templates yet</i>
             </div>
@@ -79,7 +79,7 @@
 
     <section>
         <div>
-            <h3>Posts</h3>
+            <h3 id="posts">Posts</h3>
             <p>
                 <i
                     >We will retain your posts for 30 days after posting, in order to combat abuse or misuse of our

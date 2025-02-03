@@ -158,7 +158,7 @@ export class HomeComponent implements OnInit, AfterViewInit {
         //     // Data back from dialog
         //     console.log({ res });
         // });
-        this.userServiceDialog.open();
+        this.userServiceDialog.open(serviceId, serviceName);
     }
 
     btnCreateQuickPost() {

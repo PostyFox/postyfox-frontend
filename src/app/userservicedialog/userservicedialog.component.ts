@@ -10,16 +10,30 @@ import { TemplatesService } from '../services/templates.service';
 })
 export class UserservicedialogComponent {
     @Output() clickedOK: EventEmitter<string> = new EventEmitter<string>();
-    // constructor(
-    //     // public dialogRef: MatDialogRef<UserservicedialogComponent>,
-    //     private servicesService: ServicesService,
-    //     private templatesService: TemplatesService,
-    //     // @Inject(MAT_DIALOG_DATA) public data: any,
-    // ) {}
+
+    public serviceName: string;
+
+    constructor(
+        //     // public dialogRef: MatDialogRef<UserservicedialogComponent>,
+        private servicesService: ServicesService,
+        //     private templatesService: TemplatesService,
+        //     // @Inject(MAT_DIALOG_DATA) public data: any,
+    ) {
+        this.serviceName = '';
+    }
 
     show = false;
 
-    open() {
+    open(serviceId: string, serviceName: string) {
+        this.servicesService.getAvailableService(serviceId).subscribe((service) => {
+            // this.service = service;
+            console.log(service);
+            this.serviceName = serviceName;
+            // Loop over the data in configuration and build the dynamic form
+            //     "configuration": "{\"PhoneNumber\":\"\",\"DefaultPostingTarget\":\"\"}", "isEnabled": true
+            // TODO
+        });
+
         this.show = true;
     }
 
@@ -27,20 +41,9 @@ export class UserservicedialogComponent {
         this.show = false;
     }
 
-    // ngOnInit(): void {
-    //     // console.log(this.data);
-    //     // // Call out to the userService and get the configured detail if id is passed
-    //     // // Otherwise call out and just get the template
-
-    //     // this.servicesService.getAvailableService(this.data.serviceId).subscribe((service) => {
-    //     //  //   this.service = service;
-    //     //  console.log(service);
-    //     // });
-    // }
-
     onSubmit() {}
 
     closeClick() {
-        // this.dialogRef.close();
+        this.close();
     }
 }
