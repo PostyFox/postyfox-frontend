@@ -5,6 +5,8 @@ import { filter, takeUntil } from 'rxjs/operators';
 import '@cds/core/icon/register.js';
 import { ClarityIcons, cloudScaleIcon, bellIcon, userIcon, loginIcon, logoutIcon } from '@cds/core/icon';
 
+import { RouterLinkActive } from '@angular/router';
+
 import { MsalService, MsalBroadcastService, MSAL_GUARD_CONFIG, MsalGuardConfiguration } from '@azure/msal-angular';
 import {
     AuthenticationResult,

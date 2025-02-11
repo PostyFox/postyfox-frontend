@@ -58,7 +58,7 @@ export function MSALInstanceFactory(): IPublicClientApplication {
             allowNativeBroker: false, // Disables WAM Broker
             loggerOptions: {
                 loggerCallback,
-                logLevel: LogLevel.Verbose,
+                logLevel: LogLevel.Info,
                 piiLoggingEnabled: false,
             },
         },

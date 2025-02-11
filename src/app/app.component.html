@@ -65,12 +65,16 @@
             </div>
         </div>
         <clr-vertical-nav *ngIf="loginDisplay">
-            <a clrVerticalNavLink class="active" href="/#availableServices">Available Services</a>
-            <a clrVerticalNavLink href="/#configuredServices">Configured Services</a>
-            <a clrVerticalNavLink href="/#templates">Templates</a>
-            <a clrVerticalNavLink>Automations</a>
-            <a clrVerticalNavLink>Posts</a>
-            <a clrVerticalNavLink>Logs</a>
+            <a clrVerticalNavLink routerLink="/" routerLinkActive="active" href="/#availableServices"
+                >Available Services</a
+            >
+            <a clrVerticalNavLink routerLink="/" routerLinkActive="active" href="/#configuredServices"
+                >Configured Services</a
+            >
+            <a clrVerticalNavLink routerLink="/" routerLinkActive="active" href="/#templates">Templates</a>
+            <a clrVerticalNavLink routerLink="/automations" routerLinkActive="active">Automations</a>
+            <a clrVerticalNavLink routerLink="/posts" routerLinkActive="active">Posts</a>
+            <a clrVerticalNavLink routerLink="/logs" routerLinkActive="active">Logs</a>
         </clr-vertical-nav>
     </div>
 </div>

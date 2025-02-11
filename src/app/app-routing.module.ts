@@ -9,6 +9,7 @@ import { PostComponent } from './post/post.component';
 const routes: Routes = [
     {
         path: 'post',
+        title: 'Create a new post',
         component: PostComponent,
         canActivate: [MsalGuard],
     },

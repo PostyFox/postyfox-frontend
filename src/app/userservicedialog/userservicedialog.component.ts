@@ -27,11 +27,20 @@ export class UserservicedialogComponent {
     open(serviceId: string, serviceName: string) {
         this.servicesService.getAvailableService(serviceId).subscribe((service) => {
             // this.service = service;
-            console.log(service);
+            // console.log(service);
             this.serviceName = serviceName;
             // Loop over the data in configuration and build the dynamic form
-            //     "configuration": "{\"PhoneNumber\":\"\",\"DefaultPostingTarget\":\"\"}", "isEnabled": true
-            // TODO
+
+            let config = JSON.parse(service.configuration);
+            if (config) {
+                Object.entries(config).forEach(([key, value]) => {
+                    console.log(' Config Item: ', key, ' = ', value);
+                });
+            } else {
+                console.log("- Error: Service didn't return any valid configuration data!!");
+            }
+
+            // TODO - build the form ...
         });
 
         this.show = true;
