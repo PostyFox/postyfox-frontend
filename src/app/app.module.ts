@@ -37,6 +37,7 @@ import { PostComponent } from './post/post.component';
 import { AngularMarkdownEditorModule } from 'angular-markdown-editor';
 import { environment } from 'src/environments/environment';
 import { UserservicedialogComponent } from './userservicedialog/userservicedialog.component';
+import { FormQuestionComponent } from './form-question/form-question.component';
 
 export function loggerCallback(logLevel: LogLevel, message: string) {
     console.log(message);
@@ -103,6 +104,7 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
             // to avoid passing the same options over and over in each components of your App
             iconlibrary: 'fa',
         }),
+        FormQuestionComponent,
     ],
     providers: [
         {
