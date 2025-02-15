@@ -1,11 +1,16 @@
 export class QuestionBase<T> {
-    id: number;
-    questionText: string;
+    key: string;
+    questionText: unknown;
     questionType: string;
+    required: boolean;
+    controlType: string;
 
-    constructor(id: number, questionText: string, questionType: string) {
-        this.id = id;
+    constructor(key: string, questionText: unknown, questionType: string, required: boolean = false) {
+        this.key = key;
+
         this.questionText = questionText;
         this.questionType = questionType;
+        this.required = required;
+        this.controlType = 'textbox'; // TODO: Add more types
     }
 }

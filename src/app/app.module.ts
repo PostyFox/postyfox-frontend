@@ -38,6 +38,7 @@ import { AngularMarkdownEditorModule } from 'angular-markdown-editor';
 import { environment } from 'src/environments/environment';
 import { UserservicedialogComponent } from './userservicedialog/userservicedialog.component';
 import { FormQuestionComponent } from './form-question/form-question.component';
+import { FormService } from './services/form.service';
 
 export function loggerCallback(logLevel: LogLevel, message: string) {
     console.log(message);
@@ -127,6 +128,7 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
         MsalGuard,
         MsalService,
         MsalBroadcastService,
+        FormService,
         provideHttpClient(withInterceptorsFromDi()),
     ],
 })

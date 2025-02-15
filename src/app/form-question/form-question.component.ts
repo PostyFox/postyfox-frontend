@@ -7,11 +7,16 @@ import { QuestionBase } from 'src/models/question-base';
     selector: 'app-form-question',
     templateUrl: './form-question.component.html',
     styleUrl: './form-question.component.scss',
+    imports: [CommonModule, ReactiveFormsModule],
 })
 export class FormQuestionComponent {
-    @Input() question!: QuestionBase<string>;
+    @Input() question!: QuestionBase<any>;
     @Input() form!: FormGroup;
+
     get isValid() {
-        return this.form.controls[this.question.id].valid;
+        if (this.form) {
+            return this.form.controls[this.question.key].valid;
+        }
+        return false;
     }
 }
