@@ -142,22 +142,6 @@ export class HomeComponent implements OnInit, AfterViewInit {
     }
 
     editExistingUserService(serviceId: string, serviceName: string) {
-        // Pop modal with the service form
-        // Buid the form with the service config definition
-        // Bind any existing user service data to the form
-        // const dialogConfig = new MatDialogConfig();
-        // dialogConfig.disableClose = true;
-        // dialogConfig.autoFocus = true;
-        // dialogConfig.width = '60%';
-        // dialogConfig.data = {
-        //     serviceName: serviceName,
-        //     serviceId: serviceId,
-        // };
-        // let dialogref = this.dialog.open(UserservicedialogComponent, dialogConfig);
-        // dialogref.afterClosed().subscribe((res) => {
-        //     // Data back from dialog
-        //     console.log({ res });
-        // });
         this.userServiceDialog.open(serviceId, serviceName);
     }
 
