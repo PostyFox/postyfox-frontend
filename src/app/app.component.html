@@ -1,25 +1,80 @@
-<mat-toolbar color="primary">
-    <a class="title" href="/">{{ title }}</a>
-
-    <div class="toolbar-spacer"></div>
-
-    <!--<a mat-button [routerLink]="['todo-view']">TodoList</a>-->
-
-    <button mat-button *ngIf="loginDisplay" (click)="editProfile()">Edit Profile</button>
-    <button mat-raised-button *ngIf="!loginDisplay" (click)="login()">Login</button>
-    <button mat-raised-button color="accent" *ngIf="loginDisplay" (click)="logout()">Logout</button>
-</mat-toolbar>
-<div class="container">
-    <!--This is to avoid reload during acquireTokenSilent() because of hidden iframe -->
-    <router-outlet *ngIf="!isIframe"></router-outlet>
-</div>
-
-<footer *ngIf="loginDisplay">
-    <!-- <mat-toolbar>
-        <div class="footer-text">
-            How did we do? <a
-                href="https://forms.office.com/Pages/ResponsePage.aspx?id=v4j5cvGGr0GRqy180BHbR73pcsbpbxNJuZCMKN0lURpUOU5PNlM4MzRRV0lETkk2ODBPT0NBTEY5MCQlQCN0PWcu"
-                target="_blank"> Share your experience with us!</a>
+<div class="main-container">
+    <!-- <div class="alert alert-app-level alert-info">
+      <div class="alert-items">
+        <div class="alert-item static">
+          <div class="alert-icon-wrapper">
+            <cds-icon class="alert-icon" shape="info-circle"></cds-icon>
+          </div>
+          <div class="alert-text">App Level Alert</div>
+          <div class="alert-actions">
+            <button class="btn btn-sm alert-action">Action</button>
+          </div>
         </div>
-    </mat-toolbar> -->
-</footer>
+      </div>
+      <button type="button" class="close" aria-label="Close">
+        <cds-icon shape="close"></cds-icon>
+      </button>
+    </div> -->
+
+    <header class="header header-6">
+        <div class="branding">
+            <a href="javascript://">
+                <cds-icon shape="cloud-scale"></cds-icon>
+                <span class="title">{{ title }}</span>
+            </a>
+        </div>
+
+        <div class="header-nav">
+            <a href="#" (click)="login()" class="active nav-link nav-icon" *ngIf="!loginDisplay">
+                <cds-icon shape="login"></cds-icon>
+            </a>
+            <a href="#" (click)="editProfile()" class="nav-link nav-icon" *ngIf="loginDisplay">
+                <cds-icon shape="user"></cds-icon>
+            </a>
+            <a href="#" (click)="logout()" class="active nav-link nav-icon" *ngIf="loginDisplay">
+                <cds-icon shape="logout"></cds-icon>
+            </a>
+        </div>
+    </header>
+
+    <!-- <nav class="subnav">
+      <ul class="nav">
+        <li class="nav-item">
+          <a class="nav-link active" href="javascript://">Subnav Link 1</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript://">Subnav Link 2</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript://">Subnav Link 3</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript://">Subnav Link 4</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="javascript://">Subnav Link 5</a>
+        </li>
+      </ul>
+    </nav> -->
+
+    <div class="content-container">
+        <div class="content-area" cds-layout="m-t:md">
+            <div class="container">
+                <!--This is to avoid reload during acquireTokenSilent() because of hidden iframe -->
+                <router-outlet *ngIf="!isIframe"></router-outlet>
+            </div>
+        </div>
+        <clr-vertical-nav *ngIf="loginDisplay">
+            <a clrVerticalNavLink routerLink="/" routerLinkActive="active" href="/#availableServices"
+                >Available Services</a
+            >
+            <a clrVerticalNavLink routerLink="/" routerLinkActive="active" href="/#configuredServices"
+                >Configured Services</a
+            >
+            <a clrVerticalNavLink routerLink="/" routerLinkActive="active" href="/#templates">Templates</a>
+            <a clrVerticalNavLink routerLink="/automations" routerLinkActive="active">Automations</a>
+            <a clrVerticalNavLink routerLink="/posts" routerLinkActive="active">Posts</a>
+            <a clrVerticalNavLink routerLink="/logs" routerLinkActive="active">Logs</a>
+        </clr-vertical-nav>
+    </div>
+</div>

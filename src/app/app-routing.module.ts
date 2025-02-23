@@ -6,25 +6,10 @@ import { BrowserUtils } from '@azure/msal-browser';
 import { HomeComponent } from './home/home.component';
 import { PostComponent } from './post/post.component';
 
-// const routes: Routes = [
-//     {
-//         // Needed for handling redirect after login
-//         path: 'auth',
-//         component: MsalRedirectComponent,
-//     },
-//     {
-//         path: '',
-//         component: HomeComponent,
-//     },
-//     {
-//         path: 'post',
-//         component: PostComponent,
-//     },
-// ];
-
 const routes: Routes = [
     {
         path: 'post',
+        title: 'Create a new post',
         component: PostComponent,
         canActivate: [MsalGuard],
     },

@@ -2,6 +2,11 @@ import { Component, OnInit, Inject, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 
+import '@cds/core/icon/register.js';
+import { ClarityIcons, cloudScaleIcon, bellIcon, userIcon, loginIcon, logoutIcon } from '@cds/core/icon';
+
+import { RouterLinkActive } from '@angular/router';
+
 import { MsalService, MsalBroadcastService, MSAL_GUARD_CONFIG, MsalGuardConfiguration } from '@azure/msal-angular';
 import {
     AuthenticationResult,
@@ -39,7 +44,13 @@ export class AppComponent implements OnInit, OnDestroy {
         @Inject(MSAL_GUARD_CONFIG) private msalGuardConfig: MsalGuardConfiguration,
         private authService: MsalService,
         private msalBroadcastService: MsalBroadcastService,
-    ) {}
+    ) {
+        ClarityIcons.addIcons(cloudScaleIcon);
+        ClarityIcons.addIcons(bellIcon);
+        ClarityIcons.addIcons(userIcon);
+        ClarityIcons.addIcons(loginIcon);
+        ClarityIcons.addIcons(logoutIcon);
+    }
 
     ngOnInit(): void {
         this.isIframe = window !== window.parent && !window.opener;

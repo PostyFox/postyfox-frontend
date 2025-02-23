@@ -1,10 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
 import { EventMessage, EventType, AuthenticationResult, InteractionStatus } from '@azure/msal-browser';
-import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 
 import { ApiTokenService } from '../services/api-token.service';
 import { ServicesService } from '../services/services.service';
@@ -12,7 +11,6 @@ import { TemplatesService } from '../services/templates.service';
 import { environment } from 'src/environments/environment';
 import { HttpClient } from '@angular/common/http';
 
-import { MatButtonModule } from '@angular/material/button';
 import { UserservicedialogComponent } from '../userservicedialog/userservicedialog.component';
 
 @Component({
@@ -21,7 +19,10 @@ import { UserservicedialogComponent } from '../userservicedialog/userservicedial
     styleUrls: ['./home.component.css'],
     standalone: false,
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, AfterViewInit {
+    @ViewChild(UserservicedialogComponent)
+    userServiceDialog!: UserservicedialogComponent;
+
     loginDisplay = false;
     displayedColumns: string[] = ['claim', 'value', 'description'];
     dataSource: any = [];
@@ -37,7 +38,6 @@ export class HomeComponent implements OnInit {
         private servicesService: ServicesService,
         private templatesService: TemplatesService,
         private router: Router,
-        private dialog: MatDialog,
     ) {}
 
     ngOnInit(): void {
@@ -55,6 +55,12 @@ export class HomeComponent implements OnInit {
                 this.getClaims(this.authService.instance.getActiveAccount()?.idTokenClaims);
                 this.getUser(); // Attempt to fetch the user data from PostyFox api
             });
+    }
+
+    ngAfterViewInit(): void {
+        this.userServiceDialog.clickedOK.subscribe((str) => {
+            this.userServiceDialog.close();
+        });
     }
 
     setLoginDisplay() {
@@ -135,21 +141,8 @@ export class HomeComponent implements OnInit {
         );
     }
 
-    editExistingUserService(serviceId: string) {
-        // Pop modal with the service form
-        // Buid the form with the service config definition
-        // Bind any existing user service data to the form
-        const dialogConfig = new MatDialogConfig();
-
-        dialogConfig.disableClose = true;
-        dialogConfig.autoFocus = true;
-        dialogConfig.width = '60%';
-        dialogConfig.data = {
-            serviceName: 'Testing',
-            serviceId: serviceId,
-        };
-
-        let dialogref = this.dialog.open(UserservicedialogComponent, dialogConfig);
+    editExistingUserService(serviceId: string, serviceName: string) {
+        this.userServiceDialog.open(serviceId, serviceName);
     }
 
     btnCreateQuickPost() {
