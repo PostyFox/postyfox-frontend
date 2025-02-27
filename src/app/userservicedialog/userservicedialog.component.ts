@@ -31,6 +31,12 @@ export class UserservicedialogComponent {
     show = false;
 
     open(serviceId: string, serviceName: string) {
+        // Clear down form
+        this.serviceName = '';
+        this.serviceId = '';
+        this.questions = [];
+        this.form = this.formService.createFormGroup(this.questions);
+
         this.servicesService.getAvailableService(serviceId).subscribe((service) => {
             this.serviceName = serviceName;
             this.serviceId = serviceId;

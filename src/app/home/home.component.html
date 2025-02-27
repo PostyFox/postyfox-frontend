@@ -39,7 +39,7 @@
                 <div *ngFor="let service of services" class="service-item">
                     <h4>{{ service.serviceName }}</h4>
                     <p>{{ service.description }}</p>
-                    <button class="btn btn-primary">Add</button>
+                    <button class="btn btn-primary" disabled>Add</button>
                 </div>
             </div>
         </div>
@@ -51,7 +51,7 @@
             <div *ngFor="let service of userServices" class="service-item">
                 <h4>{{ service.serviceID }}</h4>
                 <p>{{ service.serviceName }} - ({{ service.isEnabled }})</p>
-                <button class="btn btn-danger">Delete</button>
+                <button class="btn btn-danger" disabled>Delete</button>
                 <button
                     class="btn btn-primary"
                     (click)="editExistingUserService(service.serviceID, service.serviceName)"
@@ -73,7 +73,7 @@
                     <!-- <h3>{{ service.serviceID }} - {{ service.serviceName }} - ({{ service.isEnabled }})</h3> -->
                 </div>
             </div>
-            <button class="btn btn-primary">Create new Posting Template</button>
+            <button class="btn btn-primary" disabled>Create new Posting Template</button>
         </div>
     </section>
 
@@ -89,7 +89,7 @@
             <div>
                 <i>You have not posted anything yet</i>
             </div>
-            <button class="btn btn-primary">Create new Post</button>
+            <button class="btn btn-primary" disabled>Create new Post</button>
             <button class="btn btn-outline" (click)="btnCreateQuickPost()">Create a quick post</button>
         </div>
     </section>
