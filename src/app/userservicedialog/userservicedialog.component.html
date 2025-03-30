@@ -6,23 +6,29 @@
         </div>
 
         <div class="modal-body">
-            <div>
-                <!-- <form (ngSubmit)="onSubmit()" [formGroup]="form"> -->
-                @for (question of questions; track question) {
-                    <div class="form-row">
-                        <app-form-question [question]="question" [form]="form"></app-form-question>
-                    </div>
-                }
+            @if (questions == null || questions.length == 0) {
                 <div class="form-row">
-                    <!-- <button type="submit" [disabled]="!form.valid">Save</button> -->
+                    <p>No template defined for this service; unable to provide prompts.</p>
                 </div>
-                <!-- </form> -->
-                <!-- @if (payLoad) {
-                  <div class="form-row">
-                    <strong>Saved the following values</strong><br>{{ payLoad }}
-                  </div>
-                } -->
-            </div>
+            } @else {
+                <div>
+                    <!-- <form (ngSubmit)="onSubmit()" [formGroup]="form"> -->
+                    @for (question of questions; track question) {
+                        <div class="form-row">
+                            <app-form-question [question]="question" [form]="form"></app-form-question>
+                        </div>
+                    }
+                    <div class="form-row">
+                        <!-- <button type="submit" [disabled]="!form.valid">Save</button> -->
+                    </div>
+                    <!-- </form> -->
+                    <!-- @if (payLoad) {
+                    <div class="form-row">
+                        <strong>Saved the following values</strong><br>{{ payLoad }}
+                    </div>
+                    } -->
+                </div>
+            }
         </div>
 
         <div class="modal-footer">

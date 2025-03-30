@@ -7,6 +7,7 @@
 export const environment = {
     production: false,
     endpoint: 'https://dev.api.postyfox.com/api',
+    postingEndpoint: 'https://dev.post.postyfox.com/api',
     msalConfig: {
         auth: {
             clientId: '2b89259d-3cc3-41fe-adbf-5f9acb15e622',
