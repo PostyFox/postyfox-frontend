@@ -13,6 +13,7 @@ import { MarkdownService } from 'ngx-markdown';
 export class PostComponent implements OnInit {
     bsEditorInstance!: EditorInstance;
     markdownText = '';
+    body = '';
     showEditor = true;
     templateForm!: FormGroup;
     editorOptions!: EditorOption;
@@ -85,5 +86,12 @@ Post data here blah blah blah
                 this.markdownText = formData.body;
             }
         });
+    }
+
+    post() {
+        console.log('Post data:', this.templateForm.value);
+
+        // post data to service
+        // this.servicesService.post;
     }
 }

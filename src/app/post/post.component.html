@@ -16,13 +16,24 @@
         </angular-markdown-editor>
     </div>
 </form> -->
-<hr />
-<h3 class="text-success bold">Preview</h3>
-<div class="result-preview outline">
-    <!-- <markdown [data]="markdownText"></markdown> -->
-</div>
-<hr />
-<div>
-    <button mat-stroked-button>POST NOW</button>&nbsp;&nbsp;<button mat-stroked-button>Schedule for Later</button
-    >&nbsp;&nbsp;<button mat-stroked-button>Save Draft</button>
-</div>
+<form novalidate #f="ngForm" [formGroup]="templateForm" (ngSubmit)="post()">
+    <label [attr.for]="body">Post Body</label> <br />
+    <textarea id="bodyContent" formControlName="body" rows="10" cols="30"></textarea>
+    <br /><br />
+    <p>
+        <b>Posting to service:</b><br />
+        Telegram Test - 2306745293 - Service is hardcoded for testing! <br />
+    </p>
+
+    <hr />
+    <h3 class="text-success bold">Preview</h3>
+    <div class="result-preview outline">
+        <!-- <markdown [data]="markdownText"></markdown> -->
+    </div>
+    <hr />
+    <div>
+        <button mat-stroked-button type="submit">POST NOW</button>&nbsp;&nbsp;<button mat-stroked-button disabled>
+            Schedule for Later</button
+        >&nbsp;&nbsp;<button mat-stroked-button disabled>Save Draft</button>
+    </div>
+</form>
