@@ -28,7 +28,7 @@
     "@clr/angular": "^17.9.0",
     "@clr/ui": "^17.9.0",
     "angular-markdown-editor": "^3.1.1",
-    "bootstrap": "^5.3.3",
+    "bootstrap": "^5.3.5",
     "font-awesome": "^4.7.0",
     "marked": "^15.0.7",
     "ngx-markdown": "^19.1.1",
