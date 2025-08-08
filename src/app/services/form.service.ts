@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, FormControl } from '@angular/forms';
 import { QuestionBase } from 'src/app/models/question-base';
 
@@ -6,7 +6,7 @@ import { QuestionBase } from 'src/app/models/question-base';
     providedIn: 'root',
 })
 export class FormService {
-    constructor(private fb: FormBuilder) {}
+    private fb = inject(FormBuilder);
 
     createFormGroup(questions: QuestionBase<any>[]): FormGroup {
         const group: any = {};

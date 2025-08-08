@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
@@ -8,14 +8,14 @@ import { PostRequest } from './api-models';
     providedIn: 'root',
 })
 export class ServicesService {
+    private http = inject(HttpClient);
+
     private servicesUrl = `${environment.endpoint}/Services_GetAvailable`;
     private serviceUrl = `${environment.endpoint}/Services_GetAvailableService`;
     private userServicesUrl = `${environment.endpoint}/Services_GetUserServices`;
     private userServiceUrl = `${environment.endpoint}/Services_GetUserService`;
 
     private postServiceUrl = `${environment.postingEndpoint}/Post`;
-
-    constructor(private http: HttpClient) {}
 
     getAvailableServices(): Observable<any> {
         return this.http.get(this.servicesUrl);

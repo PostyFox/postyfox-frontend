@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewEncapsulation } from '@angular/core';
+import { Component, OnInit, ViewEncapsulation, inject } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { EditorInstance, EditorOption } from 'angular-markdown-editor';
 import { ServicesService } from '../services/services.service';
@@ -11,6 +11,10 @@ import { MarkdownService } from 'ngx-markdown';
     standalone: false,
 })
 export class PostComponent implements OnInit {
+    private fb = inject(FormBuilder);
+    private servicesService = inject(ServicesService);
+    private markdownService = inject(MarkdownService);
+
     bsEditorInstance!: EditorInstance;
     markdownText = '';
     body = '';
@@ -18,12 +22,6 @@ export class PostComponent implements OnInit {
     templateForm!: FormGroup;
     editorOptions!: EditorOption;
     userServices: any[] = [];
-
-    constructor(
-        private fb: FormBuilder,
-        private servicesService: ServicesService,
-        private markdownService: MarkdownService,
-    ) {}
 
     ngOnInit(): void {
         this.servicesService.getUserServices().subscribe(
