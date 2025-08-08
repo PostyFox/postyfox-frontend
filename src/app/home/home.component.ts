@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 
@@ -20,6 +20,13 @@ import { UserservicedialogComponent } from '../userservicedialog/userservicedial
     standalone: false,
 })
 export class HomeComponent implements OnInit, AfterViewInit {
+    private authService = inject(MsalService);
+    private msalBroadcastService = inject(MsalBroadcastService);
+    private apiTokenService = inject(ApiTokenService);
+    private servicesService = inject(ServicesService);
+    private templatesService = inject(TemplatesService);
+    private router = inject(Router);
+
     @ViewChild(UserservicedialogComponent)
     userServiceDialog!: UserservicedialogComponent;
 
@@ -30,15 +37,6 @@ export class HomeComponent implements OnInit, AfterViewInit {
     services: any[] = [];
     userServices: any[] = [];
     userTemplates: any[] = [];
-
-    constructor(
-        private authService: MsalService,
-        private msalBroadcastService: MsalBroadcastService,
-        private apiTokenService: ApiTokenService,
-        private servicesService: ServicesService,
-        private templatesService: TemplatesService,
-        private router: Router,
-    ) {}
 
     ngOnInit(): void {
         this.msalBroadcastService.msalSubject$

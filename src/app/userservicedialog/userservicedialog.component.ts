@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, Output, EventEmitter, inject } from '@angular/core';
 import { FormGroup } from '@angular/forms';
 import { QuestionBase } from 'src/app/models/question-base';
 import { ServicesService } from 'src/app/services/services.service';
@@ -11,6 +11,9 @@ import { FormService } from 'src/app/services/form.service';
     standalone: false,
 })
 export class UserservicedialogComponent {
+    private servicesService = inject(ServicesService);
+    private formService = inject(FormService);
+
     @Output() clickedOK: EventEmitter<string> = new EventEmitter<string>();
 
     public serviceName: string;
@@ -18,10 +21,7 @@ export class UserservicedialogComponent {
     questions: QuestionBase<any>[] | null = [];
     form: FormGroup;
 
-    constructor(
-        private servicesService: ServicesService,
-        private formService: FormService,
-    ) {
+    constructor() {
         this.serviceName = '';
         this.serviceId = '';
         this.questions = [];

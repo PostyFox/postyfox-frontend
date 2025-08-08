@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Subject } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
 
@@ -35,16 +35,16 @@ type IdTokenClaimsWithPolicyId = IdTokenClaims & {
     standalone: false,
 })
 export class AppComponent implements OnInit, OnDestroy {
+    private msalGuardConfig = inject<MsalGuardConfiguration>(MSAL_GUARD_CONFIG);
+    private authService = inject(MsalService);
+    private msalBroadcastService = inject(MsalBroadcastService);
+
     title = 'PostyFox';
     isIframe = false;
     loginDisplay = false;
     private readonly _destroying$ = new Subject<void>();
 
-    constructor(
-        @Inject(MSAL_GUARD_CONFIG) private msalGuardConfig: MsalGuardConfiguration,
-        private authService: MsalService,
-        private msalBroadcastService: MsalBroadcastService,
-    ) {
+    constructor() {
         ClarityIcons.addIcons(cloudScaleIcon);
         ClarityIcons.addIcons(bellIcon);
         ClarityIcons.addIcons(userIcon);
