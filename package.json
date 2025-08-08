@@ -23,7 +23,7 @@
     "@angular/platform-browser-dynamic": "^19.2.8",
     "@angular/router": "^19.2.8",
     "@azure/msal-angular": "^3.1.0",
-    "@azure/msal-browser": "^3.28.0",
+    "@azure/msal-browser": "^4.19.0",
     "@cds/core": "^6.16.1",
     "@clr/angular": "^17.11.0",
     "@clr/ui": "^17.11.0",
