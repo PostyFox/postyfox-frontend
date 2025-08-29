@@ -39,6 +39,7 @@ export class HomeComponent implements OnInit, AfterViewInit {
     userTemplates: any[] = [];
 
     ngOnInit(): void {
+        // Handle successful logins
         this.msalBroadcastService.msalSubject$
             .pipe(filter((msg: EventMessage) => msg.eventType === EventType.LOGIN_SUCCESS))
             .subscribe((result: EventMessage) => {
@@ -46,6 +47,7 @@ export class HomeComponent implements OnInit, AfterViewInit {
                 this.authService.instance.setActiveAccount(payload.account);
             });
 
+        // Handle interaction status changes
         this.msalBroadcastService.inProgress$
             .pipe(filter((status: InteractionStatus) => status === InteractionStatus.None))
             .subscribe(() => {

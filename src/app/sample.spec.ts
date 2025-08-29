@@ -3,14 +3,28 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import { MSAL_GUARD_CONFIG, MsalGuardConfiguration } from '@azure/msal-angular';
-import { InteractionType } from '@azure/msal-browser';
+import { InteractionType, Configuration } from '@azure/msal-browser';
 
-import { msalConfig } from './auth-config';
+import { environment } from '../environments/environment';
 import { AppComponent } from './app.component';
 import { AppModule } from './app.module';
 
-describe('Sanitize the configuration object', () => {
+// Create msalConfig for testing
+const msalConfig: Configuration = {
+    auth: {
+        clientId: environment.msalConfig.auth.clientId,
+        authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
+        redirectUri: '/',
+        postLogoutRedirectUri: '/',
+        knownAuthorities: [environment.b2cPolicies.authorityDomain],
+    },
+    cache: {
+        cacheLocation: 'localStorage',
+        storeAuthStateInCookie: false,
+    },
+};
 
+describe('Sanitize the configuration object', () => {
     it('should define the config object', () => {
         expect(msalConfig).toBeDefined();
         expect(msalConfig.auth.clientId).toBeDefined();
@@ -40,10 +54,10 @@ describe('Ensure that the app starts', () => {
         expect(bootApplication).not.toThrow();
     });
 
-    it(`should have as title 'Microsoft identity platform'`, async () => {
+    it(`should have as title 'PostyFox'`, async () => {
         const { fixture } = setup();
         const app = fixture.debugElement.componentInstance;
-        expect(app.title).toEqual('Microsoft identity platform');
+        expect(app.title).toEqual('PostyFox');
     });
 
     it('should navigate to unguarded route', async () => {
@@ -57,14 +71,13 @@ describe('Ensure that the app starts', () => {
     it('should not navigate to guarded component', async () => {
         const { router, run } = setup();
 
-        const canNavigate = await run(() => router.navigateByUrl('/todo-view'));
+        const canNavigate = await run(() => router.navigateByUrl('/post'));
 
         expect(canNavigate).toBe(false);
     });
 });
 
 function setup() {
-
     function MSALGuardConfigFactory(): MsalGuardConfiguration {
         return {
             interactionType: InteractionType.Redirect,
@@ -72,16 +85,13 @@ function setup() {
     }
 
     TestBed.configureTestingModule({
-        imports: [
-            AppModule,
-            RouterTestingModule,
-        ],
+        imports: [AppModule, RouterTestingModule],
         providers: [
             {
                 provide: MSAL_GUARD_CONFIG,
-                useFactory: MSALGuardConfigFactory
-            }
-        ]
+                useFactory: MSALGuardConfigFactory,
+            },
+        ],
     }).compileComponents();
 
     let rootFixture: ComponentFixture<AppComponent>;
@@ -100,12 +110,8 @@ function setup() {
         run<TResult>(task: () => TResult) {
             initializeRootFixture();
 
-            return rootFixture.ngZone == null
-                ? task()
-                : rootFixture.ngZone.run(task);
+            return rootFixture.ngZone == null ? task() : rootFixture.ngZone.run(task);
         },
-        fixture: TestBed.createComponent(AppComponent)
+        fixture: TestBed.createComponent(AppComponent),
     };
 }
-
-
