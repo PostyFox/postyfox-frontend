@@ -17,6 +17,7 @@ import {
     InteractionType,
     BrowserCacheLocation,
     LogLevel,
+    Configuration,
 } from '@azure/msal-browser';
 import {
     MsalGuard,
@@ -45,7 +46,7 @@ export function loggerCallback(logLevel: LogLevel, message: string) {
 }
 
 export function MSALInstanceFactory(): IPublicClientApplication {
-    return new PublicClientApplication({
+    const msalConfig: Configuration = {
         auth: {
             clientId: environment.msalConfig.auth.clientId,
             authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
@@ -55,16 +56,18 @@ export function MSALInstanceFactory(): IPublicClientApplication {
         },
         cache: {
             cacheLocation: BrowserCacheLocation.LocalStorage,
+            storeAuthStateInCookie: false, // Set to true for IE 11 or Edge
         },
         system: {
-            allowNativeBroker: false, // Disables WAM Broker
             loggerOptions: {
                 loggerCallback,
                 logLevel: LogLevel.Info,
                 piiLoggingEnabled: false,
             },
         },
-    });
+    };
+
+    return new PublicClientApplication(msalConfig);
 }
 
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
