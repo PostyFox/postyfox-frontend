@@ -17,6 +17,7 @@ describe('FormQuestionComponent', () => {
         component = fixture.componentInstance;
 
         // Set up required inputs with proper constructor parameters
+        const testQuestion = new QuestionBase('test', 'Test Question', 'textbox', false);
         component.question = testQuestion;
         component.form = new FormGroup({
             test: new FormControl(''),
