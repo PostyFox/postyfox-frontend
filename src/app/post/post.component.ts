@@ -31,6 +31,24 @@ export class PostComponent implements OnInit {
     isPosting = false;
 
     ngOnInit(): void {
+        // Initialize editor options first
+        this.editorOptions = {
+            autofocus: false,
+            iconlibrary: 'fa',
+            savable: false,
+            onShow: (e) => (this.bsEditorInstance = e),
+            parser: (val) => this.parse(val),
+        };
+
+        // Initialize markdown text
+        this.markdownText = `### Markdown example
+Post data here blah blah blah
+`;
+
+        // Build form first before loading data
+        this.buildForm(this.markdownText);
+        this.onFormChanges();
+
         // Load user services
         this.servicesService.getUserServices().subscribe(
             (response: any) => {
@@ -55,23 +73,6 @@ export class PostComponent implements OnInit {
                 console.error('Error fetching API tokens:', error);
             },
         );
-
-        this.editorOptions = {
-            autofocus: false,
-            iconlibrary: 'fa',
-            savable: false,
-            onShow: (e) => (this.bsEditorInstance = e),
-            parser: (val) => this.parse(val),
-        };
-
-        // parser: (val) => this.parse(val)
-        // put the text completely on the left to avoid extra white spaces
-        this.markdownText = `### Markdown example
-Post data here blah blah blah
-`;
-
-        this.buildForm(this.markdownText);
-        this.onFormChanges();
     }
 
     buildForm(markdownText: string) {
@@ -113,8 +114,10 @@ Post data here blah blah blah
             if (formData) {
                 this.markdownText = formData.body;
                 // Update selected API token if changed via form
-                if (formData.selectedApiToken && formData.selectedApiToken !== this.selectedApiToken) {
-                    this.selectedApiToken = formData.selectedApiToken;
+                if (formData.selectedApiToken && formData.selectedApiToken !== this.selectedApiToken?.id) {
+                    // Find the actual token object from the ID
+                    const selectedToken = this.userApiTokens.find((token) => token.id === formData.selectedApiToken);
+                    this.selectedApiToken = selectedToken || null;
                 }
             }
         });
@@ -133,7 +136,7 @@ Post data here blah blah blah
             const selectedToken = this.userApiTokens.find((token) => token.id === tokenId);
             if (selectedToken) {
                 this.selectedApiToken = selectedToken;
-                this.templateForm.patchValue({ selectedApiToken: selectedToken });
+                this.templateForm.patchValue({ selectedApiToken: selectedToken.id });
             }
         } else {
             this.selectedApiToken = null;

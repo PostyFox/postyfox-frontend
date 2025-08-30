@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testin
 import { FormBuilder, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { MarkdownModule } from 'ngx-markdown';
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 
 import { PostComponent } from './post.component';
@@ -173,6 +173,7 @@ describe('PostComponent', () => {
             spyOn(window, 'alert');
             spyOn(console, 'error');
             component.selectedApiToken = null;
+            component.templateForm.patchValue({ selectedApiToken: null });
 
             component.post();
 
@@ -209,11 +210,29 @@ describe('PostComponent', () => {
             expect(postRequestArg.tags).toEqual(['tag1', 'tag2', 'tag3']);
         }));
 
-        it('should set isPosting flag during post creation', () => {
+        it('should set isPosting flag during post creation', fakeAsync(() => {
+            // Create a subject to control the observable completion
+            const postSubject = new Subject<PostResponse>();
+            servicesService.createNewPost.and.returnValue(postSubject.asObservable());
+
+            // Set up valid form data to pass validation
+            component.templateForm.patchValue({
+                title: 'Test Title',
+                body: 'Test body',
+                selectedApiToken: mockAPIKey.id,
+            });
+
             component.post();
 
             expect(component.isPosting).toBe(true);
-        });
+
+            // Complete the observable
+            postSubject.next(mockPostResponse);
+            postSubject.complete();
+            tick();
+
+            expect(component.isPosting).toBe(false);
+        }));
     });
 
     describe('platform selection', () => {

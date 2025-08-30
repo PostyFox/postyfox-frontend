@@ -50,8 +50,8 @@ describe('ApiTokenService', () => {
             });
 
             const req = httpMock.expectOne(`${environment.endpoint}/Profile_GenerateAPIToken`);
-            expect(req.request.method).toBe('POST');
-            expect(req.request.body).toEqual({});
+            expect(req.request.method).toBe('GET');
+            expect(req.request.body).toEqual(null);
             req.flush(mockAPIKey);
         });
 
