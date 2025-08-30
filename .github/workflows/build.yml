@@ -33,9 +33,8 @@ jobs:
 
     - name: Test
       run: |
-        # Install Chrome dependencies for headless testing
-        sudo apt-get update
-        sudo apt-get install -y chromium-browser
+        # Use pre-installed Google Chrome for headless testing
+        # No need to install chromium-browser; GitHub Actions runner already has Google Chrome
         # Run tests with Chrome headless
         npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
 
