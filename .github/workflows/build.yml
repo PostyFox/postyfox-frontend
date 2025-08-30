@@ -31,6 +31,14 @@ jobs:
     - name: Lint
       run: npm run lint --if-present
 
+    - name: Test
+      run: |
+        # Install Chrome dependencies for headless testing
+        sudo apt-get update
+        sudo apt-get install -y chromium-browser
+        # Run tests with Chrome headless
+        npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
+
     - name: Build - Production
       run: npm run build --if-present
 
