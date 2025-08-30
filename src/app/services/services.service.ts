@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from 'src/environments/environment';
-import { PostRequest } from './api-models';
+import { PostRequest, PostResponse } from './api-models';
 
 @Injectable({
     providedIn: 'root',
@@ -33,8 +33,8 @@ export class ServicesService {
         return this.http.get(this.userServiceUrl, { params: { service, serviceId } });
     }
 
-    createNewPost(post: PostRequest) {
-        return this.http.post(this.postServiceUrl, { post });
+    createNewPost(post: PostRequest): Observable<PostResponse> {
+        return this.http.post<PostResponse>(this.postServiceUrl, post);
     }
 
     // Add other CRUD methods if needed

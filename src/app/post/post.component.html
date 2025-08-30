@@ -25,6 +25,29 @@
         Telegram Test - 2306745293 - Service is hardcoded for testing! <br />
     </p>
 
+    <!-- API Token Selection -->
+    <div>
+        <label for="apiTokenSelect">Select API Token:</label>
+        <select id="apiTokenSelect" (change)="onApiTokenSelectionChange($event)" formControlName="selectedApiToken">
+            <option value="">Please select an API token</option>
+            <option *ngFor="let token of userApiTokens; trackBy: trackByTokenId" [value]="token.id">
+                API Key: {{ token.apiKey.substring(0, 6) }}... ({{ token.id }})
+            </option>
+        </select>
+        <button type="button" (click)="generateNewApiToken()">Generate New Token</button>
+    </div>
+
+    <!-- Additional form fields -->
+    <div>
+        <label for="titleInput">Title:</label>
+        <input id="titleInput" type="text" formControlName="title" placeholder="Enter post title" />
+    </div>
+
+    <div>
+        <label for="tagsInput">Tags (comma separated):</label>
+        <input id="tagsInput" type="text" formControlName="tags" placeholder="tag1, tag2, tag3" />
+    </div>
+
     <hr />
     <h3 class="text-success bold">Preview</h3>
     <div class="result-preview outline">

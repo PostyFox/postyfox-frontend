@@ -40,3 +40,15 @@ export class PostRequest {
         this.postAt = postAt;
     }
 }
+
+export class PostResponse {
+    public postId: string;
+    public status: number; // 0-4 based on API spec
+    public mediaSavedUri: string;
+
+    constructor(postId: string, status: number, mediaSavedUri: string) {
+        this.postId = postId;
+        this.status = status;
+        this.mediaSavedUri = mediaSavedUri;
+    }
+}
