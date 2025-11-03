@@ -10,31 +10,19 @@ export const environment = {
     postingEndpoint: 'https://dev.post.postyfox.com/api',
     msalConfig: {
         auth: {
-            clientId: '2b89259d-3cc3-41fe-adbf-5f9acb15e622',
+            clientId: '9b930c86-ea5b-40d0-a200-36a152032910',
+            authority: 'https://postyfoxd.ciamlogin.com/postyfoxd.onmicrosoft.com/v2.0',
+            redirectUri: '/',
+            postLogoutRedirectUri: '/',
+        },
+        cache: {
+            cacheLocation: 'localStorage',
+            storeAuthStateInCookie: false,
         },
     },
     apiConfig: {
-        scopes: ['profile', 'https://postyfoxdev.onmicrosoft.com/2b89259d-3cc3-41fe-adbf-5f9acb15e622/Postyfox.Use'],
+        scopes: ['profile'],
         uri: 'https://dev.api.postyfox.com/api',
-    },
-    b2cPolicies: {
-        names: {
-            signUpSignIn: 'B2C_1_Signin',
-            resetPassword: 'B2C_1_reset_v3',
-            editProfile: 'B2C_1_edit_profile_v2',
-        },
-        authorities: {
-            signUpSignIn: {
-                authority: 'https://postyfoxdev.b2clogin.com/postyfoxdev.onmicrosoft.com/B2C_1_Signin',
-            },
-            resetPassword: {
-                authority: 'https://postyfoxdev.b2clogin.com/postyfoxdev.onmicrosoft.com/B2C_1_reset_v3',
-            },
-            editProfile: {
-                authority: 'https://postyfoxdev.b2clogin.com/postyfoxdev.onmicrosoft.com/b2c_1_edit_profile_v2',
-            },
-        },
-        authorityDomain: 'postyfoxdev.b2clogin.com',
     },
 };
 

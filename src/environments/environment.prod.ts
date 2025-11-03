@@ -5,36 +5,24 @@
 // This file is for the settings LOCAL development
 
 export const environment = {
-    production: false,
+    production: true,
     endpoint: 'https://dev.api.postyfox.com/api',
     postingEndpoint: 'https://dev.post.postyfox.com/api',
     msalConfig: {
         auth: {
-            clientId: '2b89259d-3cc3-41fe-adbf-5f9acb15e622',
+            clientId: '<entra-app-client-id>',
+            authority: 'https://login.microsoftonline.com/<entra-tenant-id-or-domain>/',
+            redirectUri: '<your-app-redirect-uri>',
+            postLogoutRedirectUri: '<your-app-post-logout-uri>',
+        },
+        cache: {
+            cacheLocation: 'localStorage',
+            storeAuthStateInCookie: false,
         },
     },
     apiConfig: {
-        scopes: ['profile', 'https://postyfoxdev.onmicrosoft.com/2b89259d-3cc3-41fe-adbf-5f9acb15e622/Postyfox.Use'],
-        uri: '/api/',
-    },
-    b2cPolicies: {
-        names: {
-            signUpSignIn: 'B2C_1_Signin',
-            resetPassword: 'B2C_1_reset_v3',
-            editProfile: 'B2C_1_edit_profile_v2',
-        },
-        authorities: {
-            signUpSignIn: {
-                authority: 'https://postyfoxdev.b2clogin.com/postyfoxdev.onmicrosoft.com/B2C_1_Signin',
-            },
-            resetPassword: {
-                authority: 'https://postyfoxdev.b2clogin.com/postyfoxdev.onmicrosoft.com/B2C_1_reset_v3',
-            },
-            editProfile: {
-                authority: 'https://postyfoxdev.b2clogin.com/postyfoxdev.onmicrosoft.com/b2c_1_edit_profile_v2',
-            },
-        },
-        authorityDomain: 'postyfoxdev.b2clogin.com',
+        scopes: ['openid', 'profile', 'email', '<your-api-scope>'],
+        uri: '<your-api-uri>',
     },
 };
 
