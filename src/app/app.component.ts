@@ -17,16 +17,8 @@ import {
     EventType,
     InteractionType,
     AccountInfo,
-    SsoSilentRequest,
-    IdTokenClaims,
-    PromptValue,
 } from '@azure/msal-browser';
 import { environment } from '../environments/environment';
-
-type IdTokenClaimsWithPolicyId = IdTokenClaims & {
-    acr?: string;
-    tfp?: string;
-};
 
 @Component({
     selector: 'app-root',
@@ -98,90 +90,12 @@ export class AppComponent implements OnInit, OnDestroy {
                 takeUntil(this._destroying$),
             )
             .subscribe((result: EventMessage) => {
-                let payload = result.payload as AuthenticationResult;
-                let idtoken = payload.idTokenClaims as IdTokenClaimsWithPolicyId;
-
-                if (
-                    idtoken.acr === environment.b2cPolicies.names.signUpSignIn ||
-                    idtoken.tfp === environment.b2cPolicies.names.signUpSignIn
-                ) {
-                    this.authService.instance.setActiveAccount(payload.account);
-                }
-
-                /**
-                 * For the purpose of setting an active account for UI update, we want to consider only the auth response resulting
-                 * from SUSI flow. "acr" claim in the id token tells us the policy (NOTE: newer policies may use the "tfp" claim instead).
-                 * To learn more about B2C tokens, visit https://docs.microsoft.com/en-us/azure/active-directory-b2c/tokens-overview
-                 */
-                if (
-                    idtoken.acr === environment.b2cPolicies.names.editProfile ||
-                    idtoken.tfp === environment.b2cPolicies.names.editProfile
-                ) {
-                    // retrieve the account from initial sing-in to the app
-                    const originalSignInAccount = this.authService.instance
-                        .getAllAccounts()
-                        .find(
-                            (account: AccountInfo) =>
-                                account.idTokenClaims?.oid === idtoken.oid &&
-                                account.idTokenClaims?.sub === idtoken.sub &&
-                                ((account.idTokenClaims as IdTokenClaimsWithPolicyId).acr ===
-                                    environment.b2cPolicies.names.signUpSignIn ||
-                                    (account.idTokenClaims as IdTokenClaimsWithPolicyId).tfp ===
-                                        environment.b2cPolicies.names.signUpSignIn),
-                        );
-
-                    let signUpSignInFlowRequest: SsoSilentRequest = {
-                        authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
-                        account: originalSignInAccount,
-                    };
-
-                    // silently login again with the signUpSignIn policy
-                    this.authService.ssoSilent(signUpSignInFlowRequest);
-                }
-
-                /**
-                 * Below we are checking if the user is returning from the reset password flow.
-                 * If so, we will ask the user to reauthenticate with their new password.
-                 * If you do not want this behavior and prefer your users to stay signed in instead,
-                 * you can replace the code below with the same pattern used for handling the return from
-                 * profile edit flow (see above ln. 74-92).
-                 */
-                if (
-                    idtoken.acr === environment.b2cPolicies.names.resetPassword ||
-                    idtoken.tfp === environment.b2cPolicies.names.resetPassword
-                ) {
-                    let signUpSignInFlowRequest: RedirectRequest | PopupRequest = {
-                        authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
-                        prompt: PromptValue.LOGIN, // force user to reauthenticate with their new password
-                        scopes: [...environment.apiConfig.scopes],
-                    };
-
-                    this.login(signUpSignInFlowRequest);
-                }
-
+                const payload = result.payload as AuthenticationResult;
+                this.authService.instance.setActiveAccount(payload.account);
                 return result;
             });
 
-        this.msalBroadcastService.msalSubject$
-            .pipe(
-                filter(
-                    (msg: EventMessage) =>
-                        msg.eventType === EventType.LOGIN_FAILURE || msg.eventType === EventType.ACQUIRE_TOKEN_FAILURE,
-                ),
-                takeUntil(this._destroying$),
-            )
-            .subscribe((result: EventMessage) => {
-                // Checking for the forgot password error. Learn more about B2C error codes at
-                // https://learn.microsoft.com/azure/active-directory-b2c/error-codes
-                if (result.error && result.error.message.indexOf('AADB2C90118') > -1) {
-                    let resetPasswordFlowRequest: RedirectRequest | PopupRequest = {
-                        authority: environment.b2cPolicies.authorities.resetPassword.authority,
-                        scopes: [],
-                    };
-
-                    this.login(resetPasswordFlowRequest);
-                }
-            });
+        // No B2C logic required for Entra tenant
     }
 
     setLoginDisplay() {
@@ -241,15 +155,6 @@ export class AppComponent implements OnInit, OnDestroy {
                 account: activeAccount,
             });
         }
-    }
-
-    editProfile() {
-        let editProfileFlowRequest: RedirectRequest | PopupRequest = {
-            authority: environment.b2cPolicies.authorities.editProfile.authority,
-            scopes: [],
-        };
-
-        this.login(editProfileFlowRequest);
     }
 
     // unsubscribe to events when component is destroyed

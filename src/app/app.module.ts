@@ -49,14 +49,13 @@ export function MSALInstanceFactory(): IPublicClientApplication {
     const msalConfig: Configuration = {
         auth: {
             clientId: environment.msalConfig.auth.clientId,
-            authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
-            redirectUri: '/',
-            postLogoutRedirectUri: '/',
-            knownAuthorities: [environment.b2cPolicies.authorityDomain],
+            authority: environment.msalConfig.auth.authority,
+            redirectUri: environment.msalConfig.auth.redirectUri,
+            postLogoutRedirectUri: environment.msalConfig.auth.postLogoutRedirectUri,
         },
         cache: {
-            cacheLocation: BrowserCacheLocation.LocalStorage,
-            storeAuthStateInCookie: false, // Set to true for IE 11 or Edge
+            cacheLocation: environment.msalConfig.cache.cacheLocation,
+            storeAuthStateInCookie: environment.msalConfig.cache.storeAuthStateInCookie,
         },
         system: {
             loggerOptions: {
