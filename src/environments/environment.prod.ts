@@ -8,17 +8,12 @@ export const environment = {
     production: true,
     endpoint: 'https://dev.api.postyfox.com/api',
     postingEndpoint: 'https://dev.post.postyfox.com/api',
-    msalConfig: {
-        auth: {
-            clientId: '<entra-app-client-id>',
-            authority: 'https://login.microsoftonline.com/<entra-tenant-id-or-domain>/',
-            redirectUri: '<your-app-redirect-uri>',
-            postLogoutRedirectUri: '<your-app-post-logout-uri>',
-        },
-        cache: {
-            cacheLocation: 'localStorage',
-            storeAuthStateInCookie: false,
-        },
+    oidcConfig: {
+        issuer: 'https://keycloak.example.com/realms/postyfox',
+        clientId: '<your-keycloak-client-id>',
+        redirectUri: '/',
+        postLogoutRedirectUri: '/',
+        scope: 'openid profile email',
     },
     apiConfig: {
         scopes: ['openid', 'profile', 'email', '<your-api-scope>'],

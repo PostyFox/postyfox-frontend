@@ -8,17 +8,12 @@ export const environment = {
     production: false,
     endpoint: 'https://dev.api.postyfox.com/api',
     postingEndpoint: 'https://dev.post.postyfox.com/api',
-    msalConfig: {
-        auth: {
-            clientId: '9b930c86-ea5b-40d0-a200-36a152032910',
-            authority: 'https://postyfoxd.ciamlogin.com/postyfoxd.onmicrosoft.com/v2.0',
-            redirectUri: '/',
-            postLogoutRedirectUri: '/',
-        },
-        cache: {
-            cacheLocation: 'localStorage',
-            storeAuthStateInCookie: false,
-        },
+    oidcConfig: {
+        issuer: 'https://keycloak.example.com/realms/postyfox',
+        clientId: '9b930c86-ea5b-40d0-a200-36a152032910',
+        redirectUri: '/',
+        postLogoutRedirectUri: '/',
+        scope: 'openid profile email',
     },
     apiConfig: {
         scopes: ['profile'],

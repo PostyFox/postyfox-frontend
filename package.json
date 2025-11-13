@@ -28,6 +28,7 @@
     "@clr/angular": "^17.11.2",
     "@clr/ui": "^17.11.2",
     "angular-markdown-editor": "^3.1.1",
+    "angular-oauth2-oidc": "^20.0.2",
     "bootstrap": "^5.3.8",
     "font-awesome": "^4.7.0",
     "marked": "^15.0.9",
@@ -49,6 +50,7 @@
     "@types/node": "^24.3.0",
     "@typescript-eslint/eslint-plugin": "^8.41.0",
     "@typescript-eslint/parser": "^8.41.0",
+    "esbuild": ">=0.25.9",
     "eslint": "^9.34.0",
     "eslint-plugin-react": "^7.37.5",
     "husky": "^9.1.7",
@@ -61,7 +63,6 @@
     "lint-staged": "^16.1.5",
     "prettier": "^3.6.2",
     "typescript": "~5.8.3",
-    "esbuild": ">=0.25.9",
     "vite": ">=7.1.3"
   }
 }

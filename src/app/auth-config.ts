@@ -1,16 +1,15 @@
-import { Configuration } from '@azure/msal-browser';
+import { AuthConfig } from 'angular-oauth2-oidc';
 import { environment } from '../environments/environment';
 
-export const msalConfig: Configuration = {
-    auth: {
-        clientId: environment.msalConfig.auth.clientId,
-        authority: environment.b2cPolicies.authorities.signUpSignIn.authority,
-        redirectUri: '/',
-        postLogoutRedirectUri: '/',
-        knownAuthorities: [environment.b2cPolicies.authorityDomain],
-    },
-    cache: {
-        cacheLocation: 'localStorage',
-        storeAuthStateInCookie: false,
-    },
+export const authConfig: AuthConfig = {
+    issuer: environment.oidcConfig.issuer,
+    clientId: environment.oidcConfig.clientId,
+    redirectUri: window.location.origin + (environment.oidcConfig.redirectUri || '/'),
+    postLogoutRedirectUri: window.location.origin + (environment.oidcConfig.postLogoutRedirectUri || '/'),
+    scope: environment.oidcConfig.scope || 'openid profile email',
+    responseType: 'code',
+    requireHttps: environment.production,
+    showDebugInformation: !environment.production,
+    sessionChecksEnabled: true,
+    clearHashAfterLogin: true,
 };

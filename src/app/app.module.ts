@@ -11,27 +11,7 @@ import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import {
-    IPublicClientApplication,
-    PublicClientApplication,
-    InteractionType,
-    BrowserCacheLocation,
-    LogLevel,
-    Configuration,
-} from '@azure/msal-browser';
-import {
-    MsalGuard,
-    MsalInterceptor,
-    MsalBroadcastService,
-    MsalInterceptorConfiguration,
-    MsalModule,
-    MsalService,
-    MSAL_GUARD_CONFIG,
-    MSAL_INSTANCE,
-    MSAL_INTERCEPTOR_CONFIG,
-    MsalGuardConfiguration,
-    MsalRedirectComponent,
-} from '@azure/msal-angular';
+import { OAuthModule, OAuthStorage } from 'angular-oauth2-oidc';
 
 import { PostComponent } from './post/post.component';
 
@@ -41,58 +21,9 @@ import { UserservicedialogComponent } from './userservicedialog/userservicedialo
 import { FormQuestionComponent } from './form-question/form-question.component';
 import { FormService } from './services/form.service';
 
-export function loggerCallback(logLevel: LogLevel, message: string) {
-    console.log(message);
-}
-
-export function MSALInstanceFactory(): IPublicClientApplication {
-    const msalConfig: Configuration = {
-        auth: {
-            clientId: environment.msalConfig.auth.clientId,
-            authority: environment.msalConfig.auth.authority,
-            redirectUri: environment.msalConfig.auth.redirectUri,
-            postLogoutRedirectUri: environment.msalConfig.auth.postLogoutRedirectUri,
-        },
-        cache: {
-            cacheLocation: environment.msalConfig.cache.cacheLocation,
-            storeAuthStateInCookie: environment.msalConfig.cache.storeAuthStateInCookie,
-        },
-        system: {
-            loggerOptions: {
-                loggerCallback,
-                logLevel: LogLevel.Info,
-                piiLoggingEnabled: false,
-            },
-        },
-    };
-
-    return new PublicClientApplication(msalConfig);
-}
-
-export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
-    const protectedResourceMap = new Map<string, Array<string>>();
-
-    protectedResourceMap.set(environment.apiConfig.uri, environment.apiConfig.scopes);
-
-    return {
-        interactionType: InteractionType.Redirect,
-        protectedResourceMap,
-    };
-}
-
-export function MSALGuardConfigFactory(): MsalGuardConfiguration {
-    return {
-        interactionType: InteractionType.Redirect,
-        authRequest: {
-            scopes: [...environment.apiConfig.scopes],
-        },
-        loginFailedRoute: '/login-failed',
-    };
-}
-
 @NgModule({
     declarations: [AppComponent, HomeComponent, PostComponent, UserservicedialogComponent],
-    bootstrap: [AppComponent, MsalRedirectComponent],
+    bootstrap: [AppComponent],
     imports: [
         BrowserModule,
         BrowserAnimationsModule,
@@ -100,7 +31,12 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
         AppRoutingModule,
         FormsModule,
         ReactiveFormsModule,
-        MsalModule,
+        OAuthModule.forRoot({
+            resourceServer: {
+                allowedUrls: [environment.endpoint, environment.postingEndpoint],
+                sendAccessToken: true,
+            },
+        }),
         MarkdownModule.forRoot(),
         AngularMarkdownEditorModule.forRoot({
             // add any Global Options/Config you might want
@@ -111,25 +47,9 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
     ],
     providers: [
         {
-            provide: HTTP_INTERCEPTORS,
-            useClass: MsalInterceptor,
-            multi: true,
+            provide: OAuthStorage,
+            useValue: localStorage,
         },
-        {
-            provide: MSAL_INSTANCE,
-            useFactory: MSALInstanceFactory,
-        },
-        {
-            provide: MSAL_GUARD_CONFIG,
-            useFactory: MSALGuardConfigFactory,
-        },
-        {
-            provide: MSAL_INTERCEPTOR_CONFIG,
-            useFactory: MSALInterceptorConfigFactory,
-        },
-        MsalGuard,
-        MsalService,
-        MsalBroadcastService,
         FormService,
         provideHttpClient(withInterceptorsFromDi()),
     ],
