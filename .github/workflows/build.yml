@@ -9,77 +9,183 @@ on:
   #     - main
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
-  build:
-    name: 'Build SPA'
+  build-and-push:
+    name: 'Build and Push Docker Images'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     outputs:
-      output1: ${{ steps.upload-dev-spa.artifact-id }}
+      dev-image: ${{ steps.meta-dev.outputs.tags }}
+      prod-image: ${{ steps.meta-prod.outputs.tags }}
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v5
 
-    - name: Use Node.js
-      uses: actions/setup-node@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
       with:
-        node-version: '24.x'
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Install dependencies
-      run: npm ci
-
-    - name: Lint
-      run: npm run lint --if-present
-
-    - name: Test
-      run: |
-        # Use pre-installed Google Chrome for headless testing
-        # No need to install chromium-browser; GitHub Actions runner already has Google Chrome
-        # Run tests with Chrome headless
-        npm test -- --watch=false --browsers=ChromeHeadless --code-coverage
-
-    - name: Build - Production
-      run: npm run build --if-present
-
-    - name: Archive production artifacts
-      uses: actions/upload-artifact@v4
+    - name: Extract metadata for development image
+      id: meta-dev
+      uses: docker/metadata-action@v5
       with:
-        name: prod-spa
-        path: dist/spa
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch,suffix=-dev
+          type=sha,prefix=dev-,format=short
+          type=raw,value=dev-latest
 
-    - name: Build - Development
-      run: npm run build-dev --if-present
-
-    - name: Archive production artifacts
-      uses: actions/upload-artifact@v4
-      id: upload-dev-spa
+    - name: Build and push development Docker image
+      uses: docker/build-push-action@v5
       with:
-        name: dev-spa
-        path: dist/spa
+        context: .
+        push: true
+        tags: ${{ steps.meta-dev.outputs.tags }}
+        labels: ${{ steps.meta-dev.outputs.labels }}
+        build-args: |
+          BUILD_ENV=dev
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-  deploy:
-    name: 'Deploy environment'
+    - name: Extract metadata for production image
+      id: meta-prod
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix=prod-,format=short
+          type=raw,value=latest
+
+    - name: Build and push production Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta-prod.outputs.tags }}
+        labels: ${{ steps.meta-prod.outputs.labels }}
+        build-args: |
+          BUILD_ENV=production
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy-dev:
+    name: 'Deploy to Development'
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [build-and-push]
+    environment:
+      name: development
+      url: ${{ steps.deploy.outputs.container-app-url }}
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-    - uses: actions/download-artifact@v4
-      with:
-        name: dev-spa
-        path: ./dist/spa
-
     - name: Azure Login
-      shell: pwsh
-      run: |
-        az login --service-principal -u $env:ARM_CLIENT_ID -p $env:ARM_CLIENT_SECRET --tenant $env:ARM_TENANT_ID
-      env:
-        ARM_CLIENT_ID: ${{ vars.ARM_CLIENT_ID }}
-        ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
-        ARM_TENANT_ID: ${{ vars.ARM_TENANT_ID }}
-        ARM_SUBSCRIPTION_ID: ${{ vars.ARM_SUBSCRIPTION_ID }}
-
-    - name: Upload to blob storage
-      uses: azure/CLI@v1
+      uses: azure/login@v2
       with:
-        inlineScript: |
-          az storage blob upload-batch --account-name postyfoxspastordev  --auth-mode login -d '$web' -s ./dist/spa --overwrite
+        client-id: ${{ vars.ARM_CLIENT_ID }}
+        tenant-id: ${{ vars.ARM_TENANT_ID }}
+        subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+
+    - name: Deploy to Azure Container Apps (Development)
+      id: deploy
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        containerAppName: ${{ vars.CONTAINER_APP_NAME_DEV || 'postyfox-frontend-dev' }}
+        resourceGroup: ${{ vars.AZURE_RESOURCE_GROUP }}
+        imageToDeploy: ${{ needs.build-and-push.outputs.dev-image }}
+        targetPort: 80
+
+    - name: Deployment Summary
+      run: |
+        echo "### Development Deployment Successful" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Environment:** Development" >> $GITHUB_STEP_SUMMARY
+        echo "**Image:** \`${{ needs.build-and-push.outputs.dev-image }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Container App:** \`${{ vars.CONTAINER_APP_NAME_DEV || 'postyfox-frontend-dev' }}\`" >> $GITHUB_STEP_SUMMARY
+
+  deploy-test:
+    name: 'Deploy to Test'
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-dev]
+    environment:
+      name: test
+      url: ${{ steps.deploy.outputs.container-app-url }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ vars.ARM_CLIENT_ID }}
+        tenant-id: ${{ vars.ARM_TENANT_ID }}
+        subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+
+    - name: Deploy to Azure Container Apps (Test)
+      id: deploy
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        containerAppName: ${{ vars.CONTAINER_APP_NAME_TEST || 'postyfox-frontend-test' }}
+        resourceGroup: ${{ vars.AZURE_RESOURCE_GROUP }}
+        imageToDeploy: ${{ needs.build-and-push.outputs.prod-image }}
+        targetPort: 80
+
+    - name: Deployment Summary
+      run: |
+        echo "### Test Deployment Successful" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Environment:** Test" >> $GITHUB_STEP_SUMMARY
+        echo "**Image:** \`${{ needs.build-and-push.outputs.prod-image }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Container App:** \`${{ vars.CONTAINER_APP_NAME_TEST || 'postyfox-frontend-test' }}\`" >> $GITHUB_STEP_SUMMARY
+
+  deploy-prod:
+    name: 'Deploy to Production'
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-test]
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.container-app-url }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ vars.ARM_CLIENT_ID }}
+        tenant-id: ${{ vars.ARM_TENANT_ID }}
+        subscription-id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+
+    - name: Deploy to Azure Container Apps (Production)
+      id: deploy
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        containerAppName: ${{ vars.CONTAINER_APP_NAME_PROD || 'postyfox-frontend-prod' }}
+        resourceGroup: ${{ vars.AZURE_RESOURCE_GROUP }}
+        imageToDeploy: ${{ needs.build-and-push.outputs.prod-image }}
+        targetPort: 80
+
+    - name: Deployment Summary
+      run: |
+        echo "### Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+        echo "**Image:** \`${{ needs.build-and-push.outputs.prod-image }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Container App:** \`${{ vars.CONTAINER_APP_NAME_PROD || 'postyfox-frontend-prod' }}\`" >> $GITHUB_STEP_SUMMARY

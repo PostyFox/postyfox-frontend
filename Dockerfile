@@ -1,6 +1,9 @@
 # Stage 1: Build the Angular application
 FROM node:20-alpine AS build
 
+# Build argument to determine environment (production or dev)
+ARG BUILD_ENV=production
+
 # Set working directory
 WORKDIR /app
 
@@ -13,8 +16,12 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the Angular app for production
-RUN npm run build -- --configuration production
+# Build the Angular app based on BUILD_ENV argument
+RUN if [ "$BUILD_ENV" = "dev" ]; then \
+      npm run build-dev; \
+    else \
+      npm run build -- --configuration production; \
+    fi
 
 # Stage 2: Serve with nginx
 FROM nginx:alpine
