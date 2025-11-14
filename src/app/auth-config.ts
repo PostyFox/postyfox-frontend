@@ -12,4 +12,5 @@ export const authConfig: AuthConfig = {
     showDebugInformation: !environment.production,
     sessionChecksEnabled: true,
     clearHashAfterLogin: true,
+    // PKCE is automatically used for public clients with responseType: 'code'
 };

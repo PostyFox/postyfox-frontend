@@ -9,15 +9,15 @@ export const environment = {
     endpoint: 'https://dev.api.postyfox.com/api',
     postingEndpoint: 'https://dev.post.postyfox.com/api',
     oidcConfig: {
-        issuer: 'https://keycloak.example.com/realms/postyfox',
-        clientId: '<your-keycloak-client-id>',
+        issuer: 'https://keycloak.furryfandom.me/realms/PostyFox',
+        clientId: '9b930c86-ea5b-40d0-a200-36a152032910',
         redirectUri: '/',
         postLogoutRedirectUri: '/',
-        scope: 'openid profile email',
+        scope: 'profile email',
     },
     apiConfig: {
-        scopes: ['openid', 'profile', 'email', '<your-api-scope>'],
-        uri: '<your-api-uri>',
+        scopes: ['profile'],
+        uri: 'https://dev.api.postyfox.com/api',
     },
 };
 

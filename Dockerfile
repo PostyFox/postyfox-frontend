@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --legacy-peer-deps
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -23,7 +23,7 @@ FROM nginx:alpine
 # COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy built app from build stage
-COPY --from=build /app/dist/posty-fox /usr/share/nginx/html
+COPY --from=build /app/dist/spa /usr/share/nginx/html
 
 # Expose port 80
 EXPOSE 80

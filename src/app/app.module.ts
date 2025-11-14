@@ -11,7 +11,7 @@ import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { OAuthModule, OAuthStorage } from 'angular-oauth2-oidc';
+import { OAuthModule, OAuthStorage, OAuthService } from 'angular-oauth2-oidc';
 
 import { PostComponent } from './post/post.component';
 
@@ -51,6 +51,7 @@ import { FormService } from './services/form.service';
             useValue: localStorage,
         },
         FormService,
+        OAuthService,
         provideHttpClient(withInterceptorsFromDi()),
     ],
 })
