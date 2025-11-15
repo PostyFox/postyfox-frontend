@@ -9,7 +9,7 @@ export const environment = {
     endpoint: 'https://dev.api.postyfox.com/api',
     postingEndpoint: 'https://dev.post.postyfox.com/api',
     oidcConfig: {
-        issuer: 'https://keycloak.furryfandom.me/realms/PostyFox',
+        issuer: 'https://auth.postyfox.com/realms/PostyFox',
         clientId: '9b930c86-ea5b-40d0-a200-36a152032910',
         redirectUri: '/',
         postLogoutRedirectUri: '/',
