@@ -11,7 +11,7 @@ on:
 
 env:
   REGISTRY: ${{ vars.PROGET_SERVER }}
-  IMAGE_NAME: postyfox/frontend
+  IMAGE_NAME: docker/postyfox-frontend
 
 jobs:
   build-and-push:
