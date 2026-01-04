@@ -34,7 +34,7 @@ jobs:
     - name: Log in to ProGet
       uses: docker/login-action@v3
       with:
-        registry: ${{ env.PROGET_SERVER }}
+        registry: ${{ env.REGISTRY }}
         username: api
         password: ${{ secrets.PROGET_API_KEY }}
 
