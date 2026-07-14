@@ -1,31 +1,17 @@
-// This file can be replaced during build by using the `fileReplacements` array.
-// `ng build` replaces `environment.ts` with `environment.prod.ts`.
-// The list of file replacements can be found in `angular.json`.
-
-// This file is for the settings LOCAL development
-
-export const environment = {
-    production: false,
-    endpoint: 'https://dev.api.postyfox.com/api',
-    postingEndpoint: 'https://dev.post.postyfox.com/api',
-    oidcConfig: {
-        issuer: 'https://auth.postyfox.com/realms/PostyFox',
-        clientId: '9b930c86-ea5b-40d0-a200-000000000010',
-        redirectUri: '/',
-        postLogoutRedirectUri: '/',
-        scope: 'profile email',
-    },
-    apiConfig: {
-        scopes: ['profile'],
-        uri: 'https://dev.api.postyfox.com/api',
-    },
-};
-
-/*
- * For easier debugging in development mode, you can import the following file
- * to ignore zone related error stack frames such as `zone.run`, `zoneDelegate.invokeTask`.
+/**
+ * Base (local development) environment.
  *
- * This import should be commented out in production mode because it will have a negative impact
- * on performance if an error is thrown.
+ * The SPA is served *behind* the oauth2-proxy edge, so every request is same-origin:
+ *  - `/api/*`     is path-routed by the gateway to core-api / post-api, with the proxy
+ *                 attaching the validated `Authorization: Bearer` token. The browser holds no tokens.
+ *  - `/oauth2/*`  are oauth2-proxy's own endpoints (userinfo, sign_in, sign_out).
+ *
+ * In `ng serve`, proxy.conf.json forwards these prefixes to a running edge (default :4180).
  */
-// import 'zone.js/plugins/zone-error';  // Included with Angular CLI.
+export const environment = {
+  production: false,
+  /** Prefix for all PostyFox core-api / post-api calls (path-routed by the gateway). */
+  apiBaseUrl: '/api',
+  /** oauth2-proxy endpoint prefix. */
+  oauth2BaseUrl: '/oauth2',
+};

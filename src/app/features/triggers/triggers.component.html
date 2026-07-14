@@ -1,0 +1,166 @@
+<app-page-header
+  title="Triggers"
+  subtitle="Fire a templated post when an external event arrives via signed webhook"
+>
+  <button
+    class="btn btn-primary"
+    (click)="openForm()"
+    [disabled]="enabledConnectors().length === 0"
+  >
+    <i class="bi bi-plus-lg me-1"></i> Register trigger
+  </button>
+</app-page-header>
+
+@if (!loading() && enabledConnectors().length === 0) {
+  <div class="alert alert-warning d-flex align-items-center gap-2">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <span>You need at least one enabled connector before you can register a trigger.</span>
+  </div>
+}
+
+@if (loading()) {
+  <div class="card">
+    <div class="card-body placeholder-glow">
+      <span class="placeholder col-12 mb-2"></span><span class="placeholder col-8"></span>
+    </div>
+  </div>
+} @else if (list().length === 0) {
+  <div class="card">
+    <div class="card-body">
+      <app-empty-state
+        icon="bi-lightning-charge"
+        title="No triggers registered"
+        text="Register interest in an external account so inbound webhooks post automatically."
+      ></app-empty-state>
+    </div>
+  </div>
+} @else {
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>External account</th>
+            <th>Target connector</th>
+            <th>Template</th>
+            <th>Frequency</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of list(); track t.id) {
+            <tr>
+              <td>
+                <span class="badge bg-label-primary">{{ t.sourceType }}</span>
+              </td>
+              <td class="fw-medium">{{ t.externalAccount }}</td>
+              <td>{{ connectorName(t.targetConnectorId) }}</td>
+              <td class="text-muted-2">{{ templateName(t.templateId) }}</td>
+              <td>every {{ t.notifyFrequencyHrs }}h</td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-danger" (click)="remove(t)" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+<!-- Register form modal -->
+@if (showForm()) {
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Register trigger</h5>
+          <button type="button" class="btn-close" (click)="closeForm()"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="srcType">Source type</label>
+            <select
+              id="srcType"
+              class="form-select"
+              [ngModel]="form().sourceType"
+              (ngModelChange)="patch('sourceType', $event)"
+            >
+              @for (s of sourceTypes; track s) {
+                <option [value]="s">{{ s }}</option>
+              }
+            </select>
+            <div class="form-text">
+              Inbound webhooks are delivered to <code>/api/webhooks/{{ form().sourceType }}</code>
+              (HMAC-signed).
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="extAcct">External account</label>
+            <input
+              id="extAcct"
+              class="form-control"
+              placeholder="Identifier the source sends for this account"
+              [ngModel]="form().externalAccount"
+              (ngModelChange)="patch('externalAccount', $event)"
+            />
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="target">Target connector</label>
+            <select
+              id="target"
+              class="form-select"
+              [ngModel]="form().targetConnectorId"
+              (ngModelChange)="patch('targetConnectorId', $event)"
+            >
+              <option value="" disabled>Choose a connector…</option>
+              @for (c of enabledConnectors(); track c.id) {
+                <option [value]="c.id">{{ c.displayName }} ({{ c.platform }})</option>
+              }
+            </select>
+          </div>
+          <div class="row g-3">
+            <div class="col-sm-7">
+              <label class="form-label" for="tpl">Template (optional)</label>
+              <select
+                id="tpl"
+                class="form-select"
+                [ngModel]="form().templateId"
+                (ngModelChange)="patch('templateId', $event)"
+              >
+                <option value="">None</option>
+                @for (t of templateList(); track t.id) {
+                  <option [value]="t.id">{{ t.title }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-sm-5">
+              <label class="form-label" for="freq">Frequency (hours)</label>
+              <input
+                id="freq"
+                type="number"
+                min="0"
+                class="form-control"
+                [ngModel]="form().notifyFrequencyHrs"
+                (ngModelChange)="patch('notifyFrequencyHrs', $event)"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="closeForm()">Cancel</button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="saving()">
+            @if (saving()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Register
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show"></div>
+}

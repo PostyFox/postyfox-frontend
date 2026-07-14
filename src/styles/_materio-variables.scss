@@ -1,0 +1,90 @@
+// ---------------------------------------------------------------------------
+// Materio-inspired Bootstrap 5 variable overrides.
+// Design tokens lifted from the MIT-licensed Materio Bootstrap free template
+// (ThemeSelection). Must be imported BEFORE bootstrap/scss/bootstrap.
+// ---------------------------------------------------------------------------
+
+// Grays (Materio scale)
+$white: #fff;
+$gray-25: #fafafa;
+$gray-50: #f2f2f3;
+$gray-100: #eae9ec;
+$gray-200: #d5d4d8;
+$gray-300: #c0bec5;
+$gray-400: #aba8b1;
+$gray-500: #97939e;
+$gray-600: #827d8b;
+$gray-700: #6d6777;
+$gray-800: #585164;
+$gray-900: #433c50;
+$black: #000;
+
+// Brand palette
+$purple: #8c57ff;
+$blue: #16b1ff;
+$green: #56ca00;
+$orange: #ffb400;
+$red: #ff4c51;
+$cyan: #28c3d7;
+
+$primary: $purple;
+$secondary: #8a8d93;
+$success: $green;
+$info: $blue;
+$warning: $orange;
+$danger: $red;
+$light: #dfdfe3;
+$dark: #312d4b;
+
+// Body / typography
+$body-bg: #f4f5fa;
+$body-color: $gray-700;
+$font-family-sans-serif:
+  'Inter',
+  -apple-system,
+  blinkmacsystemfont,
+  'Segoe UI',
+  'Roboto',
+  'Helvetica Neue',
+  sans-serif;
+$font-size-base: 0.9375rem;
+$headings-font-weight: 500;
+$headings-color: $gray-900;
+$link-color: $primary;
+$link-decoration: none;
+
+// Radii
+$border-radius: 0.375rem;
+$border-radius-sm: 0.25rem;
+$border-radius-lg: 0.5rem;
+$border-radius-xl: 0.625rem;
+$border-radius-xxl: 1rem;
+
+// Cards — borderless with the signature soft shadow
+$card-border-width: 0;
+$card-border-radius: 0.625rem;
+$card-spacer-y: 1.5rem;
+$card-spacer-x: 1.5rem;
+$card-cap-bg: transparent;
+$card-bg: $white;
+
+// Components
+$border-color: #e6e6e8;
+$input-border-color: #d1d0d4;
+$component-active-bg: $primary;
+$focus-ring-color: rgba($primary, 0.25);
+$box-shadow: 0 0.25rem 1.125rem -0.1875rem rgba(47, 43, 61, 0.1);
+$box-shadow-sm: 0 0.125rem 0.5rem 0 rgba(47, 43, 61, 0.12);
+$box-shadow-lg: 0 0.5rem 1.75rem 0 rgba(47, 43, 61, 0.18);
+
+// Buttons
+$btn-font-weight: 500;
+$btn-box-shadow: none;
+
+// Tables
+$table-cell-padding-y: 0.75rem;
+$table-cell-padding-x: 1.25rem;
+
+// Enable niceties
+$enable-shadows: true;
+$enable-negative-margins: true;
