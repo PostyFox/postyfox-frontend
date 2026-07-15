@@ -1,0 +1,410 @@
+<app-page-header title="Connectors" subtitle="Connect the platforms you want to post to">
+  <button class="btn btn-primary" (click)="startAdd()">
+    <i class="bi bi-plus-lg me-1"></i> Add connector
+  </button>
+</app-page-header>
+
+@if (loading()) {
+  <div class="row g-4">
+    @for (i of [1, 2, 3]; track i) {
+      <div class="col-md-6 col-xl-4">
+        <div class="card">
+          <div class="card-body placeholder-glow">
+            <span class="placeholder col-6 mb-2"></span><span class="placeholder col-10"></span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+} @else if (list().length === 0) {
+  <div class="card">
+    <div class="card-body">
+      <app-empty-state
+        icon="bi-plug"
+        title="No connectors yet"
+        text="Add a connector to start delivering posts to Discord, Telegram, BlueSky or Tumblr."
+      >
+        <button class="btn btn-primary" (click)="startAdd()">
+          <i class="bi bi-plus-lg me-1"></i> Add your first connector
+        </button>
+      </app-empty-state>
+    </div>
+  </div>
+} @else {
+  <div class="row g-4">
+    @for (c of list(); track c.id) {
+      <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <span
+                class="avatar"
+                [style.background]="brand(c.platform).color + '22'"
+                [style.color]="brand(c.platform).color"
+              >
+                <i class="bi" [class]="brand(c.platform).icon"></i>
+              </span>
+              <div class="flex-grow-1 min-w-0">
+                <h6 class="mb-0 text-truncate">{{ c.displayName }}</h6>
+                <small class="text-muted-2">{{ brand(c.platform).label }}</small>
+              </div>
+              @if (c.enabled) {
+                <span class="badge bg-label-success">Enabled</span>
+              } @else {
+                <span class="badge bg-label-secondary">Disabled</span>
+              }
+            </div>
+
+            <!-- Capability chips -->
+            <div class="d-flex flex-wrap gap-1 mb-3">
+              @for (chip of chipsForPlatform(c.platform); track chip.label) {
+                <span
+                  class="badge d-inline-flex align-items-center gap-1"
+                  [class.bg-label-primary]="chip.on"
+                  [class.bg-label-secondary]="!chip.on"
+                  [class.opacity-50]="!chip.on"
+                >
+                  <i class="bi {{ chip.icon }}"></i>{{ chip.label }}
+                </span>
+              }
+            </div>
+
+            <!-- Auth state -->
+            <div class="mb-3">
+              @if (authStates()[c.id]; as entry) {
+                @if (entry.loading) {
+                  <span class="text-muted-2 small">
+                    <span class="spinner-border spinner-border-sm me-1"></span>Checking…
+                  </span>
+                } @else if (entry.state) {
+                  @if (entry.state; as st) {
+                    @if (st.isAuthenticated) {
+                      <span class="badge bg-label-success"
+                        ><i class="bi bi-check-circle me-1"></i>Authenticated</span
+                      >
+                    } @else {
+                      <span class="badge bg-label-danger"
+                        ><i class="bi bi-x-circle me-1"></i>Not authenticated</span
+                      >
+                    }
+                    @if (st.detail) {
+                      <div class="small text-muted-2 mt-1">{{ st.detail }}</div>
+                    }
+                  }
+                }
+              } @else {
+                <button class="btn btn-sm btn-outline-secondary" (click)="checkAuth(c)">
+                  <i class="bi bi-shield-check me-1"></i> Check auth
+                </button>
+              }
+            </div>
+
+            <div class="mt-auto d-flex flex-wrap gap-2">
+              <button class="btn btn-sm btn-outline-primary" (click)="editConnector(c)">
+                <i class="bi bi-pencil me-1"></i> Edit
+              </button>
+              <button class="btn btn-sm btn-outline-secondary" (click)="openTargets(c)">
+                <i class="bi bi-bullseye me-1"></i> Targets
+              </button>
+              @if (isTelegram(c)) {
+                <button class="btn btn-sm btn-outline-info" (click)="startTelegram(c)">
+                  <i class="bi bi-telegram me-1"></i> Log in
+                </button>
+              }
+              <button
+                class="btn btn-sm btn-outline-danger ms-auto"
+                (click)="remove(c)"
+                title="Delete"
+              >
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Service picker modal -->
+@if (picking()) {
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Choose a platform</h5>
+          <button type="button" class="btn-close" (click)="picking.set(false)"></button>
+        </div>
+        <div class="modal-body">
+          <div class="list-group">
+            @for (def of enabledCatalogue(); track def.id) {
+              <button
+                class="list-group-item list-group-item-action d-flex align-items-center gap-3"
+                (click)="pickService(def)"
+              >
+                <span
+                  class="avatar"
+                  [style.background]="brand(def.platform).color + '22'"
+                  [style.color]="brand(def.platform).color"
+                >
+                  <i class="bi" [class]="brand(def.platform).icon"></i>
+                </span>
+                <span class="flex-grow-1 text-start min-w-0">
+                  <span class="fw-medium d-block">{{ def.name }}</span>
+                  <small class="text-muted-2 d-block text-truncate">{{
+                    brand(def.platform).blurb || def.platform
+                  }}</small>
+                  <span class="d-flex flex-wrap gap-1 mt-1">
+                    @for (chip of chipsForDef(def); track chip.label) {
+                      <span
+                        class="badge d-inline-flex align-items-center gap-1"
+                        [class.bg-label-primary]="chip.on"
+                        [class.bg-label-secondary]="!chip.on"
+                        [class.opacity-50]="!chip.on"
+                      >
+                        <i class="bi {{ chip.icon }}"></i>{{ chip.label }}
+                      </span>
+                    }
+                  </span>
+                </span>
+                <i class="bi bi-chevron-right text-muted-2"></i>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Editor modal -->
+@if (editor(); as e) {
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title d-flex align-items-center gap-2">
+            <i
+              class="bi"
+              [class]="brand(e.platform).icon"
+              [style.color]="brand(e.platform).color"
+            ></i>
+            {{ e.id ? 'Edit' : 'Add' }} {{ brand(e.platform).label }} connector
+          </h5>
+          <button type="button" class="btn-close" (click)="closeEditor()"></button>
+        </div>
+        <div class="modal-body">
+          @if (brand(e.platform).blurb) {
+            <p class="text-muted-2">{{ brand(e.platform).blurb }}</p>
+          }
+          @if (brand(e.platform).setup) {
+            <div class="alert alert-info d-flex align-items-start gap-2 py-2">
+              <i class="bi bi-info-circle-fill mt-1"></i>
+              <span class="small">{{ brand(e.platform).setup }}</span>
+            </div>
+          }
+
+          <div class="mb-3">
+            <label class="form-label" for="dispName">Display name</label>
+            <input
+              id="dispName"
+              class="form-control"
+              [ngModel]="e.displayName"
+              (ngModelChange)="patchDisplayName($event)"
+            />
+          </div>
+
+          @if (e.configFields.length) {
+            <h6 class="text-muted-2 text-uppercase small mt-4">Configuration</h6>
+            @for (key of e.configFields; track key) {
+              <div class="mb-3">
+                <label class="form-label" [for]="'cfg-' + key">{{ field(key).label }}</label>
+                <input
+                  [id]="'cfg-' + key"
+                  class="form-control"
+                  [class.is-invalid]="configErrors()[key]"
+                  [type]="field(key).type || 'text'"
+                  [placeholder]="field(key).placeholder || ''"
+                  [ngModel]="e.config[key]"
+                  (ngModelChange)="patchConfig(key, $event)"
+                />
+                @if (configErrors()[key]; as err) {
+                  <div class="invalid-feedback d-block">{{ err }}</div>
+                }
+                @if (field(key); as fm) {
+                  @if (fm.help) {
+                    <div class="form-text">{{ fm.help }}</div>
+                  }
+                  @if (fm.link) {
+                    <div class="form-text">
+                      <a [href]="fm.link.href" target="_blank" rel="noopener">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>{{ fm.link.text }}
+                      </a>
+                    </div>
+                  }
+                }
+              </div>
+            }
+          }
+
+          @if (supportsOAuth(e.platform)) {
+            <h6 class="text-muted-2 text-uppercase small mt-4">Connection</h6>
+            <p class="small text-muted-2">
+              Authorize PostyFox to post on your behalf — no tokens to copy or paste.
+            </p>
+            <button
+              class="btn btn-outline-primary"
+              (click)="connect()"
+              [disabled]="connecting() || !e.displayName.trim() || hasConfigErrors()"
+            >
+              @if (connecting()) {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+              } @else {
+                <i class="bi bi-box-arrow-up-right me-1"></i>
+              }
+              {{ e.id ? 'Reconnect' : 'Save & connect' }} {{ brand(e.platform).label }}
+            </button>
+          }
+
+          @if (e.secureFields.length) {
+            <h6 class="text-muted-2 text-uppercase small mt-4">
+              Secrets <i class="bi bi-shield-lock ms-1"></i>
+            </h6>
+            @if (e.hasExistingSecret) {
+              <p class="small text-muted-2">Leave blank to keep the stored secret unchanged.</p>
+            }
+            @for (key of e.secureFields; track key) {
+              <div class="mb-3">
+                <label class="form-label" [for]="'sec-' + key">{{ field(key).label }}</label>
+                <input
+                  [id]="'sec-' + key"
+                  type="password"
+                  autocomplete="new-password"
+                  class="form-control"
+                  [ngModel]="e.secure[key]"
+                  (ngModelChange)="patchSecure(key, $event)"
+                />
+                @if (field(key); as fm) {
+                  @if (fm.help) {
+                    <div class="form-text">{{ fm.help }}</div>
+                  }
+                  @if (fm.link) {
+                    <div class="form-text">
+                      <a [href]="fm.link.href" target="_blank" rel="noopener">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>{{ fm.link.text }}
+                      </a>
+                    </div>
+                  }
+                }
+              </div>
+            }
+          }
+
+          <div class="form-check form-switch mt-3">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="enabledSwitch"
+              [ngModel]="e.enabled"
+              (ngModelChange)="patchEnabled($event)"
+            />
+            <label class="form-check-label" for="enabledSwitch">Enabled</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="closeEditor()">Cancel</button>
+          <button
+            class="btn btn-primary"
+            (click)="save()"
+            [disabled]="saving() || !e.displayName.trim() || hasConfigErrors()"
+          >
+            @if (saving()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Save connector
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Targets modal -->
+@if (targetsFor(); as c) {
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Targets — {{ c.displayName }}</h5>
+          <button type="button" class="btn-close" (click)="closeTargets()"></button>
+        </div>
+        <div class="modal-body">
+          @if (targetsLoading()) {
+            <div class="text-center py-3">
+              <span class="spinner-border spinner-border-sm me-1"></span> Loading targets…
+            </div>
+          } @else if (targets()?.length) {
+            <ul class="list-group">
+              @for (t of targets(); track t.id) {
+                <li class="list-group-item d-flex justify-content-between">
+                  <span class="fw-medium">{{ t.name }}</span>
+                  <code class="text-muted-2">{{ t.id }}</code>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="text-muted-2 mb-0">No delivery targets available for this connector.</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show"></div>
+}
+
+<!-- Telegram login modal -->
+@if (telegram(); as c) {
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-telegram me-2"></i>Telegram login — {{ c.displayName }}
+          </h5>
+          <button type="button" class="btn-close" (click)="closeTelegram()"></button>
+        </div>
+        <div class="modal-body">
+          @if (telegramBusy() && !telegramStep()) {
+            <div class="text-center py-3">
+              <span class="spinner-border spinner-border-sm me-1"></span> Starting login…
+            </div>
+          } @else if (telegramStep()) {
+            @if (telegramStep(); as step) {
+              <label class="form-label">{{ step.label || 'Enter the requested value' }}</label>
+              <input
+                class="form-control"
+                [type]="step.input === 'password' ? 'password' : 'text'"
+                [ngModel]="telegramValue()"
+                (ngModelChange)="telegramValue.set($event)"
+                (keyup.enter)="advanceTelegram()"
+                autofocus
+              />
+            }
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="closeTelegram()">Cancel</button>
+          <button class="btn btn-primary" (click)="advanceTelegram()" [disabled]="telegramBusy()">
+            @if (telegramBusy()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show"></div>
+}

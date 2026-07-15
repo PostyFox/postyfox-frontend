@@ -1,0 +1,251 @@
+<app-page-header title="Compose" subtitle="Write once, deliver everywhere"></app-page-header>
+
+@if (loading()) {
+  <div class="card">
+    <div class="card-body placeholder-glow">
+      <span class="placeholder col-4 mb-2"></span><span class="placeholder col-12"></span>
+    </div>
+  </div>
+} @else if (enabledConnectors().length === 0) {
+  <div class="card">
+    <div class="card-body">
+      <app-empty-state
+        icon="bi-plug"
+        title="No enabled connectors"
+        text="Add and enable a connector before you can post."
+      >
+        <a class="btn btn-primary" routerLink="/connectors">Manage connectors</a>
+      </app-empty-state>
+    </div>
+  </div>
+} @else {
+  <div class="row g-4">
+    <!-- Left: content -->
+    <div class="col-lg-8">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Content</h5>
+          <div class="mb-3">
+            <label class="form-label" for="title">Title</label>
+            <input
+              id="title"
+              class="form-control"
+              placeholder="Optional title"
+              [ngModel]="title()"
+              (ngModelChange)="title.set($event)"
+            />
+            @if (titleIgnoredTargets().length) {
+              <div class="form-text text-warning-emphasis">
+                <i class="bi bi-info-circle me-1"></i>Ignored by
+                {{ names(titleIgnoredTargets()) }} (no title support).
+              </div>
+            }
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="desc">Description</label>
+            <textarea
+              id="desc"
+              class="form-control"
+              rows="6"
+              placeholder="What do you want to say?"
+              [ngModel]="description()"
+              (ngModelChange)="description.set($event)"
+            ></textarea>
+            <div
+              class="text-end small mt-1"
+              [class.text-danger]="overLimit()"
+              [class.text-muted-2]="!overLimit()"
+            >
+              {{ descriptionLength()
+              }}{{ effectiveMaxLength() !== null ? ' / ' + effectiveMaxLength() : '' }}
+            </div>
+            @if (overLimit()) {
+              <div class="form-text text-danger">
+                <i class="bi bi-exclamation-triangle me-1"></i>Over the
+                {{ effectiveMaxLength() }}-character limit of the tightest selected platform — it
+                may be truncated or rejected.
+              </div>
+            }
+          </div>
+          <div class="mb-0">
+            <label class="form-label" for="tags">Tags</label>
+            <input
+              id="tags"
+              class="form-control"
+              placeholder="comma, separated, tags"
+              [ngModel]="tags()"
+              (ngModelChange)="tags.set($event)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Media -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="card-title mb-0">Media</h5>
+            <label class="btn btn-sm btn-outline-primary mb-0">
+              @if (uploading()) {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+              } @else {
+                <i class="bi bi-upload me-1"></i>
+              }
+              Upload
+              <input type="file" multiple hidden (change)="onFilesSelected($event)" />
+            </label>
+          </div>
+          @if (mediaUnsupportedTargets().length) {
+            <div class="alert alert-warning py-2 small d-flex align-items-start gap-2">
+              <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+              <span
+                >{{ names(mediaUnsupportedTargets()) }} will post text only (no media
+                support).</span
+              >
+            </div>
+          }
+          @if (mediaItems().length === 0) {
+            <p class="text-muted-2 mb-0">No media attached.</p>
+          } @else {
+            <div class="d-flex flex-column gap-2">
+              @for (m of mediaItems(); track m.ref.key; let i = $index) {
+                <div class="d-flex align-items-center gap-2 border rounded p-2">
+                  <i class="bi bi-file-earmark-image fs-4 text-primary"></i>
+                  <div class="flex-grow-1 min-w-0">
+                    <div class="text-truncate fw-medium">{{ m.name }}</div>
+                    <input
+                      class="form-control form-control-sm mt-1"
+                      placeholder="Alt text (optional)"
+                      [ngModel]="m.alt"
+                      (ngModelChange)="patchAlt(i, $event)"
+                    />
+                  </div>
+                  <button class="btn btn-sm btn-outline-danger" (click)="removeMedia(i)">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Template + variables -->
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Template</h5>
+          <div class="mb-3">
+            <label class="form-label" for="tpl">Apply a template (optional)</label>
+            <select
+              id="tpl"
+              class="form-select"
+              [ngModel]="templateId()"
+              (ngModelChange)="templateId.set($event)"
+            >
+              <option value="">None</option>
+              @for (t of templateList(); track t.id) {
+                <option [value]="t.id">{{ t.title }}</option>
+              }
+            </select>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <label class="form-label mb-0">Variables</label>
+            <button class="btn btn-sm btn-outline-secondary" (click)="addVariable()">
+              <i class="bi bi-plus-lg"></i> Add
+            </button>
+          </div>
+          @for (v of variables(); track $index; let i = $index) {
+            <div class="input-group mb-2">
+              <input
+                class="form-control"
+                placeholder="key"
+                [ngModel]="v.key"
+                (ngModelChange)="patchVariable(i, 'key', $event)"
+              />
+              <input
+                class="form-control"
+                placeholder="value"
+                [ngModel]="v.value"
+                (ngModelChange)="patchVariable(i, 'value', $event)"
+              />
+              <button class="btn btn-outline-danger" (click)="removeVariable(i)">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          } @empty {
+            <p class="text-muted-2 small mb-0">
+              Add key/value pairs to fill placeholders in the selected template.
+            </p>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: targets + schedule + submit -->
+    <div class="col-lg-4">
+      <div class="card mb-4">
+        <div class="card-body">
+          <h5 class="card-title mb-3">Deliver to</h5>
+          <div class="d-flex flex-column gap-2">
+            @for (c of enabledConnectors(); track c.id) {
+              <label class="d-flex align-items-center gap-2 border rounded p-2 cursor-pointer">
+                <input
+                  class="form-check-input mt-0"
+                  type="checkbox"
+                  [checked]="isSelected(c.id)"
+                  (change)="toggleTarget(c.id)"
+                />
+                <span
+                  class="avatar avatar-sm"
+                  [style.background]="brand(c.platform).color + '22'"
+                  [style.color]="brand(c.platform).color"
+                >
+                  <i class="bi" [class]="brand(c.platform).icon"></i>
+                </span>
+                <span class="flex-grow-1 min-w-0">
+                  <span class="fw-medium d-block text-truncate">{{ c.displayName }}</span>
+                  <small class="text-muted-2">{{ brand(c.platform).label }}</small>
+                </span>
+              </label>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="form-check form-switch mb-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="sched"
+              [ngModel]="scheduleEnabled()"
+              (ngModelChange)="scheduleEnabled.set($event)"
+            />
+            <label class="form-check-label" for="sched">Schedule for later</label>
+          </div>
+          @if (scheduleEnabled()) {
+            <input
+              type="datetime-local"
+              class="form-control"
+              [ngModel]="postAt()"
+              (ngModelChange)="postAt.set($event)"
+            />
+          }
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-lg w-100" (click)="submit()" [disabled]="!canSubmit()">
+        @if (submitting()) {
+          <span class="spinner-border spinner-border-sm me-1"></span>
+        } @else {
+          <i class="bi bi-send me-1"></i>
+        }
+        {{ scheduleEnabled() && postAt() ? 'Schedule post' : 'Post now' }}
+      </button>
+      <p class="text-muted-2 small text-center mt-2 mb-0">
+        {{ selectedTargets().size }} target{{ selectedTargets().size === 1 ? '' : 's' }} selected
+      </p>
+    </div>
+  </div>
+}

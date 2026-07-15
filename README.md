@@ -1,27 +1,59 @@
-# PostyFox
+# PostyFox — frontend
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 19, and utilises Angular Material
+Angular 21 (LTS Version) single-page app for the [PostyFox platform](../postyfox-core). Write a post once and
+deliver it to Discord, Telegram, BlueSky and Tumblr; manage connectors, templates, external triggers
+and API keys.
 
-## Development server
+- **Framework:** Angular 21 (standalone components, signals)
+- **UI:** Bootstrap 5 with a Materio-inspired theme (`src/styles/`)
+- **Auth:** cookie session via the oauth2-proxy edge → Keycloak (the browser holds no tokens).
+  See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
+- **APIs:** the core-api / post-api, consumed same-origin under `/api/*`.
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+## Prerequisites
 
-## Code scaffolding
+- Node.js 22+ and npm
+- The core platform running (for API + auth). See `../postyfox-core/README.md`.
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+## Develop
 
-## Build
+```bash
+npm install
+npm start          # ng serve → http://127.0.0.1:4200
+```
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+`proxy.conf.json` forwards `/api` and `/oauth2` to a running edge at `http://localhost:4180`.
+Sign in once at http://localhost:4180 (see [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) for why).
 
-## Running unit tests
+## Build & quality
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+```bash
+npm run build        # production build → dist/spa/browser
+npm run build-dev    # dev configuration
+npm run lint         # eslint (ts + templates)
+npm test             # karma/jasmine unit tests
+```
 
-## Running end-to-end tests
+## Run the whole stack (SPA + APIs + auth)
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+```bash
+cd ../postyfox-core/deploy
+docker compose \
+  -f docker-compose.yml \
+  -f ../../postyfox-frontend/deploy/docker-compose.frontend.yml \
+  up --build
+# open http://localhost:4180  (login: postyfox / postyfox)
+```
 
-## Further help
+## Project layout
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+```
+src/app/
+  core/            models, typed API services, auth, guard, interceptor, toast/confirm
+  layout/          Materio shell (sidebar, navbar, user menu)
+  shared/          reusable UI (page header, empty state, status badge, dialogs)
+  features/        dashboard, connectors, templates, compose, post-status, triggers, api-keys
+src/styles/        Materio-inspired Bootstrap theme (variables + layout)
+deploy/            gateway config + compose overlay to serve the SPA behind the edge
+docs/              deployment & architecture notes
+```

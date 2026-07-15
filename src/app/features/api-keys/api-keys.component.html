@@ -1,0 +1,116 @@
+<app-page-header title="API keys" subtitle="Authenticate machine/external callers with X-API-Key">
+</app-page-header>
+
+<!-- One-time plaintext key reveal -->
+@if (created(); as k) {
+  <div class="alert alert-success d-flex align-items-start gap-3" role="alert">
+    <i class="bi bi-check-circle-fill fs-4"></i>
+    <div class="flex-grow-1">
+      <h6 class="alert-heading mb-1">API key created</h6>
+      <p class="mb-2 small">
+        Copy it now — for security, the full key is shown only once and can never be retrieved
+        again.
+      </p>
+      <div class="input-group">
+        <input class="form-control font-monospace" [value]="k.apiKey" readonly />
+        <button class="btn btn-outline-success" type="button" (click)="copy(k.apiKey)">
+          <i class="bi bi-clipboard"></i> Copy
+        </button>
+      </div>
+    </div>
+    <button type="button" class="btn-close" (click)="dismissCreated()"></button>
+  </div>
+}
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Create a key</h5>
+        <p class="text-muted-2 small">Give it a name so you remember where it's used.</p>
+        <div class="mb-3">
+          <label class="form-label" for="keyName">Name (optional)</label>
+          <input
+            id="keyName"
+            class="form-control"
+            placeholder="e.g. CI pipeline"
+            [ngModel]="newName()"
+            (ngModelChange)="newName.set($event)"
+            [disabled]="creating()"
+          />
+        </div>
+        <button class="btn btn-primary w-100" (click)="create()" [disabled]="creating()">
+          @if (creating()) {
+            <span class="spinner-border spinner-border-sm me-1"></span>
+          } @else {
+            <i class="bi bi-plus-lg me-1"></i>
+          }
+          Generate key
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title mb-3">Your keys</h5>
+        @if (loading()) {
+          <div class="placeholder-glow">
+            <span class="placeholder col-12 mb-2"></span>
+            <span class="placeholder col-8"></span>
+          </div>
+        } @else if (keys().length === 0) {
+          <app-empty-state
+            icon="bi-key"
+            title="No API keys"
+            text="Generate one to call the PostyFox API from scripts or integrations."
+          ></app-empty-state>
+        } @else {
+          <div class="table-responsive">
+            <table class="table align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Prefix</th>
+                  <th>Created</th>
+                  <th>Status</th>
+                  <th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (k of keys(); track k.id) {
+                  <tr>
+                    <td class="fw-medium">{{ k.name || '—' }}</td>
+                    <td>
+                      <code>{{ k.prefix }}…</code>
+                    </td>
+                    <td class="text-muted-2">{{ k.createdAt | date: 'medium' }}</td>
+                    <td>
+                      @if (k.revokedAt) {
+                        <span class="badge bg-label-secondary">Revoked</span>
+                      } @else {
+                        <span class="badge bg-label-success">Active</span>
+                      }
+                    </td>
+                    <td class="text-end">
+                      @if (!k.revokedAt) {
+                        <button
+                          class="btn btn-sm btn-outline-danger"
+                          (click)="revoke(k)"
+                          title="Revoke"
+                        >
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

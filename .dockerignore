@@ -1,38 +1,15 @@
-# Node modules
 node_modules
-npm-debug.log
-yarn-error.log
-
-# Build output
 dist
 .angular
-.cache
-
-# IDE and editor files
-.vscode
-.idea
-*.swp
-*.swo
-*~
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Git
 .git
-.gitignore
-
-# Test coverage
+.github
+.vscode
 coverage
-
-# Environment files (add production configs back if needed)
-*.env
-.env.*
-
-# Logs
 *.log
-
-# Temporary files
-*.tmp
-*.temp
+deploy
+docs
+.editorconfig
+.prettierrc
+.lintstagedrc
+eslint.config.mjs
+karma.conf.js

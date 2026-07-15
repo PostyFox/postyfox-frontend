@@ -1,8 +1,5 @@
-@import '@cds/core/global.min.css';
-@import '@cds/core/styles/theme.dark.min.css';
-@import '@clr/ui/clr-ui.min.css';
-
-/* You can add global styles to this file, and also import other style files */
-
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+// PostyFox global styles — Materio-inspired Bootstrap 5 theme.
+@import './styles/materio-variables';
+@import 'bootstrap/scss/bootstrap';
+@import 'bootstrap-icons/font/bootstrap-icons';
+@import './styles/materio-theme';

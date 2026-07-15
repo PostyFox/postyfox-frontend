@@ -1,0 +1,136 @@
+<app-page-header title="Templates" subtitle="Reusable Markdown bodies for your posts">
+  <button class="btn btn-primary" (click)="newTemplate()">
+    <i class="bi bi-plus-lg me-1"></i> New template
+  </button>
+</app-page-header>
+
+@if (loading()) {
+  <div class="row g-4">
+    @for (i of [1, 2, 3]; track i) {
+      <div class="col-md-6 col-xl-4">
+        <div class="card">
+          <div class="card-body placeholder-glow">
+            <span class="placeholder col-6 mb-2"></span><span class="placeholder col-12"></span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+} @else if (list().length === 0) {
+  <div class="card">
+    <div class="card-body">
+      <app-empty-state
+        icon="bi-file-earmark-text"
+        title="No templates yet"
+        text="Templates let you standardise how posts are rendered per platform."
+      >
+        <button class="btn btn-primary" (click)="newTemplate()">
+          <i class="bi bi-plus-lg me-1"></i> Create your first template
+        </button>
+      </app-empty-state>
+    </div>
+  </div>
+} @else {
+  <div class="row g-4">
+    @for (t of list(); track t.id) {
+      <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h6 class="card-title mb-0">{{ t.title }}</h6>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-link text-muted-2 p-0" data-bs-toggle="dropdown">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                  <li>
+                    <button class="dropdown-item" (click)="openEdit(t)">
+                      <i class="bi bi-pencil me-2"></i>Edit
+                    </button>
+                  </li>
+                  <li>
+                    <button class="dropdown-item text-danger" (click)="remove(t)">
+                      <i class="bi bi-trash me-2"></i>Delete
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <p class="text-muted-2 small mb-0 flex-grow-1" style="white-space: pre-wrap">
+              {{
+                t.markdownBody.length > 160
+                  ? (t.markdownBody | slice: 0 : 160) + '…'
+                  : t.markdownBody || 'Empty template'
+              }}
+            </p>
+            <button
+              class="btn btn-sm btn-outline-primary mt-3 align-self-start"
+              (click)="openEdit(t)"
+            >
+              <i class="bi bi-pencil me-1"></i> Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Editor modal -->
+@if (edit(); as e) {
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ e.id ? 'Edit template' : 'New template' }}</h5>
+          <button type="button" class="btn-close" (click)="close()"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="tplTitle">Title</label>
+            <input
+              id="tplTitle"
+              class="form-control"
+              placeholder="e.g. Standard announcement"
+              [ngModel]="e.title"
+              (ngModelChange)="patch('title', $event)"
+            />
+          </div>
+          <div class="row g-3">
+            <div class="col-lg-6">
+              <label class="form-label" for="tplBody">Markdown body</label>
+              <textarea
+                id="tplBody"
+                class="form-control font-monospace"
+                rows="14"
+                placeholder="Write your template in Markdown…"
+                [ngModel]="e.markdownBody"
+                (ngModelChange)="patch('markdownBody', $event)"
+              ></textarea>
+            </div>
+            <div class="col-lg-6">
+              <label class="form-label">Preview</label>
+              <div class="border rounded p-3 bg-body-tertiary" style="min-height: 14rem">
+                @if (e.markdownBody.trim()) {
+                  <markdown [data]="e.markdownBody"></markdown>
+                } @else {
+                  <span class="text-muted-2">Preview appears here…</span>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="close()">Cancel</button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="saving() || !e.title.trim()">
+            @if (saving()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Save template
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show"></div>
+}
