@@ -37,17 +37,65 @@ or `/oauth2` traffic (the gateway routes those elsewhere).
 - `BUILD_ENV=production` (default) → `ng build --configuration production`
 - `BUILD_ENV=dev` → `ng build --configuration dev`
 
-CI (`.github/workflows/build.yml`) builds both and deploys to Azure Container Apps.
+## CI / CD
+
+Mirrors the core repo's split:
+
+- **`.github/workflows/frontend-ci.yml`** (`frontend-ci`) — lint, production build and unit tests on
+  every push/PR; on a push to `main` it builds the container image and pushes it to
+  `ghcr.io/<owner>/postyfox-frontend:<sha>`. Every environment runs this one production image (the
+  SPA is same-origin `/api` + `/oauth2` everywhere, so there is no per-environment build).
+- **`.github/workflows/deploy.yml`** (`deploy`) — triggered by a successful `frontend-ci` run on
+  `main`. It SSHes to the shared single-host infra (the same box and `/opt/postyfox/<env>` layout
+  core deploys to), copies this repo's overlay + gateway fragments, then pulls the SHA-tagged image
+  and rolls the `frontend` service into the running core stack:
+
+  ```
+  docker compose -f docker-compose.server.yml -f docker-compose.<env>.yml \
+                 -f docker-compose.frontend.server.yml up -d --no-deps frontend
+  docker compose ... restart gateway   # reload conf.d → SPA upstream + root route
+  ```
+
+  Dev deploys automatically; **production is gated** by the GitHub `production` environment's
+  protection rules. Requires the same secrets as core: `DEPLOY_HOST`, `DEPLOY_USER`,
+  `DEPLOY_SSH_KEY` (and optional `DEPLOY_PORT`), plus the server being logged in to GHCR.
+
+  > The frontend is an overlay on core's stack, so a core deploy that rewrites `gateway/conf.d`
+  > will drop the SPA's two fragments until the next frontend deploy re-applies them.
 
 ## Wiring behind the core edge
 
-The core gateway (`postyfox-core/deploy/gateway/nginx.conf`) must route non-API paths to this SPA.
-Two artifacts are provided:
+The core gateway is a single nginx reverse proxy composed from **`conf.d` fragments**, so routing
+ownership is cleanly split — the frontend never redefines core's API routes. The core base
+(`postyfox-core/deploy/gateway/nginx.conf`) does `include conf.d/upstreams/*.conf` (http context)
+and `include conf.d/routes/*.conf` (inside its one `server`), loading fragments in filename order:
 
-- **`deploy/gateway.nginx.conf`** — a drop-in replacement for the core gateway config that adds a
-  `frontend` upstream and the SPA/API path split.
-- **`deploy/docker-compose.frontend.yml`** — an overlay that adds the `frontend` service to the core
-  stack and re-points the gateway at the config above.
+```
+postyfox-core/deploy/gateway/
+  nginx.conf                       # thin base: map, includes, shared proxy headers, /healthz
+  conf.d/upstreams/backends.conf   # upstream core / upstream post
+  conf.d/routes/10-apis.conf       # /api/posts,/api/webhooks,/swagger-post,/openapi-post → post
+                                   # /api/, /swagger, /openapi → core   (explicit)
+  conf.d/routes/90-root.conf       # catch-all: / → core   (core-only default)
+```
+
+This repo contributes just its own two fragments — **no API routing**:
+
+```
+postyfox-frontend/deploy/gateway/
+  conf.d/upstreams/frontend.conf   # upstream frontend { server frontend:80; }
+  conf.d/routes/90-root.conf       # / → frontend   (SPA static + client-side routes)
+```
+
+The overlay (**`deploy/docker-compose.frontend.yml`** for local dev, which *builds* the image;
+**`deploy/docker-compose.frontend.server.yml`** for CI/server, which *pulls* the GHCR image) adds
+the `frontend` service and bind-mounts those two fragments into the gateway's `conf.d`:
+`upstreams/frontend.conf` is additive, and
+`routes/90-root.conf` is layered **over** core's file at the same path, so the catch-all flips from
+core to the SPA. Core's explicit `/api/`, `/swagger`, `/openapi` routes still win by longest-prefix
+match, so the API and docs stay reachable. Because nginx can't merge `location` blocks across
+separate `server` blocks, this include-based composition (not multiple servers) is what lets each
+side own a file.
 
 ### Run the full stack locally
 

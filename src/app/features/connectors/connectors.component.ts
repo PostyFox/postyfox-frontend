@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { firstValueFrom, forkJoin } from 'rxjs';
 import {
   AuthState,
   ConnectorTarget,
@@ -9,10 +9,12 @@ import {
   UserConnector,
 } from '../../core/models/api.models';
 import {
+  FieldDescriptor,
   brandFor,
   capabilitiesByPlatform,
   capabilityChips,
-  fieldMetaFor,
+  parseFieldDescriptors,
+  validateField,
 } from '../../core/models/platforms';
 import { Capabilities } from '../../core/models/api.models';
 import { ConfirmService } from '../../core/services/confirm.service';
@@ -32,22 +34,14 @@ interface EditorModel {
   config: Record<string, string>;
   secureFields: string[];
   secure: Record<string, string>;
+  /** Field metadata + validation rules for every config/secure field, keyed by field name. */
+  descriptors: Record<string, FieldDescriptor>;
   hasExistingSecret: boolean;
 }
 
 interface AuthEntry {
   loading: boolean;
   state?: AuthState;
-}
-
-function parseKeys(schema: string | null | undefined): string[] {
-  if (!schema) return [];
-  try {
-    const obj = JSON.parse(schema);
-    return obj && typeof obj === 'object' ? Object.keys(obj) : [];
-  } catch {
-    return [];
-  }
 }
 
 function parseObject(json: string | null | undefined): Record<string, string> {
@@ -94,12 +88,47 @@ export class ConnectorsComponent {
   readonly telegramValue = signal('');
   readonly telegramBusy = signal(false);
 
+  /** OAuth "connect" flow in progress (from the editor). */
+  readonly connecting = signal(false);
+
   readonly enabledCatalogue = computed(() => this.catalogue().filter((s) => s.enabled));
   readonly capsByPlatform = computed(() => capabilitiesByPlatform(this.catalogue()));
 
+  /**
+   * Per-field validation errors for the connector currently being edited, driven entirely by the
+   * field descriptors the backend ships in the service definition schema (see {@link validateField}).
+   * The server re-validates on save — this is inline UX only.
+   */
+  readonly configErrors = computed<Record<string, string>>(() => {
+    const e = this.editor();
+    if (!e) return {};
+    const errors: Record<string, string> = {};
+    for (const key of e.configFields) {
+      const err = validateField(e.descriptors[key], e.config[key]);
+      if (err) errors[key] = err;
+    }
+    for (const key of e.secureFields) {
+      // A blank secret on an existing connector means "keep the stored value" — nothing to validate.
+      if (!e.secure[key] && e.hasExistingSecret) continue;
+      const err = validateField(e.descriptors[key], e.secure[key]);
+      if (err) errors[key] = err;
+    }
+    return errors;
+  });
+
+  readonly hasConfigErrors = computed(() => Object.keys(this.configErrors()).length > 0);
+
   // ----- presentation helpers ----------------------------------------------
   brand = brandFor;
-  field = fieldMetaFor;
+
+  /** Descriptor (label/help/placeholder/type/link) for a field of the connector being edited. */
+  field(key: string): FieldDescriptor {
+    return this.editor()?.descriptors[key] ?? { label: key };
+  }
+
+  supportsOAuth(platform: string): boolean {
+    return this.capsByPlatform()[platform]?.supportsOAuth ?? false;
+  }
 
   chipsForPlatform(platform: string) {
     const caps = this.capsByPlatform()[platform];
@@ -140,8 +169,10 @@ export class ConnectorsComponent {
 
   pickService(def: ServiceDefinition): void {
     this.picking.set(false);
-    const configFields = parseKeys(def.configSchema);
-    const secureFields = parseKeys(def.secureConfigSchema);
+    const configDescriptors = parseFieldDescriptors(def.configSchema);
+    const secureDescriptors = parseFieldDescriptors(def.secureConfigSchema);
+    const configFields = Object.keys(configDescriptors);
+    const secureFields = Object.keys(secureDescriptors);
     this.editor.set({
       id: null,
       serviceDefinitionId: def.id,
@@ -152,14 +183,17 @@ export class ConnectorsComponent {
       config: Object.fromEntries(configFields.map((k) => [k, ''])),
       secureFields,
       secure: Object.fromEntries(secureFields.map((k) => [k, ''])),
+      descriptors: { ...configDescriptors, ...secureDescriptors },
       hasExistingSecret: false,
     });
   }
 
   editConnector(c: UserConnector): void {
     const def = this.definitionFor(c.serviceDefinitionId);
-    const configFields = parseKeys(def?.configSchema);
-    const secureFields = parseKeys(def?.secureConfigSchema);
+    const configDescriptors = parseFieldDescriptors(def?.configSchema);
+    const secureDescriptors = parseFieldDescriptors(def?.secureConfigSchema);
+    const configFields = Object.keys(configDescriptors);
+    const secureFields = Object.keys(secureDescriptors);
     const existing = parseObject(c.configJson);
     this.editor.set({
       id: c.id,
@@ -171,6 +205,7 @@ export class ConnectorsComponent {
       config: Object.fromEntries(configFields.map((k) => [k, existing[k] ?? ''])),
       secureFields,
       secure: Object.fromEntries(secureFields.map((k) => [k, ''])),
+      descriptors: { ...configDescriptors, ...secureDescriptors },
       hasExistingSecret: secureFields.length > 0,
     });
   }
@@ -197,7 +232,7 @@ export class ConnectorsComponent {
 
   save(): void {
     const e = this.editor();
-    if (!e || !e.displayName.trim()) return;
+    if (!e || !e.displayName.trim() || this.hasConfigErrors()) return;
     // Only send a secret payload when the user actually entered secret values.
     const enteredSecret = e.secureFields.some((k) => e.secure[k]?.length);
     const secureConfigJson = enteredSecret ? JSON.stringify(e.secure) : null;
@@ -224,6 +259,66 @@ export class ConnectorsComponent {
           this.saving.set(false);
         },
       });
+  }
+
+  // ----- OAuth connect flow -------------------------------------------------
+  /** Saves the connector (to obtain an id + persist config) then opens the provider authorize popup. */
+  async connect(): Promise<void> {
+    const e = this.editor();
+    if (!e || !e.displayName.trim() || this.hasConfigErrors()) return;
+    this.connecting.set(true);
+    try {
+      const saved = await firstValueFrom(
+        this.connectors.upsert({
+          id: e.id,
+          serviceDefinitionId: e.serviceDefinitionId,
+          displayName: e.displayName.trim(),
+          configJson: JSON.stringify(e.config),
+          // Never clear an OAuth-managed secret here; the callback writes it.
+          secureConfigJson: null,
+          enabled: e.enabled,
+        }),
+      );
+      this.editor.update((cur) => (cur ? { ...cur, id: saved.id } : cur));
+      const { authorizeUrl } = await firstValueFrom(this.connectors.startOAuth(saved.id));
+      this.openOAuthPopup(authorizeUrl);
+    } catch (err: any) {
+      this.connecting.set(false);
+      this.toast.error('Could not start connection', err?.error?.error);
+    }
+  }
+
+  private openOAuthPopup(url: string): void {
+    const popup = window.open(url, 'pf-oauth', 'width=760,height=820');
+    if (!popup) {
+      // Popups blocked — fall back to a full-page redirect; the callback returns to /connectors.
+      window.location.href = url;
+      return;
+    }
+    const finish = (): void => {
+      window.removeEventListener('message', handler);
+      clearInterval(timer);
+    };
+    const handler = (ev: MessageEvent): void => {
+      if (ev.origin !== window.location.origin || ev.data?.type !== 'postyfox-oauth') return;
+      finish();
+      this.connecting.set(false);
+      if (ev.data.ok) {
+        this.toast.success('Connected');
+        this.closeEditor();
+        this.load();
+      } else {
+        this.toast.error('Connection failed', 'Authorization was not completed.');
+      }
+    };
+    // If the user closes the popup without finishing, stop the spinner.
+    const timer = setInterval(() => {
+      if (popup.closed) {
+        finish();
+        this.connecting.set(false);
+      }
+    }, 800);
+    window.addEventListener('message', handler);
   }
 
   async remove(c: UserConnector): Promise<void> {

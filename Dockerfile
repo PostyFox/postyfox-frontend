@@ -1,5 +1,5 @@
-# Stage 1 — build the Angular application
-FROM node:20-alpine AS build
+# Stage 1 — build the Angular application (Angular 21 requires Node >= 22.12 / 24)
+FROM node:22-alpine AS build
 
 # production | dev — selects the Angular build configuration
 ARG BUILD_ENV=production

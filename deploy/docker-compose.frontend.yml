@@ -1,32 +1,46 @@
-# Overlay that adds the PostyFox SPA to the core platform stack and re-points the gateway at it.
+# Overlay that adds the PostyFox SPA to the core platform stack and wires it into the gateway.
 #
-# Run it *from the core deploy directory* alongside the core compose file, pointing at this repo:
+# This is the LOCAL-DEV overlay: it *builds* the SPA image from source. For server/CI deploys the
+# image is prebuilt and pulled from GHCR — see docker-compose.frontend.server.yml.
+#
+# It contributes ONLY the frontend's own gateway fragments (an upstream + a catch-all route that
+# re-points `/` at the SPA). It does NOT redefine any API routing — that stays owned by core's
+# gateway conf.d. The two fragments are layered into the gateway's conf.d over the core base:
+#   conf.d/upstreams/frontend.conf   (added)
+#   conf.d/routes/90-root.conf       (shadows core's core-only catch-all)
+#
+# Run it from the core deploy directory (so the project directory — and thus relative bind-mount
+# sources — resolve against postyfox-core/deploy), with core's compose as the first file:
 #
 #   cd ../postyfox-core/deploy
 #   docker compose \
-#     -f docker-compose.yml \
-#     -f ../../postyfox-frontend/deploy/docker-compose.frontend.yml \
+#     -f docker-compose.yml -f ../../postyfox-frontend/deploy/docker-compose.frontend.yml \
 #     up --build
 #
 # Then log in at http://localhost:4180 — oauth2-proxy runs the Keycloak OIDC exchange and forwards
 # you to the SPA, with /api/* proxied to the backends carrying the validated bearer token.
 #
-# Paths below are relative to THIS file (compose resolves build contexts relative to the file that
-# declares them), so it works regardless of the directory you invoke compose from.
+# NOTE on paths: docker-compose resolves BOTH the build context and bind-mount sources relative to
+# the compose *project directory* (postyfox-core/deploy per the command above) — NOT relative to
+# this file. Hence every path here is prefixed with `../../postyfox-frontend/...`. This assumes the
+# two repos are siblings; adjust the prefix if your checkout differs. (Getting the context wrong is
+# subtle: `..` would resolve to the core repo and build core's .NET Dockerfile as the frontend.)
 services:
   frontend:
     build:
-      context: ..
+      context: ../../postyfox-frontend
       dockerfile: Dockerfile
       args:
         BUILD_ENV: production
     expose:
       - "80"
 
-  # Swap the gateway config for the SPA-aware one and make it wait for the frontend.
   gateway:
+    # Layer the frontend's gateway fragments into the core gateway's conf.d (mounted by core's
+    # compose at /etc/nginx/conf.d). The 90-root.conf mount shadows core's catch-all file.
     volumes:
-      - "../deploy/gateway.nginx.conf:/etc/nginx/nginx.conf:ro"
+      - "../../postyfox-frontend/deploy/gateway/conf.d/upstreams/frontend.conf:/etc/nginx/conf.d/upstreams/frontend.conf:ro"
+      - "../../postyfox-frontend/deploy/gateway/conf.d/routes/90-root.conf:/etc/nginx/conf.d/routes/90-root.conf:ro"
     depends_on:
       frontend:
         condition: service_started

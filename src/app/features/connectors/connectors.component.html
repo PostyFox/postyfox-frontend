@@ -219,18 +219,20 @@
             <h6 class="text-muted-2 text-uppercase small mt-4">Configuration</h6>
             @for (key of e.configFields; track key) {
               <div class="mb-3">
-                <label class="form-label" [for]="'cfg-' + key">{{
-                  field(e.platform, key).label
-                }}</label>
+                <label class="form-label" [for]="'cfg-' + key">{{ field(key).label }}</label>
                 <input
                   [id]="'cfg-' + key"
                   class="form-control"
-                  [type]="field(e.platform, key).type || 'text'"
-                  [placeholder]="field(e.platform, key).placeholder || ''"
+                  [class.is-invalid]="configErrors()[key]"
+                  [type]="field(key).type || 'text'"
+                  [placeholder]="field(key).placeholder || ''"
                   [ngModel]="e.config[key]"
                   (ngModelChange)="patchConfig(key, $event)"
                 />
-                @if (field(e.platform, key); as fm) {
+                @if (configErrors()[key]; as err) {
+                  <div class="invalid-feedback d-block">{{ err }}</div>
+                }
+                @if (field(key); as fm) {
                   @if (fm.help) {
                     <div class="form-text">{{ fm.help }}</div>
                   }
@@ -246,6 +248,25 @@
             }
           }
 
+          @if (supportsOAuth(e.platform)) {
+            <h6 class="text-muted-2 text-uppercase small mt-4">Connection</h6>
+            <p class="small text-muted-2">
+              Authorize PostyFox to post on your behalf — no tokens to copy or paste.
+            </p>
+            <button
+              class="btn btn-outline-primary"
+              (click)="connect()"
+              [disabled]="connecting() || !e.displayName.trim() || hasConfigErrors()"
+            >
+              @if (connecting()) {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+              } @else {
+                <i class="bi bi-box-arrow-up-right me-1"></i>
+              }
+              {{ e.id ? 'Reconnect' : 'Save & connect' }} {{ brand(e.platform).label }}
+            </button>
+          }
+
           @if (e.secureFields.length) {
             <h6 class="text-muted-2 text-uppercase small mt-4">
               Secrets <i class="bi bi-shield-lock ms-1"></i>
@@ -255,9 +276,7 @@
             }
             @for (key of e.secureFields; track key) {
               <div class="mb-3">
-                <label class="form-label" [for]="'sec-' + key">{{
-                  field(e.platform, key).label
-                }}</label>
+                <label class="form-label" [for]="'sec-' + key">{{ field(key).label }}</label>
                 <input
                   [id]="'sec-' + key"
                   type="password"
@@ -266,7 +285,7 @@
                   [ngModel]="e.secure[key]"
                   (ngModelChange)="patchSecure(key, $event)"
                 />
-                @if (field(e.platform, key); as fm) {
+                @if (field(key); as fm) {
                   @if (fm.help) {
                     <div class="form-text">{{ fm.help }}</div>
                   }
@@ -298,7 +317,7 @@
           <button
             class="btn btn-primary"
             (click)="save()"
-            [disabled]="saving() || !e.displayName.trim()"
+            [disabled]="saving() || !e.displayName.trim() || hasConfigErrors()"
           >
             @if (saving()) {
               <span class="spinner-border spinner-border-sm me-1"></span>

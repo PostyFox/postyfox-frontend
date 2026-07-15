@@ -1,10 +1,10 @@
 # PostyFox — frontend
 
-Angular 19 single-page app for the [PostyFox platform](../postyfox-core). Write a post once and
+Angular 21 (LTS Version) single-page app for the [PostyFox platform](../postyfox-core). Write a post once and
 deliver it to Discord, Telegram, BlueSky and Tumblr; manage connectors, templates, external triggers
 and API keys.
 
-- **Framework:** Angular 19 (standalone components, signals)
+- **Framework:** Angular 21 (standalone components, signals)
 - **UI:** Bootstrap 5 with a Materio-inspired theme (`src/styles/`)
 - **Auth:** cookie session via the oauth2-proxy edge → Keycloak (the browser holds no tokens).
   See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
@@ -12,7 +12,7 @@ and API keys.
 
 ## Prerequisites
 
-- Node.js 20+ and npm
+- Node.js 22+ and npm
 - The core platform running (for API + auth). See `../postyfox-core/README.md`.
 
 ## Develop

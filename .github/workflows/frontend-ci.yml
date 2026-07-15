@@ -1,0 +1,81 @@
+name: frontend-ci
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "angular.json"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - "eslint.config.mjs"
+      - "nginx.conf"
+      - "Dockerfile"
+      - "deploy/**"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "public/**"
+      - "angular.json"
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig*.json"
+      - "eslint.config.mjs"
+      - "nginx.conf"
+      - "Dockerfile"
+      - "deploy/**"
+      - ".github/workflows/frontend-ci.yml"
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build -- --configuration production
+      - name: Test
+        # Karma unit tests, headless. No-op until the first *.spec.ts lands (avoids a flaky empty run).
+        run: |
+          if find src -name '*.spec.ts' | grep -q .; then
+            npm test -- --watch=false --browsers=ChromeHeadless
+          else
+            echo "No spec files yet — skipping unit tests."
+          fi
+
+  images:
+    # Build + push the container image only on main (not PRs).
+    needs: [node]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Normalize image repository name
+        run: echo "IMAGE_REPOSITORY=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ghcr.io/${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+          build-args: |
+            BUILD_ENV=production
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

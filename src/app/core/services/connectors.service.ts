@@ -44,4 +44,9 @@ export class ConnectorsService {
   telegramLogin(id: string, value?: string | null): Observable<TelegramLoginStep> {
     return this.http.post<TelegramLoginStep>(`${this.base}/${id}/telegram/login`, { value });
   }
+
+  /** Begin the OAuth "connect" flow; returns the provider URL to open in the browser. */
+  startOAuth(id: string): Observable<{ authorizeUrl: string }> {
+    return this.http.post<{ authorizeUrl: string }>(`${this.base}/${id}/oauth/start`, {});
+  }
 }

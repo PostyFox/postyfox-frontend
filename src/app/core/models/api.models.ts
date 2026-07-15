@@ -63,6 +63,8 @@ export interface Capabilities {
   supportsThreads: boolean;
   /** Max characters the platform accepts, or null for effectively unlimited. */
   maxContentLength: number | null;
+  /** True when the platform offers an interactive OAuth "connect" flow instead of pasted secrets. */
+  supportsOAuth: boolean;
 }
 
 export interface ServiceDefinition extends Capabilities {
