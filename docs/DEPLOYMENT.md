@@ -47,9 +47,10 @@ Mirrors the core repo's split:
   SPA is same-origin `/api` + `/oauth2` everywhere, so there is no per-environment build).
 - **`.github/workflows/deploy.yml`** (`deploy`) — triggered by a successful `frontend-ci` run on
   `main`. Dev runs directly on the self-hosted runner node (the same box and `/opt/postyfox/dev`
-  layout core deploys to), copies this repo's overlay + gateway fragments locally, then pulls the
-  SHA-tagged image and rolls the `frontend` service into the running core stack. Production still
-  uses SSH to the target host:
+  layout core deploys to), copies this repo's overlay + gateway fragments locally, then uses the
+  latest successful `frontend-ci` build from `main` to roll the `frontend` service into the running
+  core stack. Manual dispatches use the same latest successful `frontend-ci` SHA for both dev and
+  prod. Production still uses SSH to the target host:
 
   ```
   docker compose -f docker-compose.server.yml -f docker-compose.<env>.yml \
