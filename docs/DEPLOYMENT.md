@@ -46,9 +46,10 @@ Mirrors the core repo's split:
   `ghcr.io/<owner>/postyfox-frontend:<sha>`. Every environment runs this one production image (the
   SPA is same-origin `/api` + `/oauth2` everywhere, so there is no per-environment build).
 - **`.github/workflows/deploy.yml`** (`deploy`) — triggered by a successful `frontend-ci` run on
-  `main`. It SSHes to the shared single-host infra (the same box and `/opt/postyfox/<env>` layout
-  core deploys to), copies this repo's overlay + gateway fragments, then pulls the SHA-tagged image
-  and rolls the `frontend` service into the running core stack:
+  `main`. Dev runs directly on the self-hosted runner node (the same box and `/opt/postyfox/dev`
+  layout core deploys to), copies this repo's overlay + gateway fragments locally, then pulls the
+  SHA-tagged image and rolls the `frontend` service into the running core stack. Production still
+  uses SSH to the target host:
 
   ```
   docker compose -f docker-compose.server.yml -f docker-compose.<env>.yml \

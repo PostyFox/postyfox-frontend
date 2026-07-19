@@ -81,35 +81,14 @@ jobs:
             echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Prepare SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p ${{ env.DEPLOY_PORT }} ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-
       - name: Copy deployment files
         run: |
           echo "📦 Copying frontend overlay + gateway fragments to dev stack..."
-          # The frontend is an overlay on the core stack already present at /opt/postyfox/dev
-          # (deployed by postyfox-core). We add ONLY our own files: the server compose overlay and
-          # the two gateway fragments. We do NOT touch core's compose or gateway base.
-          ssh -p ${{ env.DEPLOY_PORT }} \
-            -i ~/.ssh/deploy_key \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
-            "mkdir -p /opt/postyfox/dev/gateway/conf.d/upstreams /opt/postyfox/dev/gateway/conf.d/routes" || {
-            echo "❌ Failed to ensure gateway conf.d directories exist"
-            exit 1
-          }
-          scp -P ${{ env.DEPLOY_PORT }} -i ~/.ssh/deploy_key \
-            deploy/docker-compose.frontend.server.yml \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/opt/postyfox/dev/ || { echo "❌ Failed to copy compose overlay"; exit 1; }
-          scp -P ${{ env.DEPLOY_PORT }} -i ~/.ssh/deploy_key \
-            deploy/gateway/conf.d/upstreams/frontend.conf \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/opt/postyfox/dev/gateway/conf.d/upstreams/frontend.conf || { echo "❌ Failed to copy upstream fragment"; exit 1; }
-          scp -P ${{ env.DEPLOY_PORT }} -i ~/.ssh/deploy_key \
-            deploy/gateway/conf.d/routes/90-root.conf \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/opt/postyfox/dev/gateway/conf.d/routes/90-root.conf || { echo "❌ Failed to copy root route fragment"; exit 1; }
+          # The runner is already on the deployment node, so write directly into the local core stack.
+          mkdir -p /opt/postyfox/dev/gateway/conf.d/upstreams /opt/postyfox/dev/gateway/conf.d/routes
+          cp deploy/docker-compose.frontend.server.yml /opt/postyfox/dev/
+          cp deploy/gateway/conf.d/upstreams/frontend.conf /opt/postyfox/dev/gateway/conf.d/upstreams/frontend.conf
+          cp deploy/gateway/conf.d/routes/90-root.conf /opt/postyfox/dev/gateway/conf.d/routes/90-root.conf
 
       - name: Deploy frontend to dev stack
         env:
@@ -117,26 +96,23 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
         run: |
           echo "🚀 Deploying frontend to dev stack..."
-          ssh -p ${{ env.DEPLOY_PORT }} \
-            -i ~/.ssh/deploy_key \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
-            "set -e; \
-            cd /opt/postyfox/dev && \
-            echo '📋 Checking .env file exists...' && \
-            [ -f .env ] || { echo '❌ Missing .env file (core stack not initialised?)'; exit 1; }; \
-            source .env 2>/dev/null || true; \
-            export FRONTEND_IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }} && \
-            export FRONTEND_IMAGE_TAG=${{ env.IMAGE_TAG }} && \
-            export COMPOSE_PROJECT_NAME=postyfox-dev && \
-            COMPOSE_FILES='-f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml' && \
-            echo '🔄 Pulling frontend image...' && \
-            docker compose \$COMPOSE_FILES pull frontend || { echo '❌ Failed to pull frontend image'; exit 1; }; \
-            echo '⬆️ Updating frontend service...' && \
-            docker compose \$COMPOSE_FILES up -d --no-deps frontend || { echo '❌ Failed to start frontend'; exit 1; }; \
-            echo '🔄 Reloading gateway (conf.d fragments are bind-mounted; restart picks up the SPA route)...' && \
-            docker compose \$COMPOSE_FILES restart gateway || { echo '❌ Failed to restart gateway'; exit 1; }; \
-            echo '✅ Dev frontend deployed successfully' && \
-            docker compose \$COMPOSE_FILES ps frontend gateway" || {
+          set -e
+          cd /opt/postyfox/dev
+          echo '📋 Checking .env file exists...'
+          [ -f .env ] || { echo '❌ Missing .env file (core stack not initialised?)'; exit 1; }
+          source .env 2>/dev/null || true
+          export FRONTEND_IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
+          export FRONTEND_IMAGE_TAG=${{ env.IMAGE_TAG }}
+          export COMPOSE_PROJECT_NAME=postyfox-dev
+          COMPOSE_FILES='-f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml'
+          echo '🔄 Pulling frontend image...'
+          docker compose $COMPOSE_FILES pull frontend || { echo '❌ Failed to pull frontend image'; exit 1; }
+          echo '⬆️ Updating frontend service...'
+          docker compose $COMPOSE_FILES up -d --no-deps frontend || { echo '❌ Failed to start frontend'; exit 1; }
+          echo '🔄 Reloading gateway (conf.d fragments are bind-mounted; restart picks up the SPA route)...'
+          docker compose $COMPOSE_FILES restart gateway || { echo '❌ Failed to restart gateway'; exit 1; }
+          echo '✅ Dev frontend deployed successfully'
+          docker compose $COMPOSE_FILES ps frontend gateway || {
             echo "❌ Dev deployment failed"
             exit 1
           }
@@ -145,17 +121,10 @@ jobs:
         run: |
           echo "🏥 Running health checks..."
           sleep 10
-          ssh -p ${{ env.DEPLOY_PORT }} \
-            -i ~/.ssh/deploy_key \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
-            "cd /opt/postyfox/dev && \
-            docker compose -f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml ps frontend | grep -E '(Up|healthy)' || { \
-            echo '⚠️ Warning: frontend may not be healthy yet'; }; \
-            true"
-
-      - name: Cleanup SSH
-        if: always()
-        run: rm -f ~/.ssh/deploy_key
+          cd /opt/postyfox/dev && \
+          docker compose -f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml ps frontend | grep -E '(Up|healthy)' || { \
+          echo '⚠️ Warning: frontend may not be healthy yet'; }; \
+          true
 
       - name: Deployment summary
         if: success()
@@ -167,10 +136,10 @@ jobs:
           - Environment: Development (auto-deploy on every push)
           - Project: postyfox-dev
           - Location: /opt/postyfox/dev
-          - Image: ${{ steps.image.outputs.repository }}:${{ github.event.workflow_run.head_sha }}
+          - Image: ${{ steps.image.outputs.repository }}:${{ steps.tag.outputs.tag }}
 
           📝 Check logs:
-          - ssh ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} "cd /opt/postyfox/dev && docker compose logs -f frontend"
+          - cd /opt/postyfox/dev && docker compose logs -f frontend
           EOF
 
   deploy-prod:
