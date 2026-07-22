@@ -14,4 +14,14 @@ export const environment = {
   apiBaseUrl: '/api',
   /** oauth2-proxy endpoint prefix. */
   oauth2BaseUrl: '/oauth2',
+  /**
+   * Browser OpenTelemetry tracing. Off in `ng serve` by default — there's no collector edge
+   * locally. To exercise it locally, run the edge stack and flip `enabled` to true (proxy.conf.json
+   * already forwards `/otlp/` to the edge). See src/app/core/telemetry/browser-telemetry.ts.
+   */
+  otel: {
+    enabled: false,
+    collectorUrl: '/otlp/v1/traces',
+    serviceName: 'postyfox-frontend',
+  },
 };
