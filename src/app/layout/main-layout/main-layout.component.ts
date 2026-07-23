@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { VersionService } from '../../core/services/version.service';
 
 interface NavItem {
   label: string;
@@ -15,9 +16,12 @@ interface NavItem {
 })
 export class MainLayoutComponent {
   private auth = inject(AuthService);
+  private version = inject(VersionService);
 
   readonly sidebarOpen = signal(false);
   readonly year = new Date().getFullYear();
+  readonly frontendVersion = this.version.frontend;
+  readonly backendVersion = this.version.backend;
   readonly displayName = this.auth.displayName;
   readonly email = this.auth.email;
   readonly initials = computed(() => {

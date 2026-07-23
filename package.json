@@ -6,6 +6,7 @@
     "start": "ng serve --host=127.0.0.1",
     "build": "ng build",
     "build-dev": "ng build --configuration dev",
+    "set-version": "node scripts/set-version.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
