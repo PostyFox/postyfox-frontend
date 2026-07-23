@@ -23,6 +23,37 @@
   }
 </div>
 
+@if (activePosts().length > 0) {
+  <div class="card mb-2 mt-2 border-primary-subtle">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <span class="stat-icon bg-label-primary"><i class="bi bi-send"></i></span>
+        <h5 class="card-title mb-0">Processing now</h5>
+        <span class="text-muted-2 small">
+          <span class="spinner-border spinner-border-sm me-1"></span>live
+        </span>
+        <a class="btn btn-sm btn-outline-primary ms-auto" routerLink="/posts">View all</a>
+      </div>
+      <ul class="list-unstyled mb-0">
+        @for (p of activePosts(); track p.postId) {
+          <li class="d-flex align-items-center gap-3 py-2 border-bottom">
+            <div class="flex-grow-1 text-truncate">
+              <a class="fw-medium text-decoration-none" [routerLink]="['/posts', p.postId]">
+                {{ p.title || 'Untitled post' }}
+              </a>
+              <div class="text-muted-2 small">
+                {{ p.deliveredCount }}/{{ p.targetCount }} delivered ·
+                {{ p.platforms.join(', ') }}
+              </div>
+            </div>
+            <app-status-badge [meta]="rootMeta(p)"></app-status-badge>
+          </li>
+        }
+      </ul>
+    </div>
+  </div>
+}
+
 <div class="row g-4 mt-1">
   <!-- Quick actions -->
   <div class="col-lg-5">

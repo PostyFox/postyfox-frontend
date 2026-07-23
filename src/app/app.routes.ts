@@ -34,6 +34,13 @@ export const routes: Routes = [
           import('./features/compose/compose.component').then((m) => m.ComposeComponent),
       },
       {
+        path: 'posts',
+        pathMatch: 'full',
+        title: 'Posts · PostyFox',
+        loadComponent: () =>
+          import('./features/posts/posts.component').then((m) => m.PostsComponent),
+      },
+      {
         path: 'posts/:id',
         title: 'Post status · PostyFox',
         loadComponent: () =>

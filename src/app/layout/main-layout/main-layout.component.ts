@@ -32,6 +32,7 @@ export class MainLayoutComponent {
   readonly nav: NavItem[] = [
     { label: 'Dashboard', icon: 'bi-grid-1x2', link: '/dashboard' },
     { label: 'Compose', icon: 'bi-pencil-square', link: '/compose' },
+    { label: 'Posts', icon: 'bi-collection', link: '/posts' },
     { label: 'Connectors', icon: 'bi-plug', link: '/connectors' },
     { label: 'Templates', icon: 'bi-file-earmark-text', link: '/templates' },
     { label: 'Triggers', icon: 'bi-lightning-charge', link: '/triggers' },
