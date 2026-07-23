@@ -181,6 +181,20 @@ export interface PostStatus {
   targets: PostTargetStatus[];
 }
 
+/** Lightweight row from `GET /api/posts` (list / activity view — no per-target detail). */
+export interface PostSummary {
+  postId: string;
+  rootStatus: PostRootStatus;
+  title: string;
+  platforms: string[];
+  targetCount: number;
+  deliveredCount: number;
+  failedCount: number;
+  createdAt: string;
+  updatedAt: string;
+  postAt: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Triggers
 // ---------------------------------------------------------------------------

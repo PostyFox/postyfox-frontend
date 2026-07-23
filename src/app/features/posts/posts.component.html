@@ -1,0 +1,133 @@
+<app-page-header title="Posts" subtitle="What's processing now, and your recent history">
+  <a class="btn btn-primary" routerLink="/compose">
+    <i class="bi bi-pencil-square me-1"></i> New post
+  </a>
+</app-page-header>
+
+@if (loading()) {
+  <div class="card">
+    <div class="card-body placeholder-glow">
+      <span class="placeholder col-4 mb-2"></span><span class="placeholder col-12"></span>
+    </div>
+  </div>
+} @else {
+  <!-- Active now -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <h5 class="card-title mb-0">Active now</h5>
+        @if (polling()) {
+          <span class="text-muted-2 small">
+            <span class="spinner-border spinner-border-sm me-1"></span>live
+          </span>
+        }
+        <span class="badge bg-label-secondary ms-auto">{{ active().length }}</span>
+      </div>
+
+      @if (active().length === 0) {
+        <p class="text-muted-2 mb-0">
+          Nothing is being processed right now. Posts you publish will show here until every target
+          is delivered.
+        </p>
+      } @else {
+        <div class="row g-3">
+          @for (p of active(); track p.postId) {
+            <div class="col-md-6">
+              <a class="card h-100 text-decoration-none border" [routerLink]="['/posts', p.postId]">
+                <div class="card-body">
+                  <div class="d-flex align-items-start gap-2 mb-2">
+                    <div class="flex-grow-1">
+                      <div class="fw-medium text-truncate">{{ p.title || 'Untitled post' }}</div>
+                      <small class="text-muted-2">{{ p.createdAt | date: 'medium' }}</small>
+                    </div>
+                    <app-status-badge [meta]="rootMeta(p)"></app-status-badge>
+                  </div>
+                  <div class="d-flex flex-wrap gap-1">
+                    @for (pl of p.platforms; track pl) {
+                      <span
+                        class="badge d-inline-flex align-items-center gap-1"
+                        [style.background]="brand(pl).color + '22'"
+                        [style.color]="brand(pl).color"
+                      >
+                        <i class="bi" [class]="brand(pl).icon"></i>{{ brand(pl).label }}
+                      </span>
+                    }
+                  </div>
+                  <div class="text-muted-2 small mt-2">
+                    {{ p.deliveredCount }}/{{ p.targetCount }} delivered
+                  </div>
+                </div>
+              </a>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="card">
+    <div class="card-body pb-0">
+      <h5 class="card-title mb-0">History</h5>
+    </div>
+    @if (history().length === 0) {
+      <div class="card-body">
+        <app-empty-state
+          icon="bi-clock-history"
+          title="No past posts yet"
+          text="Delivered and failed posts appear here for the retention window."
+        >
+          <a class="btn btn-primary" routerLink="/compose">Compose a post</a>
+        </app-empty-state>
+      </div>
+    } @else {
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Post</th>
+              <th>Platforms</th>
+              <th>Status</th>
+              <th>Delivered</th>
+              <th>When</th>
+              <th class="text-end"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of history(); track p.postId) {
+              <tr>
+                <td class="fw-medium">{{ p.title || 'Untitled post' }}</td>
+                <td>
+                  <div class="d-flex flex-wrap gap-1">
+                    @for (pl of p.platforms; track pl) {
+                      <span
+                        class="avatar avatar-sm"
+                        [title]="brand(pl).label"
+                        [style.background]="brand(pl).color + '22'"
+                        [style.color]="brand(pl).color"
+                      >
+                        <i class="bi" [class]="brand(pl).icon"></i>
+                      </span>
+                    }
+                  </div>
+                </td>
+                <td><app-status-badge [meta]="rootMeta(p)"></app-status-badge></td>
+                <td>
+                  <span [class.text-danger]="p.failedCount > 0">
+                    {{ p.deliveredCount }}/{{ p.targetCount }}
+                  </span>
+                </td>
+                <td class="text-muted-2">{{ p.createdAt | date: 'medium' }}</td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-secondary" [routerLink]="['/posts', p.postId]">
+                    <i class="bi bi-eye me-1"></i>View
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+}
