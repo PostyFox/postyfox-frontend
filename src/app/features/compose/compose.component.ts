@@ -5,6 +5,7 @@ import { forkJoin } from 'rxjs';
 import {
   CreatePostRequest,
   MediaRef,
+  PostContent,
   ServiceDefinition,
   Template,
   UserConnector,
@@ -108,6 +109,11 @@ export class ComposeComponent {
   );
 
   constructor() {
+    // "Post again" from history hands us the original content via router state.
+    const prefill = (this.router.getCurrentNavigation()?.extras.state ??
+      (typeof history !== 'undefined' ? history.state : null))?.['prefill'] as
+      PostContent | undefined;
+
     forkJoin({
       connectors: this.connectors.list(),
       templates: this.templates.list(),
@@ -118,12 +124,32 @@ export class ComposeComponent {
         this.templateList.set(templates);
         this.catalogue.set(catalogue);
         this.loading.set(false);
+        if (prefill) this.applyPrefill(prefill, connectors);
       },
       error: () => {
         this.toast.error('Could not load compose data');
         this.loading.set(false);
       },
     });
+  }
+
+  /** Re-seeds the form from a past post. Only re-ticks targets that still exist and are enabled. */
+  private applyPrefill(content: PostContent, connectors: UserConnector[]): void {
+    const available = new Set(connectors.filter((c) => c.enabled).map((c) => c.id));
+    this.selectedTargets.set(new Set(content.connectorIds.filter((id) => available.has(id))));
+    this.title.set(content.title ?? '');
+    this.description.set(content.description ?? '');
+    this.tags.set(content.tags.join(', '));
+    this.templateId.set(content.templateId ?? '');
+    this.variables.set(Object.entries(content.variables).map(([key, value]) => ({ key, value })));
+    this.mediaItems.set(
+      content.media.map((ref) => ({
+        ref,
+        name: ref.key.split('/').pop() ?? ref.key,
+        alt: ref.alt ?? '',
+      })),
+    );
+    // Deliberately not carrying the old schedule time across — it's almost certainly in the past.
   }
 
   /** Comma-joined display names, for capability warnings. */

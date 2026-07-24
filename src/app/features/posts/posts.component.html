@@ -33,7 +33,7 @@
         <div class="row g-3">
           @for (p of active(); track p.postId) {
             <div class="col-md-6">
-              <a class="card h-100 text-decoration-none border" [routerLink]="['/posts', p.postId]">
+              <div class="card h-100 border">
                 <div class="card-body">
                   <div class="d-flex align-items-start gap-2 mb-2">
                     <div class="flex-grow-1">
@@ -53,11 +53,38 @@
                       </span>
                     }
                   </div>
-                  <div class="text-muted-2 small mt-2">
-                    {{ p.deliveredCount }}/{{ p.targetCount }} delivered
+                  <div class="d-flex align-items-center gap-2 mt-2">
+                    <span class="text-muted-2 small">
+                      {{ p.deliveredCount }}/{{ p.targetCount }} delivered
+                    </span>
+                    <div class="ms-auto d-flex gap-1">
+                      <a
+                        class="btn btn-sm btn-outline-secondary"
+                        [routerLink]="['/posts', p.postId]"
+                      >
+                        <i class="bi bi-eye me-1"></i>View
+                      </a>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-warning"
+                        [disabled]="isBusy(p.postId)"
+                        (click)="cancel(p)"
+                      >
+                        <i class="bi bi-slash-circle me-1"></i>Cancel
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-danger"
+                        title="Delete this post"
+                        [disabled]="isBusy(p.postId)"
+                        (click)="remove(p)"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </a>
+              </div>
             </div>
           }
         </div>
@@ -119,9 +146,29 @@
                 </td>
                 <td class="text-muted-2">{{ p.createdAt | date: 'medium' }}</td>
                 <td class="text-end">
-                  <a class="btn btn-sm btn-outline-secondary" [routerLink]="['/posts', p.postId]">
-                    <i class="bi bi-eye me-1"></i>View
-                  </a>
+                  <div class="d-inline-flex gap-1">
+                    <a class="btn btn-sm btn-outline-secondary" [routerLink]="['/posts', p.postId]">
+                      <i class="bi bi-eye me-1"></i>View
+                    </a>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary"
+                      title="Reuse this post"
+                      [disabled]="isBusy(p.postId)"
+                      (click)="recreate(p)"
+                    >
+                      <i class="bi bi-arrow-repeat me-1"></i>Post again
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      title="Delete this post"
+                      [disabled]="isBusy(p.postId)"
+                      (click)="remove(p)"
+                    >
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
                 </td>
               </tr>
             }

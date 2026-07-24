@@ -17,6 +17,7 @@ export enum TargetStatus {
   Delivering = 3,
   Delivered = 4,
   Failed = 5,
+  Cancelled = 6,
 }
 
 /** Aggregated status of a root post across all its targets. */
@@ -27,6 +28,7 @@ export enum PostRootStatus {
   Delivered = 3,
   PartiallyFailed = 4,
   Failed = 5,
+  Cancelled = 6,
 }
 
 // ---------------------------------------------------------------------------
@@ -179,6 +181,20 @@ export interface PostStatus {
   postId: string;
   rootStatus: PostRootStatus;
   targets: PostTargetStatus[];
+}
+
+/** Authored content of a post (`GET /api/posts/{id}/content`), used to re-seed the compose form. */
+export interface PostContent {
+  title: string | null;
+  description: string | null;
+  htmlDescription: string | null;
+  tags: string[];
+  media: MediaRef[];
+  templateId: string | null;
+  variables: Record<string, string>;
+  /** Connector ids the post targeted (used to re-tick the target checkboxes). */
+  connectorIds: string[];
+  postAt: string | null;
 }
 
 /** Lightweight row from `GET /api/posts` (list / activity view — no per-target detail). */

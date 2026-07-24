@@ -18,6 +18,7 @@ export const ROOT_STATUS_META: Record<PostRootStatus, StatusMeta> = {
     icon: 'bi-exclamation-triangle',
   },
   [PostRootStatus.Failed]: { label: 'Failed', color: 'danger', icon: 'bi-x-circle' },
+  [PostRootStatus.Cancelled]: { label: 'Cancelled', color: 'secondary', icon: 'bi-slash-circle' },
 };
 
 export const TARGET_STATUS_META: Record<TargetStatus, StatusMeta> = {
@@ -27,6 +28,7 @@ export const TARGET_STATUS_META: Record<TargetStatus, StatusMeta> = {
   [TargetStatus.Delivering]: { label: 'Delivering', color: 'primary', icon: 'bi-send' },
   [TargetStatus.Delivered]: { label: 'Delivered', color: 'success', icon: 'bi-check-circle' },
   [TargetStatus.Failed]: { label: 'Failed', color: 'danger', icon: 'bi-x-circle' },
+  [TargetStatus.Cancelled]: { label: 'Cancelled', color: 'secondary', icon: 'bi-slash-circle' },
 };
 
 /** A root status is still in-flight (worth polling). */
