@@ -146,6 +146,38 @@ export interface MediaRef {
   alt?: string | null;
 }
 
+/** Live per-connector limits reported by `GET /api/connectors/{id}/limits`. */
+export interface ConnectorLimits {
+  maxContentLength: number | null;
+  maxMediaAttachments: number | null;
+  supportedMimeTypes: string[] | null;
+  /** Max image file size in bytes; null = no reported cap. */
+  imageSizeLimit: number | null;
+  /** Max video file size in bytes; null = no reported cap. */
+  videoSizeLimit: number | null;
+}
+
+/** Request body for `POST /api/connectors/media-check`. */
+export interface MediaCheckRequest {
+  connectorIds: string[];
+  fileSize: number;
+  mimeType: string;
+}
+
+/**
+ * Per-connector result from `POST /api/connectors/media-check`.
+ * `willResize` is true when the file exceeds the connector's size cap and will be
+ * automatically resized/transcoded before delivery.
+ */
+export interface MediaCheckResultItem {
+  connectorId: string;
+  platform: string;
+  displayName: string;
+  willResize: boolean;
+  imageSizeLimit: number | null;
+  videoSizeLimit: number | null;
+}
+
 // ---------------------------------------------------------------------------
 // Posts
 // ---------------------------------------------------------------------------

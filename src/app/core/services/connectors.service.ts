@@ -5,6 +5,8 @@ import { environment } from '../../../environments/environment';
 import {
   AuthState,
   ConnectorTarget,
+  MediaCheckRequest,
+  MediaCheckResultItem,
   TelegramLoginStep,
   UserConnector,
   UserConnectorUpsertRequest,
@@ -48,5 +50,14 @@ export class ConnectorsService {
   /** Begin the OAuth "connect" flow; returns the provider URL to open in the browser. */
   startOAuth(id: string): Observable<{ authorizeUrl: string }> {
     return this.http.post<{ authorizeUrl: string }>(`${this.base}/${id}/oauth/start`, {});
+  }
+
+  /**
+   * Pre-flight media check: given a file's size and MIME type, returns per-connector analysis of
+   * whether the file will be resized/transcoded before delivery. Call this after the user selects
+   * a file to surface "file too large — will be resized" warnings in the compose UI.
+   */
+  checkMedia(body: MediaCheckRequest): Observable<MediaCheckResultItem[]> {
+    return this.http.post<MediaCheckResultItem[]>(`${this.base}/media-check`, body);
   }
 }
