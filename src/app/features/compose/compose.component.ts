@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import {
   CreatePostRequest,
+  MediaCheckResultItem,
   MediaRef,
   PostContent,
   ServiceDefinition,
@@ -24,6 +25,12 @@ interface MediaItem {
   ref: MediaRef;
   name: string;
   alt: string;
+  /** Original file size in bytes (undefined for media restored from prefill history). */
+  fileSize?: number;
+  /** MIME type of the original file (undefined for media restored from prefill history). */
+  mimeType?: string;
+  /** Per-connector resize analysis from the media-check endpoint; populated after upload. */
+  resizeChecks?: MediaCheckResultItem[];
 }
 
 interface Variable {
@@ -93,6 +100,22 @@ export class ComposeComponent {
     return this.selectedConnectors().filter(
       (c) => caps[c.platform] && !caps[c.platform].supportsMedia,
     );
+  });
+
+  /** Selected targets that will resize at least one attached media item before delivery. */
+  readonly mediaResizeTargets = computed(() => {
+    const items = this.mediaItems();
+    if (items.length === 0) return [];
+    const selectedIds = new Set(this.selectedConnectors().map((c) => c.id));
+    const resizingIds = new Set<string>();
+    for (const item of items) {
+      for (const check of item.resizeChecks ?? []) {
+        if (selectedIds.has(check.connectorId) && check.willResize) {
+          resizingIds.add(check.connectorId);
+        }
+      }
+    }
+    return this.selectedConnectors().filter((c) => resizingIds.has(c.id));
   });
 
   /** Selected targets that ignore the title (platform doesn't support one). */
@@ -193,7 +216,32 @@ export class ComposeComponent {
     for (const file of files) {
       this.media.upload(file).subscribe({
         next: (ref) => {
-          this.mediaItems.update((m) => [...m, { ref, name: file.name, alt: '' }]);
+          const item: MediaItem = {
+            ref,
+            name: file.name,
+            alt: '',
+            fileSize: file.size,
+            mimeType: file.type,
+          };
+          this.mediaItems.update((m) => [...m, item]);
+
+          // Pre-flight check: find which enabled connectors would resize this file.
+          const connectorIds = this.enabledConnectors().map((c) => c.id);
+          if (connectorIds.length > 0) {
+            this.connectors
+              .checkMedia({ connectorIds, fileSize: file.size, mimeType: file.type })
+              .subscribe({
+                next: (checks) => {
+                  this.mediaItems.update((items) =>
+                    items.map((m) => (m.ref.key === ref.key ? { ...m, resizeChecks: checks } : m)),
+                  );
+                },
+                error: () => {
+                  /* resize check is best-effort; silently ignore failures */
+                },
+              });
+          }
+
           if (--remaining === 0) this.uploading.set(false);
         },
         error: () => {
@@ -203,6 +251,16 @@ export class ComposeComponent {
       });
     }
     input.value = '';
+  }
+
+  /** Returns the names of selected connectors that will resize the given media item. */
+  resizeLabelsFor(item: MediaItem): string {
+    if (!item.resizeChecks?.length) return '';
+    const selectedIds = new Set(this.selectedConnectors().map((c) => c.id));
+    return item.resizeChecks
+      .filter((c) => c.willResize && selectedIds.has(c.connectorId))
+      .map((c) => c.displayName)
+      .join(', ');
   }
 
   patchAlt(i: number, value: string): void {
