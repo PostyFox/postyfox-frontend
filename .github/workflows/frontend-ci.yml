@@ -54,9 +54,9 @@ jobs:
           fi
 
   images:
-    # Build + push the container image only on main (not PRs).
+    # Build + push for branch pushes and manual runs, but never for pull requests.
     needs: [node]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: read
