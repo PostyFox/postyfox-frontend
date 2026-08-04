@@ -31,6 +31,7 @@
               id="title"
               class="form-control"
               placeholder="Optional title"
+              [attr.maxlength]="furAffinitySelected() ? 60 : null"
               [ngModel]="title()"
               (ngModelChange)="title.set($event)"
             />
@@ -39,6 +40,9 @@
                 <i class="bi bi-info-circle me-1"></i>Ignored by
                 {{ names(titleIgnoredTargets()) }} (no title support).
               </div>
+            }
+            @if (furAffinitySelected()) {
+              <div class="form-text">Required by FurAffinity; maximum 60 characters.</div>
             }
           </div>
           <div class="mb-3">
@@ -76,7 +80,45 @@
               [ngModel]="tags()"
               (ngModelChange)="tags.set($event)"
             />
+            @if (furAffinitySelected()) {
+              <div class="form-text">
+                FurAffinity requires at least three comma-separated tags of three or more
+                characters.
+              </div>
+            }
           </div>
+          @if (ratingSupported()) {
+            <div class="mt-3">
+              <label class="form-label" for="rating">
+                Content rating
+                @if (ratingRequired()) {
+                  <span class="text-danger">*</span>
+                }
+              </label>
+              <select
+                id="rating"
+                class="form-select"
+                [ngModel]="rating()"
+                (ngModelChange)="rating.set($event)"
+              >
+                <option [ngValue]="null" [disabled]="ratingRequired()">
+                  {{ ratingRequired() ? 'Choose a rating' : 'No rating' }}
+                </option>
+                @for (option of ratingOptions; track option.value) {
+                  <option [ngValue]="option.value">{{ option.label }}</option>
+                }
+              </select>
+              @if (ratingRequired()) {
+                <div class="form-text">
+                  FurAffinity requires an explicit audience rating for every submission.
+                </div>
+              } @else if (blueskySelected()) {
+                <div class="form-text">
+                  Optional. Mature, Adult, and Extreme are published as Bluesky content self-labels.
+                </div>
+              }
+            </div>
+          }
         </div>
       </div>
 
@@ -250,6 +292,20 @@
           }
         </div>
       </div>
+
+      @if (furAffinityIssues().length) {
+        <div class="alert alert-warning">
+          <div class="fw-medium mb-1">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>Complete these FurAffinity
+            requirements
+          </div>
+          <ul class="small mb-0 ps-3">
+            @for (issue of furAffinityIssues(); track issue) {
+              <li>{{ issue }}</li>
+            }
+          </ul>
+        </div>
+      }
 
       <button class="btn btn-primary btn-lg w-100" (click)="submit()" [disabled]="!canSubmit()">
         @if (submitting()) {

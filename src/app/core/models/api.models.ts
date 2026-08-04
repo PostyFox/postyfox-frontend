@@ -31,6 +31,14 @@ export enum PostRootStatus {
   Cancelled = 6,
 }
 
+/** Author-selected audience/content classification for platforms that require it. */
+export enum ContentRating {
+  General = 0,
+  Mature = 1,
+  Adult = 2,
+  Extreme = 3,
+}
+
 // ---------------------------------------------------------------------------
 // Profile / API keys
 // ---------------------------------------------------------------------------
@@ -67,6 +75,12 @@ export interface Capabilities {
   maxContentLength: number | null;
   /** True when the platform offers an interactive OAuth "connect" flow instead of pasted secrets. */
   supportsOAuth: boolean;
+  /** True when authentication is supplied by a PostyFox Connect browser client. */
+  supportsCookiePairing: boolean;
+  /** True when the platform can represent an authored content rating. */
+  supportsRating: boolean;
+  /** True when each delivery must include an explicit content rating. */
+  requiresRating: boolean;
 }
 
 export interface ServiceDefinition extends Capabilities {
@@ -103,6 +117,11 @@ export interface UserConnectorUpsertRequest {
 export interface AuthState {
   isAuthenticated: boolean;
   detail?: string | null;
+}
+
+export interface ConnectorCookiePairingStart {
+  pairingToken: string;
+  expiresAt: string;
 }
 
 export interface ConnectorTarget {
@@ -192,6 +211,7 @@ export interface CreatePostRequest {
   templateId?: string | null;
   variables?: Record<string, string> | null;
   postAt?: string | null;
+  rating?: ContentRating | null;
 }
 
 export interface CreatePostResponse {
@@ -227,6 +247,7 @@ export interface PostContent {
   /** Connector ids the post targeted (used to re-tick the target checkboxes). */
   connectorIds: string[];
   postAt: string | null;
+  rating: ContentRating | null;
 }
 
 /** Lightweight row from `GET /api/posts` (list / activity view — no per-target detail). */

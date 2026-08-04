@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import {
   CreatePostRequest,
+  ContentRating,
   MediaCheckResultItem,
   MediaRef,
   PostContent,
@@ -65,11 +66,18 @@ export class ComposeComponent {
   readonly title = signal('');
   readonly description = signal('');
   readonly tags = signal('');
+  readonly rating = signal<ContentRating | null>(null);
   readonly templateId = signal('');
   readonly variables = signal<Variable[]>([]);
   readonly mediaItems = signal<MediaItem[]>([]);
   readonly scheduleEnabled = signal(false);
   readonly postAt = signal('');
+  readonly ratingOptions = [
+    { value: ContentRating.General, label: 'General' },
+    { value: ContentRating.Mature, label: 'Mature' },
+    { value: ContentRating.Adult, label: 'Adult' },
+    { value: ContentRating.Extreme, label: 'Extreme' },
+  ] as const;
 
   readonly enabledConnectors = computed(() => this.connectorList().filter((c) => c.enabled));
   readonly capsByPlatform = computed(() => capabilitiesByPlatform(this.catalogue()));
@@ -77,6 +85,59 @@ export class ComposeComponent {
   readonly selectedConnectors = computed(() =>
     this.enabledConnectors().filter((c) => this.selectedTargets().has(c.id)),
   );
+
+  readonly ratingRequired = computed(() => {
+    const caps = this.capsByPlatform();
+    return this.selectedConnectors().some((c) => caps[c.platform]?.requiresRating);
+  });
+
+  readonly ratingSupported = computed(() => {
+    const caps = this.capsByPlatform();
+    return this.selectedConnectors().some((c) => caps[c.platform]?.supportsRating);
+  });
+
+  readonly blueskySelected = computed(() =>
+    this.selectedConnectors().some((c) => c.platform === 'BlueSky'),
+  );
+
+  readonly furAffinitySelected = computed(() =>
+    this.selectedConnectors().some((c) => c.platform === 'FurAffinity'),
+  );
+
+  /** Requirements FurAffinity enforces at delivery time, surfaced before the post is queued. */
+  readonly furAffinityIssues = computed(() => {
+    if (!this.furAffinitySelected()) return [];
+    const issues: string[] = [];
+    if (!this.title().trim()) issues.push('Add a title.');
+    else if (this.title().trim().length > 60)
+      issues.push('Keep the title to 60 characters or fewer.');
+    if (this.rating() == null) issues.push('Choose a content rating.');
+
+    const media = this.mediaItems();
+    if (media.length !== 1) {
+      issues.push('Attach exactly one image.');
+    } else {
+      const item = media[0];
+      const contentType = (item.mimeType || item.ref.contentType).toLowerCase();
+      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(contentType)) {
+        issues.push('Use a JPEG, PNG, or GIF image.');
+      }
+      if (
+        contentType === 'image/gif' &&
+        item.fileSize != null &&
+        item.fileSize > 10 * 1024 * 1024
+      ) {
+        issues.push('Keep animated GIFs at or below 10 MiB.');
+      }
+    }
+
+    const validTags = this.tags()
+      .split(',')
+      .map((tag) => tag.trim().replace(/\s+/g, '_'))
+      .filter((tag) => tag.length >= 3);
+    if (validTags.length < 3) issues.push('Add at least three tags of three or more characters.');
+    return issues;
+  });
 
   /** Tightest character limit across selected targets (null → no limit applies). */
   readonly effectiveMaxLength = computed<number | null>(() => {
@@ -128,7 +189,12 @@ export class ComposeComponent {
   });
 
   readonly canSubmit = computed(
-    () => this.selectedTargets().size > 0 && !this.submitting() && !this.uploading(),
+    () =>
+      this.selectedTargets().size > 0 &&
+      (!this.ratingRequired() || this.rating() != null) &&
+      this.furAffinityIssues().length === 0 &&
+      !this.submitting() &&
+      !this.uploading(),
   );
 
   constructor() {
@@ -163,6 +229,7 @@ export class ComposeComponent {
     this.title.set(content.title ?? '');
     this.description.set(content.description ?? '');
     this.tags.set(content.tags.join(', '));
+    this.rating.set(content.rating);
     this.templateId.set(content.templateId ?? '');
     this.variables.set(Object.entries(content.variables).map(([key, value]) => ({ key, value })));
     this.mediaItems.set(
@@ -170,6 +237,7 @@ export class ComposeComponent {
         ref,
         name: ref.key.split('/').pop() ?? ref.key,
         alt: ref.alt ?? '',
+        mimeType: ref.contentType,
       })),
     );
     // Deliberately not carrying the old schedule time across — it's almost certainly in the past.
@@ -278,6 +346,14 @@ export class ComposeComponent {
       this.toast.warning('Pick at least one target');
       return;
     }
+    if (this.furAffinityIssues().length) {
+      this.toast.warning('Complete the FurAffinity requirements');
+      return;
+    }
+    if (this.ratingRequired() && this.rating() == null) {
+      this.toast.warning('Choose a content rating');
+      return;
+    }
 
     const tags = this.tags()
       .split(',')
@@ -309,6 +385,7 @@ export class ComposeComponent {
       templateId: this.templateId() || null,
       variables,
       postAt,
+      rating: this.rating(),
     };
 
     this.submitting.set(true);

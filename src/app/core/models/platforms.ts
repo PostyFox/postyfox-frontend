@@ -77,6 +77,18 @@ const BRANDS: Record<string, PlatformBrand> = {
     blurb: 'Post to a Tumblr blog.',
     setup: 'Provide OAuth tokens obtained from authorising the Tumblr application.',
   },
+  FurAffinity: {
+    label: 'FurAffinity',
+    icon: 'bi-palette-fill',
+    color: '#2e3b4f',
+    blurb: 'Publish gallery submissions to your FurAffinity account.',
+    setup:
+      'Sign in through PostyFox Connect so your FurAffinity password and session cookies never pass through this page.',
+    docs: {
+      href: 'https://www.furaffinity.net/login/',
+      text: 'Sign in to FurAffinity',
+    },
+  },
 };
 
 const FALLBACK: PlatformBrand = { label: '', icon: 'bi-plug', color: '#8c57ff' };
@@ -173,6 +185,9 @@ export function capabilitiesByPlatform(defs: ServiceDefinition[]): Record<string
       supportsThreads: d.supportsThreads,
       maxContentLength: d.maxContentLength,
       supportsOAuth: d.supportsOAuth,
+      supportsCookiePairing: d.supportsCookiePairing,
+      supportsRating: d.supportsRating,
+      requiresRating: d.requiresRating,
     };
   }
   return map;
