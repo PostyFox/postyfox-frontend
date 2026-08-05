@@ -11,9 +11,11 @@ import {
 } from '../../core/models/api.models';
 import {
   FieldDescriptor,
+  FieldOptionGroup,
   brandFor,
   capabilitiesByPlatform,
   capabilityChips,
+  groupedOptions,
   parseFieldDescriptors,
   validateField,
 } from '../../core/models/platforms';
@@ -45,9 +47,14 @@ interface AuthEntry {
   state?: AuthState;
 }
 
-interface CookiePairingModel extends ConnectorCookiePairingStart {
+/**
+ * State of the PostyFox Connect hand-off dialog. The extension finds the connector and the session
+ * on its own, so a token is only minted when the user opens the fallback for a browser that cannot
+ * sign in to PostyFox.
+ */
+interface CookieConnectModel {
   connector: UserConnector;
-  postyFoxOrigin: string;
+  pairing: ConnectorCookiePairingStart | null;
 }
 
 function parseObject(json: string | null | undefined): Record<string, string> {
@@ -97,10 +104,10 @@ export class ConnectorsComponent {
   /** OAuth "connect" flow in progress (from the editor). */
   readonly connecting = signal(false);
   /** PostyFox Connect cookie hand-off flow. */
-  readonly cookiePairing = signal<CookiePairingModel | null>(null);
+  readonly cookieConnect = signal<CookieConnectModel | null>(null);
   readonly pairingStarting = signal(false);
   readonly pairingChecking = signal(false);
-  readonly pairingCopied = signal<'origin' | 'token' | null>(null);
+  readonly pairingCopied = signal(false);
 
   readonly enabledCatalogue = computed(() => this.catalogue().filter((s) => s.enabled));
   readonly capsByPlatform = computed(() => capabilitiesByPlatform(this.catalogue()));
@@ -129,10 +136,24 @@ export class ConnectorsComponent {
 
   readonly hasConfigErrors = computed(() => Object.keys(this.configErrors()).length > 0);
 
+  /**
+   * Choice fields of the connector being edited, pre-grouped into `<optgroup>` runs and keyed by
+   * field name. Computed once per editor session: FurAffinity's species list alone is ~400 entries,
+   * so regrouping it on every change-detection pass would be waste.
+   */
+  readonly optionGroups = computed<Record<string, FieldOptionGroup[]>>(() => {
+    const e = this.editor();
+    if (!e) return {};
+    const groups: Record<string, FieldOptionGroup[]> = {};
+    for (const [key, descriptor] of Object.entries(e.descriptors))
+      if (descriptor.options?.length) groups[key] = groupedOptions(descriptor);
+    return groups;
+  });
+
   // ----- presentation helpers ----------------------------------------------
   brand = brandFor;
 
-  /** Descriptor (label/help/placeholder/type/link) for a field of the connector being edited. */
+  /** Descriptor (label/help/placeholder/type/link/options) for a field being edited. */
   field(key: string): FieldDescriptor {
     return this.editor()?.descriptors[key] ?? { label: key };
   }
@@ -356,39 +377,47 @@ export class ConnectorsComponent {
         }),
       );
       this.closeEditor();
-      await this.beginCookiePairing(saved);
+      this.openCookieConnect(saved);
       this.load();
     } catch (err: any) {
-      this.toast.error('Could not start PostyFox Connect', err?.error?.error);
+      this.toast.error('Could not save the connector', err?.error?.error);
     } finally {
       this.pairingStarting.set(false);
     }
   }
 
-  async beginCookiePairing(connector: UserConnector): Promise<void> {
+  /**
+   * Shows the hand-off instructions. Nothing is minted up front — the extension authenticates with
+   * the user's own PostyFox session, so a five-minute token would usually expire unused.
+   */
+  openCookieConnect(connector: UserConnector): void {
+    this.cookieConnect.set({ connector, pairing: null });
+    this.pairingCopied.set(false);
+  }
+
+  /** Fallback: mint a one-use token for a browser that cannot sign in to PostyFox. */
+  async requestPairingToken(): Promise<void> {
+    const current = this.cookieConnect();
+    if (!current) return;
     this.pairingStarting.set(true);
     try {
-      const start = await firstValueFrom(this.connectors.startCookiePairing(connector.id));
-      this.cookiePairing.set({
-        ...start,
-        connector,
-        postyFoxOrigin: window.location.origin,
-      });
-      this.pairingCopied.set(null);
+      const pairing = await firstValueFrom(
+        this.connectors.startCookiePairing(current.connector.id),
+      );
+      this.cookieConnect.set({ ...current, pairing });
+      this.pairingCopied.set(false);
     } catch (err: any) {
-      this.toast.error('Could not start PostyFox Connect', err?.error?.error);
+      this.toast.error('Could not create a pairing token', err?.error?.error);
     } finally {
       this.pairingStarting.set(false);
     }
   }
 
-  async copyPairingValue(kind: 'origin' | 'token', value: string): Promise<void> {
+  async copyPairingToken(value: string): Promise<void> {
     try {
       await navigator.clipboard.writeText(value);
-      this.pairingCopied.set(kind);
-      window.setTimeout(() => {
-        if (this.pairingCopied() === kind) this.pairingCopied.set(null);
-      }, 2000);
+      this.pairingCopied.set(true);
+      window.setTimeout(() => this.pairingCopied.set(false), 2000);
     } catch {
       this.toast.error('Could not copy to clipboard');
     }
@@ -398,33 +427,37 @@ export class ConnectorsComponent {
     return new Date(expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  checkCookiePairing(): void {
-    const pairing = this.cookiePairing();
-    if (!pairing) return;
+  checkCookieConnect(): void {
+    const current = this.cookieConnect();
+    if (!current) return;
+    const { connector } = current;
     this.pairingChecking.set(true);
-    this.connectors.isAuthenticated(pairing.connector.id).subscribe({
+    this.connectors.isAuthenticated(connector.id).subscribe({
       next: (state) => {
         this.pairingChecking.set(false);
         this.authStates.update((states) => ({
           ...states,
-          [pairing.connector.id]: { loading: false, state },
+          [connector.id]: { loading: false, state },
         }));
         if (state.isAuthenticated) {
-          this.toast.success('FurAffinity connected', state.detail ?? undefined);
-          this.closeCookiePairing();
+          this.toast.success(`${connector.displayName} connected`, state.detail ?? undefined);
+          this.closeCookieConnect();
         } else {
-          this.toast.warning('FurAffinity is not connected yet', state.detail ?? undefined);
+          this.toast.warning(
+            `${connector.displayName} is not connected yet`,
+            state.detail ?? undefined,
+          );
         }
       },
       error: (err) => {
         this.pairingChecking.set(false);
-        this.toast.error('Could not check FurAffinity connection', err?.error?.error);
+        this.toast.error(`Could not check ${connector.displayName}`, err?.error?.error);
       },
     });
   }
 
-  closeCookiePairing(): void {
-    this.cookiePairing.set(null);
+  closeCookieConnect(): void {
+    this.cookieConnect.set(null);
     this.pairingChecking.set(false);
   }
 

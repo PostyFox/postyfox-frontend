@@ -112,11 +112,7 @@
                 </button>
               }
               @if (supportsCookiePairing(c.platform)) {
-                <button
-                  class="btn btn-sm btn-outline-info"
-                  (click)="beginCookiePairing(c)"
-                  [disabled]="pairingStarting()"
-                >
+                <button class="btn btn-sm btn-outline-info" (click)="openCookieConnect(c)">
                   <i class="bi bi-browser-chrome me-1"></i> Connect
                 </button>
               }
@@ -229,15 +225,41 @@
             @for (key of e.configFields; track key) {
               <div class="mb-3">
                 <label class="form-label" [for]="'cfg-' + key">{{ field(key).label }}</label>
-                <input
-                  [id]="'cfg-' + key"
-                  class="form-control"
-                  [class.is-invalid]="configErrors()[key]"
-                  [type]="field(key).type || 'text'"
-                  [placeholder]="field(key).placeholder || ''"
-                  [ngModel]="e.config[key]"
-                  (ngModelChange)="patchConfig(key, $event)"
-                />
+                @if (field(key).options?.length) {
+                  <!-- Fixed set of choices (e.g. FurAffinity's category/species IDs): pick by name. -->
+                  <select
+                    [id]="'cfg-' + key"
+                    class="form-select"
+                    [class.is-invalid]="configErrors()[key]"
+                    [ngModel]="e.config[key]"
+                    (ngModelChange)="patchConfig(key, $event)"
+                  >
+                    <option value="">{{ field(key).placeholder || 'Not set' }}</option>
+                    @for (group of optionGroups()[key]; track $index) {
+                      @if (group.label) {
+                        <optgroup [label]="group.label">
+                          @for (option of group.options; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                          }
+                        </optgroup>
+                      } @else {
+                        @for (option of group.options; track option.value) {
+                          <option [value]="option.value">{{ option.label }}</option>
+                        }
+                      }
+                    }
+                  </select>
+                } @else {
+                  <input
+                    [id]="'cfg-' + key"
+                    class="form-control"
+                    [class.is-invalid]="configErrors()[key]"
+                    [type]="field(key).type || 'text'"
+                    [placeholder]="field(key).placeholder || ''"
+                    [ngModel]="e.config[key]"
+                    (ngModelChange)="patchConfig(key, $event)"
+                  />
+                }
                 @if (configErrors()[key]; as err) {
                   <div class="invalid-feedback d-block">{{ err }}</div>
                 }
@@ -284,8 +306,9 @@
                 <div>
                   <div class="fw-medium">Connect your browser session</div>
                   <p class="small text-muted-2 mb-3">
-                    PostyFox Connect securely transfers only the FurAffinity session cookies needed
-                    to post. Your password is never sent to PostyFox.
+                    PostyFox Connect transfers only the {{ brand(e.platform).label }} session
+                    cookies needed to post — one click, nothing to copy. Your password is never sent
+                    to PostyFox.
                   </p>
                   <button
                     class="btn btn-outline-primary"
@@ -368,26 +391,24 @@
   <div class="modal-backdrop fade show"></div>
 }
 
-<!-- PostyFox Connect pairing modal -->
-@if (cookiePairing(); as pairing) {
+<!-- PostyFox Connect hand-off modal -->
+@if (cookieConnect(); as handoff) {
   <div class="modal fade show d-block" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">
             <i class="bi bi-browser-chrome me-2 text-primary"></i>Connect
-            {{ pairing.connector.displayName }}
+            {{ handoff.connector.displayName }}
           </h5>
-          <button type="button" class="btn-close" (click)="closeCookiePairing()"></button>
+          <button type="button" class="btn-close" (click)="closeCookieConnect()"></button>
         </div>
         <div class="modal-body">
           <div class="alert alert-info d-flex align-items-start gap-2">
             <i class="bi bi-shield-check fs-5"></i>
             <span>
-              This one-use pairing expires at
-              <strong>{{ pairingExpiry(pairing.expiresAt) }}</strong
-              >. PostyFox Connect sends only FurAffinity's <code>a</code> and <code>b</code> session
-              cookies.
+              PostyFox Connect finds this connector on its own and sends only the site's session
+              cookies. Nothing to copy, nothing to type.
             </span>
           </div>
 
@@ -395,98 +416,98 @@
             <div class="d-flex gap-3">
               <span class="badge rounded-pill bg-primary align-self-start">1</span>
               <div>
-                <div class="fw-medium">Open PostyFox Connect</div>
+                <div class="fw-medium">Log in to the site in this browser</div>
                 <div class="small text-muted-2">
-                  Use the extension icon in Chrome or Edge, or open the PostyFox Connect app and
-                  enable its Safari extension on Apple devices.
+                  Stay signed in to PostyFox here too — the extension uses that session to identify
+                  you.
                 </div>
               </div>
             </div>
 
             <div class="d-flex gap-3">
               <span class="badge rounded-pill bg-primary align-self-start">2</span>
-              <div class="flex-grow-1 min-w-0">
-                <div class="fw-medium mb-2">Enter these pairing details</div>
-                <label class="form-label small" for="pair-origin">PostyFox URL</label>
-                <div class="input-group mb-3">
-                  <input
-                    id="pair-origin"
-                    class="form-control font-monospace"
-                    readonly
-                    [value]="pairing.postyFoxOrigin"
-                  />
-                  <button
-                    class="btn btn-outline-secondary"
-                    (click)="copyPairingValue('origin', pairing.postyFoxOrigin)"
-                  >
-                    <i
-                      class="bi"
-                      [class.bi-check-lg]="pairingCopied() === 'origin'"
-                      [class.bi-copy]="pairingCopied() !== 'origin'"
-                    ></i>
-                    {{ pairingCopied() === 'origin' ? 'Copied' : 'Copy' }}
-                  </button>
-                </div>
-                <label class="form-label small" for="pair-token">Pairing token</label>
-                <div class="input-group">
-                  <input
-                    id="pair-token"
-                    class="form-control font-monospace"
-                    readonly
-                    [value]="pairing.pairingToken"
-                  />
-                  <button
-                    class="btn btn-outline-secondary"
-                    (click)="copyPairingValue('token', pairing.pairingToken)"
-                  >
-                    <i
-                      class="bi"
-                      [class.bi-check-lg]="pairingCopied() === 'token'"
-                      [class.bi-copy]="pairingCopied() !== 'token'"
-                    ></i>
-                    {{ pairingCopied() === 'token' ? 'Copied' : 'Copy' }}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="d-flex gap-3">
-              <span class="badge rounded-pill bg-primary align-self-start">3</span>
               <div>
-                <div class="fw-medium">Sign in and connect</div>
+                <div class="fw-medium">Open PostyFox Connect and click Connect</div>
                 <div class="small text-muted-2">
-                  Let PostyFox Connect open FurAffinity, sign in there if needed, then choose
-                  <strong>Connect session</strong>. Return here when it reports success.
+                  Use the extension icon in Chrome or Edge, or open the PostyFox Connect app and
+                  enable its Safari extension on Apple devices. It will tell you if either login is
+                  missing.
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="modal-footer justify-content-between">
-          <button
-            class="btn btn-outline-secondary"
-            (click)="beginCookiePairing(pairing.connector)"
-            [disabled]="pairingStarting()"
-          >
-            <i class="bi bi-arrow-clockwise me-1"></i>New token
-          </button>
-          <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary" (click)="closeCookiePairing()">
-              Finish later
-            </button>
+
+          <hr class="my-4" />
+
+          @if (handoff.pairing; as pairing) {
+            <label class="form-label small" for="pair-token">
+              One-time pairing token — expires at
+              <strong>{{ pairingExpiry(pairing.expiresAt) }}</strong>
+            </label>
+            <div class="input-group">
+              <input
+                id="pair-token"
+                class="form-control font-monospace"
+                readonly
+                [value]="pairing.pairingToken"
+              />
+              <button
+                class="btn btn-outline-secondary"
+                (click)="copyPairingToken(pairing.pairingToken)"
+              >
+                <i
+                  class="bi"
+                  [class.bi-check-lg]="pairingCopied()"
+                  [class.bi-copy]="!pairingCopied()"
+                ></i>
+                {{ pairingCopied() ? 'Copied' : 'Copy' }}
+              </button>
+              <button
+                class="btn btn-outline-secondary"
+                (click)="requestPairingToken()"
+                [disabled]="pairingStarting()"
+                title="Replace with a fresh token"
+              >
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
+            <div class="form-text">
+              Paste this into <strong>Use a pairing token instead</strong> in the extension.
+            </div>
+          } @else {
+            <div class="small text-muted-2">
+              Using a browser that isn't signed in to PostyFox — a separate profile, or Safari?
+            </div>
             <button
-              class="btn btn-primary"
-              (click)="checkCookiePairing()"
-              [disabled]="pairingChecking()"
+              class="btn btn-sm btn-outline-secondary mt-2"
+              (click)="requestPairingToken()"
+              [disabled]="pairingStarting()"
             >
-              @if (pairingChecking()) {
+              @if (pairingStarting()) {
                 <span class="spinner-border spinner-border-sm me-1"></span>
               } @else {
-                <i class="bi bi-shield-check me-1"></i>
+                <i class="bi bi-key me-1"></i>
               }
-              Check connection
+              Get a pairing token instead
             </button>
-          </div>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="closeCookieConnect()">
+            Finish later
+          </button>
+          <button
+            class="btn btn-primary"
+            (click)="checkCookieConnect()"
+            [disabled]="pairingChecking()"
+          >
+            @if (pairingChecking()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            } @else {
+              <i class="bi bi-shield-check me-1"></i>
+            }
+            Check connection
+          </button>
         </div>
       </div>
     </div>
