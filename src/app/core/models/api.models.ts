@@ -91,6 +91,13 @@ export interface ServiceDefinition extends Capabilities {
   configSchema: string;
   /** Flat JSON object of secret config fields, or null. */
   secureConfigSchema: string | null;
+  /**
+   * Field descriptors for choices the platform takes *per submission* rather than per account —
+   * FurAffinity's category, species, gender and gallery folders. Same format as
+   * {@link configSchema}; null when the platform has none. Rendered by the compose form once per
+   * selected target and submitted as {@link CreatePostRequest.targetOptions}.
+   */
+  postOptionsSchema: string | null;
   platform: string;
 }
 
@@ -212,6 +219,12 @@ export interface CreatePostRequest {
   variables?: Record<string, string> | null;
   postAt?: string | null;
   rating?: ContentRating | null;
+  /**
+   * Per-submission platform choices, keyed by target connector id (see
+   * {@link ServiceDefinition.postOptionsSchema}). Validated server-side; anything the platform does
+   * not declare is dropped.
+   */
+  targetOptions?: Record<string, Record<string, string>> | null;
 }
 
 export interface CreatePostResponse {
@@ -248,6 +261,8 @@ export interface PostContent {
   connectorIds: string[];
   postAt: string | null;
   rating: ContentRating | null;
+  /** The per-submission platform choices it was created with, keyed by connector id. */
+  targetOptions: Record<string, Record<string, string>>;
 }
 
 /** Lightweight row from `GET /api/posts` (list / activity view — no per-target detail). */

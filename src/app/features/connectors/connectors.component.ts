@@ -11,11 +11,9 @@ import {
 } from '../../core/models/api.models';
 import {
   FieldDescriptor,
-  FieldOptionGroup,
   brandFor,
   capabilitiesByPlatform,
   capabilityChips,
-  groupedOptions,
   parseFieldDescriptors,
   validateField,
 } from '../../core/models/platforms';
@@ -24,6 +22,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { ConnectorsService } from '../../core/services/connectors.service';
 import { ServicesService } from '../../core/services/services.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DescriptorFieldComponent } from '../../shared/components/descriptor-field.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 
@@ -69,7 +68,7 @@ function parseObject(json: string | null | undefined): Record<string, string> {
 
 @Component({
   selector: 'app-connectors',
-  imports: [FormsModule, PageHeaderComponent, EmptyStateComponent],
+  imports: [FormsModule, PageHeaderComponent, EmptyStateComponent, DescriptorFieldComponent],
   templateUrl: './connectors.component.html',
 })
 export class ConnectorsComponent {
@@ -135,20 +134,6 @@ export class ConnectorsComponent {
   });
 
   readonly hasConfigErrors = computed(() => Object.keys(this.configErrors()).length > 0);
-
-  /**
-   * Choice fields of the connector being edited, pre-grouped into `<optgroup>` runs and keyed by
-   * field name. Computed once per editor session: FurAffinity's species list alone is ~400 entries,
-   * so regrouping it on every change-detection pass would be waste.
-   */
-  readonly optionGroups = computed<Record<string, FieldOptionGroup[]>>(() => {
-    const e = this.editor();
-    if (!e) return {};
-    const groups: Record<string, FieldOptionGroup[]> = {};
-    for (const [key, descriptor] of Object.entries(e.descriptors))
-      if (descriptor.options?.length) groups[key] = groupedOptions(descriptor);
-    return groups;
-  });
 
   // ----- presentation helpers ----------------------------------------------
   brand = brandFor;

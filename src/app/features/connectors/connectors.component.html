@@ -223,59 +223,13 @@
           @if (e.configFields.length) {
             <h6 class="text-muted-2 text-uppercase small mt-4">Configuration</h6>
             @for (key of e.configFields; track key) {
-              <div class="mb-3">
-                <label class="form-label" [for]="'cfg-' + key">{{ field(key).label }}</label>
-                @if (field(key).options?.length) {
-                  <!-- Fixed set of choices (e.g. FurAffinity's category/species IDs): pick by name. -->
-                  <select
-                    [id]="'cfg-' + key"
-                    class="form-select"
-                    [class.is-invalid]="configErrors()[key]"
-                    [ngModel]="e.config[key]"
-                    (ngModelChange)="patchConfig(key, $event)"
-                  >
-                    <option value="">{{ field(key).placeholder || 'Not set' }}</option>
-                    @for (group of optionGroups()[key]; track $index) {
-                      @if (group.label) {
-                        <optgroup [label]="group.label">
-                          @for (option of group.options; track option.value) {
-                            <option [value]="option.value">{{ option.label }}</option>
-                          }
-                        </optgroup>
-                      } @else {
-                        @for (option of group.options; track option.value) {
-                          <option [value]="option.value">{{ option.label }}</option>
-                        }
-                      }
-                    }
-                  </select>
-                } @else {
-                  <input
-                    [id]="'cfg-' + key"
-                    class="form-control"
-                    [class.is-invalid]="configErrors()[key]"
-                    [type]="field(key).type || 'text'"
-                    [placeholder]="field(key).placeholder || ''"
-                    [ngModel]="e.config[key]"
-                    (ngModelChange)="patchConfig(key, $event)"
-                  />
-                }
-                @if (configErrors()[key]; as err) {
-                  <div class="invalid-feedback d-block">{{ err }}</div>
-                }
-                @if (field(key); as fm) {
-                  @if (fm.help) {
-                    <div class="form-text">{{ fm.help }}</div>
-                  }
-                  @if (fm.link) {
-                    <div class="form-text">
-                      <a [href]="fm.link.href" target="_blank" rel="noopener">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>{{ fm.link.text }}
-                      </a>
-                    </div>
-                  }
-                }
-              </div>
+              <app-descriptor-field
+                [fieldId]="'cfg-' + key"
+                [descriptor]="field(key)"
+                [value]="e.config[key]"
+                [error]="configErrors()[key]"
+                (valueChange)="patchConfig(key, $event)"
+              />
             }
           }
 
@@ -335,29 +289,15 @@
               <p class="small text-muted-2">Leave blank to keep the stored secret unchanged.</p>
             }
             @for (key of e.secureFields; track key) {
-              <div class="mb-3">
-                <label class="form-label" [for]="'sec-' + key">{{ field(key).label }}</label>
-                <input
-                  [id]="'sec-' + key"
-                  type="password"
-                  autocomplete="new-password"
-                  class="form-control"
-                  [ngModel]="e.secure[key]"
-                  (ngModelChange)="patchSecure(key, $event)"
-                />
-                @if (field(key); as fm) {
-                  @if (fm.help) {
-                    <div class="form-text">{{ fm.help }}</div>
-                  }
-                  @if (fm.link) {
-                    <div class="form-text">
-                      <a [href]="fm.link.href" target="_blank" rel="noopener">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>{{ fm.link.text }}
-                      </a>
-                    </div>
-                  }
-                }
-              </div>
+              <app-descriptor-field
+                [fieldId]="'sec-' + key"
+                [descriptor]="field(key)"
+                [value]="e.secure[key]"
+                [error]="configErrors()[key]"
+                type="password"
+                autocomplete="new-password"
+                (valueChange)="patchSecure(key, $event)"
+              />
             }
           }
 

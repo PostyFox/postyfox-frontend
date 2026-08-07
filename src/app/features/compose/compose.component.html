@@ -237,6 +237,41 @@
           }
         </div>
       </div>
+
+      <!--
+        Choices the platform takes per submission rather than per account (FurAffinity's category,
+        species, gender, gallery folders). One section per selected target, since two accounts on the
+        same platform can want different answers.
+      -->
+      @for (group of targetOptionGroups(); track group.connector.id) {
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title d-flex align-items-center gap-2 mb-1">
+              <span
+                class="avatar avatar-sm"
+                [style.background]="brand(group.connector.platform).color + '22'"
+                [style.color]="brand(group.connector.platform).color"
+              >
+                <i class="bi" [class]="brand(group.connector.platform).icon"></i>
+              </span>
+              {{ group.connector.displayName }} options
+            </h5>
+            <p class="text-muted-2 small mb-3">
+              How this submission is filed on {{ brand(group.connector.platform).label }}. Anything
+              left unset uses the platform's own default.
+            </p>
+            @for (field of group.fields; track field.key) {
+              <app-descriptor-field
+                [fieldId]="'opt-' + group.connector.id + '-' + field.key"
+                [descriptor]="field.descriptor"
+                [value]="targetOption(group.connector.id, field.key)"
+                [error]="targetOptionError(group.connector.id, field.key)"
+                (valueChange)="patchTargetOption(group.connector.id, field.key, $event)"
+              />
+            }
+          </div>
+        </div>
+      }
     </div>
 
     <!-- Right: targets + schedule + submit -->
