@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   AuthState,
+  ConnectorCookiePairingStart,
   ConnectorTarget,
   MediaCheckRequest,
   MediaCheckResultItem,
@@ -50,6 +51,14 @@ export class ConnectorsService {
   /** Begin the OAuth "connect" flow; returns the provider URL to open in the browser. */
   startOAuth(id: string): Observable<{ authorizeUrl: string }> {
     return this.http.post<{ authorizeUrl: string }>(`${this.base}/${id}/oauth/start`, {});
+  }
+
+  /** Create a short-lived, one-use token for PostyFox Connect to transfer browser cookies. */
+  startCookiePairing(id: string): Observable<ConnectorCookiePairingStart> {
+    return this.http.post<ConnectorCookiePairingStart>(
+      `${this.base}/${id}/cookie-pairing/start`,
+      {},
+    );
   }
 
   /**

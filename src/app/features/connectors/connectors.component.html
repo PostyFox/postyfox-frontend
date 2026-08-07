@@ -22,7 +22,7 @@
       <app-empty-state
         icon="bi-plug"
         title="No connectors yet"
-        text="Add a connector to start delivering posts to Discord, Telegram, BlueSky or Tumblr."
+        text="Add a connector to start delivering posts to FurAffinity and your other platforms."
       >
         <button class="btn btn-primary" (click)="startAdd()">
           <i class="bi bi-plus-lg me-1"></i> Add your first connector
@@ -109,6 +109,11 @@
               @if (isTelegram(c)) {
                 <button class="btn btn-sm btn-outline-info" (click)="startTelegram(c)">
                   <i class="bi bi-telegram me-1"></i> Log in
+                </button>
+              }
+              @if (supportsCookiePairing(c.platform)) {
+                <button class="btn btn-sm btn-outline-info" (click)="openCookieConnect(c)">
+                  <i class="bi bi-browser-chrome me-1"></i> Connect
                 </button>
               }
               <button
@@ -218,33 +223,13 @@
           @if (e.configFields.length) {
             <h6 class="text-muted-2 text-uppercase small mt-4">Configuration</h6>
             @for (key of e.configFields; track key) {
-              <div class="mb-3">
-                <label class="form-label" [for]="'cfg-' + key">{{ field(key).label }}</label>
-                <input
-                  [id]="'cfg-' + key"
-                  class="form-control"
-                  [class.is-invalid]="configErrors()[key]"
-                  [type]="field(key).type || 'text'"
-                  [placeholder]="field(key).placeholder || ''"
-                  [ngModel]="e.config[key]"
-                  (ngModelChange)="patchConfig(key, $event)"
-                />
-                @if (configErrors()[key]; as err) {
-                  <div class="invalid-feedback d-block">{{ err }}</div>
-                }
-                @if (field(key); as fm) {
-                  @if (fm.help) {
-                    <div class="form-text">{{ fm.help }}</div>
-                  }
-                  @if (fm.link) {
-                    <div class="form-text">
-                      <a [href]="fm.link.href" target="_blank" rel="noopener">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>{{ fm.link.text }}
-                      </a>
-                    </div>
-                  }
-                }
-              </div>
+              <app-descriptor-field
+                [fieldId]="'cfg-' + key"
+                [descriptor]="field(key)"
+                [value]="e.config[key]"
+                [error]="configErrors()[key]"
+                (valueChange)="patchConfig(key, $event)"
+              />
             }
           }
 
@@ -267,6 +252,35 @@
             </button>
           }
 
+          @if (supportsCookiePairing(e.platform)) {
+            <h6 class="text-muted-2 text-uppercase small mt-4">Connection</h6>
+            <div class="border rounded p-3">
+              <div class="d-flex align-items-start gap-3">
+                <i class="bi bi-browser-chrome fs-3 text-primary"></i>
+                <div>
+                  <div class="fw-medium">Connect your browser session</div>
+                  <p class="small text-muted-2 mb-3">
+                    PostyFox Connect transfers only the {{ brand(e.platform).label }} session
+                    cookies needed to post — one click, nothing to copy. Your password is never sent
+                    to PostyFox.
+                  </p>
+                  <button
+                    class="btn btn-outline-primary"
+                    (click)="connectCookies()"
+                    [disabled]="pairingStarting() || !e.displayName.trim() || hasConfigErrors()"
+                  >
+                    @if (pairingStarting()) {
+                      <span class="spinner-border spinner-border-sm me-1"></span>
+                    } @else {
+                      <i class="bi bi-link-45deg me-1"></i>
+                    }
+                    {{ e.id ? 'Reconnect' : 'Save & connect' }} {{ brand(e.platform).label }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+
           @if (e.secureFields.length) {
             <h6 class="text-muted-2 text-uppercase small mt-4">
               Secrets <i class="bi bi-shield-lock ms-1"></i>
@@ -275,29 +289,15 @@
               <p class="small text-muted-2">Leave blank to keep the stored secret unchanged.</p>
             }
             @for (key of e.secureFields; track key) {
-              <div class="mb-3">
-                <label class="form-label" [for]="'sec-' + key">{{ field(key).label }}</label>
-                <input
-                  [id]="'sec-' + key"
-                  type="password"
-                  autocomplete="new-password"
-                  class="form-control"
-                  [ngModel]="e.secure[key]"
-                  (ngModelChange)="patchSecure(key, $event)"
-                />
-                @if (field(key); as fm) {
-                  @if (fm.help) {
-                    <div class="form-text">{{ fm.help }}</div>
-                  }
-                  @if (fm.link) {
-                    <div class="form-text">
-                      <a [href]="fm.link.href" target="_blank" rel="noopener">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>{{ fm.link.text }}
-                      </a>
-                    </div>
-                  }
-                }
-              </div>
+              <app-descriptor-field
+                [fieldId]="'sec-' + key"
+                [descriptor]="field(key)"
+                [value]="e.secure[key]"
+                [error]="configErrors()[key]"
+                type="password"
+                autocomplete="new-password"
+                (valueChange)="patchSecure(key, $event)"
+              />
             }
           }
 
@@ -323,6 +323,130 @@
               <span class="spinner-border spinner-border-sm me-1"></span>
             }
             Save connector
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show"></div>
+}
+
+<!-- PostyFox Connect hand-off modal -->
+@if (cookieConnect(); as handoff) {
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="bi bi-browser-chrome me-2 text-primary"></i>Connect
+            {{ handoff.connector.displayName }}
+          </h5>
+          <button type="button" class="btn-close" (click)="closeCookieConnect()"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info d-flex align-items-start gap-2">
+            <i class="bi bi-shield-check fs-5"></i>
+            <span>
+              PostyFox Connect finds this connector on its own and sends only the site's session
+              cookies. Nothing to copy, nothing to type.
+            </span>
+          </div>
+
+          <div class="d-flex flex-column gap-4">
+            <div class="d-flex gap-3">
+              <span class="badge rounded-pill bg-primary align-self-start">1</span>
+              <div>
+                <div class="fw-medium">Log in to the site in this browser</div>
+                <div class="small text-muted-2">
+                  Stay signed in to PostyFox here too — the extension uses that session to identify
+                  you.
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex gap-3">
+              <span class="badge rounded-pill bg-primary align-self-start">2</span>
+              <div>
+                <div class="fw-medium">Open PostyFox Connect and click Connect</div>
+                <div class="small text-muted-2">
+                  Use the extension icon in Chrome or Edge, or open the PostyFox Connect app and
+                  enable its Safari extension on Apple devices. It will tell you if either login is
+                  missing.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-4" />
+
+          @if (handoff.pairing; as pairing) {
+            <label class="form-label small" for="pair-token">
+              One-time pairing token — expires at
+              <strong>{{ pairingExpiry(pairing.expiresAt) }}</strong>
+            </label>
+            <div class="input-group">
+              <input
+                id="pair-token"
+                class="form-control font-monospace"
+                readonly
+                [value]="pairing.pairingToken"
+              />
+              <button
+                class="btn btn-outline-secondary"
+                (click)="copyPairingToken(pairing.pairingToken)"
+              >
+                <i
+                  class="bi"
+                  [class.bi-check-lg]="pairingCopied()"
+                  [class.bi-copy]="!pairingCopied()"
+                ></i>
+                {{ pairingCopied() ? 'Copied' : 'Copy' }}
+              </button>
+              <button
+                class="btn btn-outline-secondary"
+                (click)="requestPairingToken()"
+                [disabled]="pairingStarting()"
+                title="Replace with a fresh token"
+              >
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
+            <div class="form-text">
+              Paste this into <strong>Use a pairing token instead</strong> in the extension.
+            </div>
+          } @else {
+            <div class="small text-muted-2">
+              Using a browser that isn't signed in to PostyFox — a separate profile, or Safari?
+            </div>
+            <button
+              class="btn btn-sm btn-outline-secondary mt-2"
+              (click)="requestPairingToken()"
+              [disabled]="pairingStarting()"
+            >
+              @if (pairingStarting()) {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+              } @else {
+                <i class="bi bi-key me-1"></i>
+              }
+              Get a pairing token instead
+            </button>
+          }
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="closeCookieConnect()">
+            Finish later
+          </button>
+          <button
+            class="btn btn-primary"
+            (click)="checkCookieConnect()"
+            [disabled]="pairingChecking()"
+          >
+            @if (pairingChecking()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            } @else {
+              <i class="bi bi-shield-check me-1"></i>
+            }
+            Check connection
           </button>
         </div>
       </div>

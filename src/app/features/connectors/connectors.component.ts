@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import {
   AuthState,
+  ConnectorCookiePairingStart,
   ConnectorTarget,
   ServiceDefinition,
   TelegramLoginStep,
@@ -21,6 +22,7 @@ import { ConfirmService } from '../../core/services/confirm.service';
 import { ConnectorsService } from '../../core/services/connectors.service';
 import { ServicesService } from '../../core/services/services.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DescriptorFieldComponent } from '../../shared/components/descriptor-field.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 
@@ -44,6 +46,16 @@ interface AuthEntry {
   state?: AuthState;
 }
 
+/**
+ * State of the PostyFox Connect hand-off dialog. The extension finds the connector and the session
+ * on its own, so a token is only minted when the user opens the fallback for a browser that cannot
+ * sign in to PostyFox.
+ */
+interface CookieConnectModel {
+  connector: UserConnector;
+  pairing: ConnectorCookiePairingStart | null;
+}
+
 function parseObject(json: string | null | undefined): Record<string, string> {
   if (!json) return {};
   try {
@@ -56,7 +68,7 @@ function parseObject(json: string | null | undefined): Record<string, string> {
 
 @Component({
   selector: 'app-connectors',
-  imports: [FormsModule, PageHeaderComponent, EmptyStateComponent],
+  imports: [FormsModule, PageHeaderComponent, EmptyStateComponent, DescriptorFieldComponent],
   templateUrl: './connectors.component.html',
 })
 export class ConnectorsComponent {
@@ -90,6 +102,11 @@ export class ConnectorsComponent {
 
   /** OAuth "connect" flow in progress (from the editor). */
   readonly connecting = signal(false);
+  /** PostyFox Connect cookie hand-off flow. */
+  readonly cookieConnect = signal<CookieConnectModel | null>(null);
+  readonly pairingStarting = signal(false);
+  readonly pairingChecking = signal(false);
+  readonly pairingCopied = signal(false);
 
   readonly enabledCatalogue = computed(() => this.catalogue().filter((s) => s.enabled));
   readonly capsByPlatform = computed(() => capabilitiesByPlatform(this.catalogue()));
@@ -121,13 +138,17 @@ export class ConnectorsComponent {
   // ----- presentation helpers ----------------------------------------------
   brand = brandFor;
 
-  /** Descriptor (label/help/placeholder/type/link) for a field of the connector being edited. */
+  /** Descriptor (label/help/placeholder/type/link/options) for a field being edited. */
   field(key: string): FieldDescriptor {
     return this.editor()?.descriptors[key] ?? { label: key };
   }
 
   supportsOAuth(platform: string): boolean {
     return this.capsByPlatform()[platform]?.supportsOAuth ?? false;
+  }
+
+  supportsCookiePairing(platform: string): boolean {
+    return this.capsByPlatform()[platform]?.supportsCookiePairing ?? false;
   }
 
   chipsForPlatform(platform: string) {
@@ -319,6 +340,110 @@ export class ConnectorsComponent {
       }
     }, 800);
     window.addEventListener('message', handler);
+  }
+
+  /**
+   * Saves an editor before pairing so the browser client receives a connector-bound token.
+   * Existing connectors can also enter this flow directly from their card.
+   */
+  async connectCookies(): Promise<void> {
+    const e = this.editor();
+    if (!e || !e.displayName.trim() || this.hasConfigErrors()) return;
+    this.pairingStarting.set(true);
+    try {
+      const saved = await firstValueFrom(
+        this.connectors.upsert({
+          id: e.id,
+          serviceDefinitionId: e.serviceDefinitionId,
+          displayName: e.displayName.trim(),
+          configJson: JSON.stringify(e.config),
+          secureConfigJson: null,
+          enabled: e.enabled,
+        }),
+      );
+      this.closeEditor();
+      this.openCookieConnect(saved);
+      this.load();
+    } catch (err: any) {
+      this.toast.error('Could not save the connector', err?.error?.error);
+    } finally {
+      this.pairingStarting.set(false);
+    }
+  }
+
+  /**
+   * Shows the hand-off instructions. Nothing is minted up front — the extension authenticates with
+   * the user's own PostyFox session, so a five-minute token would usually expire unused.
+   */
+  openCookieConnect(connector: UserConnector): void {
+    this.cookieConnect.set({ connector, pairing: null });
+    this.pairingCopied.set(false);
+  }
+
+  /** Fallback: mint a one-use token for a browser that cannot sign in to PostyFox. */
+  async requestPairingToken(): Promise<void> {
+    const current = this.cookieConnect();
+    if (!current) return;
+    this.pairingStarting.set(true);
+    try {
+      const pairing = await firstValueFrom(
+        this.connectors.startCookiePairing(current.connector.id),
+      );
+      this.cookieConnect.set({ ...current, pairing });
+      this.pairingCopied.set(false);
+    } catch (err: any) {
+      this.toast.error('Could not create a pairing token', err?.error?.error);
+    } finally {
+      this.pairingStarting.set(false);
+    }
+  }
+
+  async copyPairingToken(value: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(value);
+      this.pairingCopied.set(true);
+      window.setTimeout(() => this.pairingCopied.set(false), 2000);
+    } catch {
+      this.toast.error('Could not copy to clipboard');
+    }
+  }
+
+  pairingExpiry(expiresAt: string): string {
+    return new Date(expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  checkCookieConnect(): void {
+    const current = this.cookieConnect();
+    if (!current) return;
+    const { connector } = current;
+    this.pairingChecking.set(true);
+    this.connectors.isAuthenticated(connector.id).subscribe({
+      next: (state) => {
+        this.pairingChecking.set(false);
+        this.authStates.update((states) => ({
+          ...states,
+          [connector.id]: { loading: false, state },
+        }));
+        if (state.isAuthenticated) {
+          this.toast.success(`${connector.displayName} connected`, state.detail ?? undefined);
+          this.closeCookieConnect();
+        } else {
+          this.toast.warning(
+            `${connector.displayName} is not connected yet`,
+            state.detail ?? undefined,
+          );
+        }
+      },
+      error: (err) => {
+        this.pairingChecking.set(false);
+        this.toast.error(`Could not check ${connector.displayName}`, err?.error?.error);
+      },
+    });
+  }
+
+  closeCookieConnect(): void {
+    this.cookieConnect.set(null);
+    this.pairingChecking.set(false);
   }
 
   async remove(c: UserConnector): Promise<void> {

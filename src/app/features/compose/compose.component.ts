@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import {
   CreatePostRequest,
+  ContentRating,
   MediaCheckResultItem,
   MediaRef,
   PostContent,
@@ -11,13 +12,20 @@ import {
   Template,
   UserConnector,
 } from '../../core/models/api.models';
-import { brandFor, capabilitiesByPlatform } from '../../core/models/platforms';
+import {
+  FieldDescriptor,
+  brandFor,
+  capabilitiesByPlatform,
+  parseFieldDescriptors,
+  validateField,
+} from '../../core/models/platforms';
 import { ConnectorsService } from '../../core/services/connectors.service';
 import { MediaService } from '../../core/services/media.service';
 import { PostsService } from '../../core/services/posts.service';
 import { ServicesService } from '../../core/services/services.service';
 import { TemplatesService } from '../../core/services/templates.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DescriptorFieldComponent } from '../../shared/components/descriptor-field.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 
@@ -38,9 +46,26 @@ interface Variable {
   value: string;
 }
 
+/**
+ * A selected target's per-submission platform choices, ready to render: the fields its platform
+ * declares plus the values chosen for this post. FurAffinity's category/species/gender/folders are
+ * the current example — they describe the submission, not the account, so they live here rather than
+ * in the connector's settings.
+ */
+interface TargetOptionsGroup {
+  connector: UserConnector;
+  fields: { key: string; descriptor: FieldDescriptor }[];
+}
+
 @Component({
   selector: 'app-compose',
-  imports: [FormsModule, RouterLink, PageHeaderComponent, EmptyStateComponent],
+  imports: [
+    FormsModule,
+    RouterLink,
+    PageHeaderComponent,
+    EmptyStateComponent,
+    DescriptorFieldComponent,
+  ],
   templateUrl: './compose.component.html',
 })
 export class ComposeComponent {
@@ -65,11 +90,20 @@ export class ComposeComponent {
   readonly title = signal('');
   readonly description = signal('');
   readonly tags = signal('');
+  readonly rating = signal<ContentRating | null>(null);
   readonly templateId = signal('');
   readonly variables = signal<Variable[]>([]);
   readonly mediaItems = signal<MediaItem[]>([]);
   readonly scheduleEnabled = signal(false);
   readonly postAt = signal('');
+  /** Per-submission platform choices, keyed by connector id then field name. */
+  readonly targetOptions = signal<Record<string, Record<string, string>>>({});
+  readonly ratingOptions = [
+    { value: ContentRating.General, label: 'General' },
+    { value: ContentRating.Mature, label: 'Mature' },
+    { value: ContentRating.Adult, label: 'Adult' },
+    { value: ContentRating.Extreme, label: 'Extreme' },
+  ] as const;
 
   readonly enabledConnectors = computed(() => this.connectorList().filter((c) => c.enabled));
   readonly capsByPlatform = computed(() => capabilitiesByPlatform(this.catalogue()));
@@ -77,6 +111,98 @@ export class ComposeComponent {
   readonly selectedConnectors = computed(() =>
     this.enabledConnectors().filter((c) => this.selectedTargets().has(c.id)),
   );
+
+  /**
+   * Per-platform descriptors for per-submission choices, parsed once from the catalogue. Keyed by
+   * platform because that is what declares them; the values are chosen per connector.
+   */
+  private readonly postOptionFields = computed<
+    Record<string, { key: string; descriptor: FieldDescriptor }[]>
+  >(() => {
+    const byPlatform: Record<string, { key: string; descriptor: FieldDescriptor }[]> = {};
+    for (const def of this.catalogue()) {
+      if (!def.postOptionsSchema) continue;
+      const descriptors = parseFieldDescriptors(def.postOptionsSchema);
+      const fields = Object.entries(descriptors).map(([key, descriptor]) => ({ key, descriptor }));
+      if (fields.length) byPlatform[def.platform] = fields;
+    }
+    return byPlatform;
+  });
+
+  /** One section per selected target whose platform takes per-submission choices. */
+  readonly targetOptionGroups = computed<TargetOptionsGroup[]>(() => {
+    const byPlatform = this.postOptionFields();
+    return this.selectedConnectors()
+      .filter((c) => byPlatform[c.platform])
+      .map((connector) => ({ connector, fields: byPlatform[connector.platform] }));
+  });
+
+  /** `connectorId::fieldName` → validation message, mirroring the server's schema enforcement. */
+  readonly targetOptionErrors = computed<Record<string, string>>(() => {
+    const errors: Record<string, string> = {};
+    for (const group of this.targetOptionGroups())
+      for (const field of group.fields) {
+        const err = validateField(
+          field.descriptor,
+          this.targetOptions()[group.connector.id]?.[field.key],
+        );
+        if (err) errors[`${group.connector.id}::${field.key}`] = err;
+      }
+    return errors;
+  });
+
+  readonly ratingRequired = computed(() => {
+    const caps = this.capsByPlatform();
+    return this.selectedConnectors().some((c) => caps[c.platform]?.requiresRating);
+  });
+
+  readonly ratingSupported = computed(() => {
+    const caps = this.capsByPlatform();
+    return this.selectedConnectors().some((c) => caps[c.platform]?.supportsRating);
+  });
+
+  readonly blueskySelected = computed(() =>
+    this.selectedConnectors().some((c) => c.platform === 'BlueSky'),
+  );
+
+  readonly furAffinitySelected = computed(() =>
+    this.selectedConnectors().some((c) => c.platform === 'FurAffinity'),
+  );
+
+  /** Requirements FurAffinity enforces at delivery time, surfaced before the post is queued. */
+  readonly furAffinityIssues = computed(() => {
+    if (!this.furAffinitySelected()) return [];
+    const issues: string[] = [];
+    if (!this.title().trim()) issues.push('Add a title.');
+    else if (this.title().trim().length > 60)
+      issues.push('Keep the title to 60 characters or fewer.');
+    if (this.rating() == null) issues.push('Choose a content rating.');
+
+    const media = this.mediaItems();
+    if (media.length !== 1) {
+      issues.push('Attach exactly one image.');
+    } else {
+      const item = media[0];
+      const contentType = (item.mimeType || item.ref.contentType).toLowerCase();
+      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(contentType)) {
+        issues.push('Use a JPEG, PNG, or GIF image.');
+      }
+      if (
+        contentType === 'image/gif' &&
+        item.fileSize != null &&
+        item.fileSize > 10 * 1024 * 1024
+      ) {
+        issues.push('Keep animated GIFs at or below 10 MiB.');
+      }
+    }
+
+    const validTags = this.tags()
+      .split(',')
+      .map((tag) => tag.trim().replace(/\s+/g, '_'))
+      .filter((tag) => tag.length >= 3);
+    if (validTags.length < 3) issues.push('Add at least three tags of three or more characters.');
+    return issues;
+  });
 
   /** Tightest character limit across selected targets (null → no limit applies). */
   readonly effectiveMaxLength = computed<number | null>(() => {
@@ -128,7 +254,13 @@ export class ComposeComponent {
   });
 
   readonly canSubmit = computed(
-    () => this.selectedTargets().size > 0 && !this.submitting() && !this.uploading(),
+    () =>
+      this.selectedTargets().size > 0 &&
+      (!this.ratingRequired() || this.rating() != null) &&
+      this.furAffinityIssues().length === 0 &&
+      Object.keys(this.targetOptionErrors()).length === 0 &&
+      !this.submitting() &&
+      !this.uploading(),
   );
 
   constructor() {
@@ -163,13 +295,22 @@ export class ComposeComponent {
     this.title.set(content.title ?? '');
     this.description.set(content.description ?? '');
     this.tags.set(content.tags.join(', '));
+    this.rating.set(content.rating);
     this.templateId.set(content.templateId ?? '');
     this.variables.set(Object.entries(content.variables).map(([key, value]) => ({ key, value })));
+    // Keep the platform choices only for targets that are still ticked; a connector that has since
+    // been removed or disabled would otherwise leave orphaned options on the request.
+    this.targetOptions.set(
+      Object.fromEntries(
+        Object.entries(content.targetOptions ?? {}).filter(([id]) => available.has(id)),
+      ),
+    );
     this.mediaItems.set(
       content.media.map((ref) => ({
         ref,
         name: ref.key.split('/').pop() ?? ref.key,
         alt: ref.alt ?? '',
+        mimeType: ref.contentType,
       })),
     );
     // Deliberately not carrying the old schedule time across — it's almost certainly in the past.
@@ -182,6 +323,22 @@ export class ComposeComponent {
 
   isSelected(id: string): boolean {
     return this.selectedTargets().has(id);
+  }
+
+  // ----- per-submission platform options -------------------------------------
+  targetOption(connectorId: string, key: string): string {
+    return this.targetOptions()[connectorId]?.[key] ?? '';
+  }
+
+  targetOptionError(connectorId: string, key: string): string | undefined {
+    return this.targetOptionErrors()[`${connectorId}::${key}`];
+  }
+
+  patchTargetOption(connectorId: string, key: string, value: string): void {
+    this.targetOptions.update((all) => ({
+      ...all,
+      [connectorId]: { ...all[connectorId], [key]: value },
+    }));
   }
 
   toggleTarget(id: string): void {
@@ -278,6 +435,18 @@ export class ComposeComponent {
       this.toast.warning('Pick at least one target');
       return;
     }
+    if (this.furAffinityIssues().length) {
+      this.toast.warning('Complete the FurAffinity requirements');
+      return;
+    }
+    if (this.ratingRequired() && this.rating() == null) {
+      this.toast.warning('Choose a content rating');
+      return;
+    }
+    if (Object.keys(this.targetOptionErrors()).length) {
+      this.toast.warning('Fix the platform options');
+      return;
+    }
 
     const tags = this.tags()
       .split(',')
@@ -299,6 +468,18 @@ export class ComposeComponent {
       postAt = new Date(this.postAt()).toISOString();
     }
 
+    // Only send choices for targets actually being posted to, and drop blanks — an unset field means
+    // "use the platform's default", which the server represents by the key being absent.
+    const targetOptions: Record<string, Record<string, string>> = {};
+    for (const group of this.targetOptionGroups()) {
+      const chosen = Object.fromEntries(
+        group.fields
+          .map((f) => [f.key, this.targetOption(group.connector.id, f.key).trim()] as const)
+          .filter(([, value]) => value.length > 0),
+      );
+      if (Object.keys(chosen).length) targetOptions[group.connector.id] = chosen;
+    }
+
     const body: CreatePostRequest = {
       targets,
       title: this.title().trim() || null,
@@ -309,6 +490,8 @@ export class ComposeComponent {
       templateId: this.templateId() || null,
       variables,
       postAt,
+      rating: this.rating(),
+      targetOptions: Object.keys(targetOptions).length ? targetOptions : null,
     };
 
     this.submitting.set(true);
