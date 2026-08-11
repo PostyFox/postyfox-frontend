@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { adminGuard } from './core/guards/admin.guard';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 
 export const routes: Routes = [
@@ -51,6 +52,13 @@ export const routes: Routes = [
         title: 'Triggers · PostyFox',
         loadComponent: () =>
           import('./features/triggers/triggers.component').then((m) => m.TriggersComponent),
+      },
+      {
+        path: 'admin',
+        title: 'Administration · PostyFox',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/admin/admin.component').then((m) => m.AdminComponent),
       },
       {
         // NB: kept off the `/api` prefix so it doesn't collide with the API path routed by the edge.
