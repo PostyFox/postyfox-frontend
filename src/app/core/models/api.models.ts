@@ -62,6 +62,18 @@ export interface CreateKeyRequest {
   name?: string | null;
 }
 
+export interface AdminAccess {
+  isAdmin: boolean;
+}
+
+export interface OperationalSecret {
+  key: string;
+  component: string;
+  displayName: string;
+  description: string;
+  configured: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Services catalogue + connectors
 // ---------------------------------------------------------------------------

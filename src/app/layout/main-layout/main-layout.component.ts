@@ -24,6 +24,7 @@ export class MainLayoutComponent {
   readonly backendVersion = this.version.backend;
   readonly displayName = this.auth.displayName;
   readonly email = this.auth.email;
+  readonly isAdmin = this.auth.isAdmin;
   readonly initials = computed(() => {
     const name = this.displayName();
     const parts = name

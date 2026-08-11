@@ -1,0 +1,87 @@
+<app-page-header
+  title="Administration"
+  subtitle="Manage credentials required by operational components"
+></app-page-header>
+
+<div class="alert alert-info d-flex gap-2" role="status">
+  <i class="bi bi-shield-lock-fill"></i>
+  <span>
+    Values are written directly to the configured secret store. Existing values are never returned
+    to the browser.
+  </span>
+</div>
+
+@if (loading()) {
+  <div class="placeholder-glow">
+    <span class="placeholder col-12 mb-3"></span>
+    <span class="placeholder col-8"></span>
+  </div>
+} @else {
+  <div class="row g-4">
+    @for (group of groups(); track group.component) {
+      <div class="col-12 col-xl-6">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <h5 class="card-title mb-0">{{ group.component }}</h5>
+              <span class="badge bg-label-secondary">Connector</span>
+            </div>
+
+            @for (secret of group.secrets; track secret.key) {
+              <div class="border-top py-3">
+                <div class="d-flex align-items-start justify-content-between gap-3 mb-2">
+                  <div>
+                    <label class="form-label mb-1" [for]="secret.key">
+                      {{ secret.displayName }}
+                    </label>
+                    <div class="small text-muted-2">{{ secret.description }}</div>
+                  </div>
+                  @if (secret.configured) {
+                    <span class="badge bg-label-success">Configured</span>
+                  } @else {
+                    <span class="badge bg-label-warning">Missing</span>
+                  }
+                </div>
+                <div class="input-group">
+                  <input
+                    class="form-control"
+                    type="password"
+                    autocomplete="new-password"
+                    [id]="secret.key"
+                    [placeholder]="secret.configured ? 'Enter a replacement value' : 'Enter value'"
+                    [ngModel]="values()[secret.key] || ''"
+                    (ngModelChange)="setValue(secret.key, $event)"
+                    [disabled]="saving() === secret.key"
+                  />
+                  <button
+                    class="btn btn-primary"
+                    type="button"
+                    (click)="save(secret)"
+                    [disabled]="!(values()[secret.key] || '').trim() || saving() === secret.key"
+                  >
+                    @if (saving() === secret.key) {
+                      <span class="spinner-border spinner-border-sm"></span>
+                    } @else {
+                      Save
+                    }
+                  </button>
+                  @if (secret.configured) {
+                    <button
+                      class="btn btn-outline-danger"
+                      type="button"
+                      title="Delete secret"
+                      (click)="remove(secret)"
+                      [disabled]="saving() === secret.key"
+                    >
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

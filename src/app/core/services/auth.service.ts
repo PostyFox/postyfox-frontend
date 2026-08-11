@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { catchError, of, tap } from 'rxjs';
+import { catchError, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { UserInfo } from '../models/api.models';
+import { AdminAccess, UserInfo } from '../models/api.models';
 
 /**
  * Identity is owned by the oauth2-proxy edge, not the browser. The SPA is served *through*
@@ -15,6 +15,7 @@ export class AuthService {
   private oauth2 = environment.oauth2BaseUrl;
 
   readonly user = signal<UserInfo | null>(null);
+  readonly isAdmin = signal(false);
   readonly loaded = signal(false);
 
   readonly displayName = computed(() => {
@@ -29,6 +30,17 @@ export class AuthService {
     return this.http.get<UserInfo>(`${this.oauth2}/userinfo`).pipe(
       tap((u) => this.user.set(u)),
       catchError(() => of(null)),
+      switchMap((user) =>
+        user
+          ? this.http.get<AdminAccess>(`${environment.apiBaseUrl}/admin/access`).pipe(
+              tap((access) => this.isAdmin.set(access.isAdmin)),
+              catchError(() => {
+                this.isAdmin.set(false);
+                return of(null);
+              }),
+            )
+          : of(null),
+      ),
       tap(() => this.loaded.set(true)),
     );
   }

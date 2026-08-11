@@ -15,6 +15,15 @@
           </a>
         </li>
       }
+      @if (isAdmin()) {
+        <li class="menu-header">Operations</li>
+        <li class="menu-item" routerLinkActive="active">
+          <a class="menu-link" routerLink="/admin" (click)="closeSidebar()">
+            <i class="bi bi-shield-lock"></i>
+            <span>Administration</span>
+          </a>
+        </li>
+      }
     </ul>
   </aside>
 
