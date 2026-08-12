@@ -4,6 +4,7 @@ import { firstValueFrom, forkJoin } from 'rxjs';
 import {
   AuthState,
   ConnectorCookiePairingStart,
+  ConnectorDestination,
   ConnectorTarget,
   ServiceDefinition,
   TelegramLoginStep,
@@ -88,6 +89,9 @@ export class ConnectorsComponent {
   readonly targetsFor = signal<UserConnector | null>(null);
   readonly targets = signal<ConnectorTarget[] | null>(null);
   readonly targetsLoading = signal(false);
+  /** For platforms that support multiple targets, the externalIds currently checked to expose. */
+  readonly selectedExternalIds = signal<Set<string>>(new Set());
+  readonly destinationsSaving = signal(false);
 
   /** editor */
   readonly editor = signal<EditorModel | null>(null);
@@ -149,6 +153,10 @@ export class ConnectorsComponent {
 
   supportsCookiePairing(platform: string): boolean {
     return this.capsByPlatform()[platform]?.supportsCookiePairing ?? false;
+  }
+
+  supportsMultipleTargets(platform: string): boolean {
+    return this.capsByPlatform()[platform]?.supportsMultipleTargets ?? false;
   }
 
   chipsForPlatform(platform: string) {
@@ -476,14 +484,29 @@ export class ConnectorsComponent {
     });
   }
 
-  // ----- Targets ------------------------------------------------------------
+  // ----- Targets / destinations ---------------------------------------------
+  /**
+   * Opens the targets/destinations modal. For single-target platforms this is a read-only view of
+   * the live platform-side list; for multi-target platforms (Telegram) it's a checklist letting the
+   * user pick which of those live targets to expose as selectable destinations in the compose form.
+   */
   openTargets(c: UserConnector): void {
     this.targetsFor.set(c);
     this.targets.set(null);
+    this.selectedExternalIds.set(new Set());
     this.targetsLoading.set(true);
-    this.connectors.listTargets(c.id).subscribe({
-      next: (t) => {
-        this.targets.set(t);
+
+    const multi = this.supportsMultipleTargets(c.platform);
+    const targets$ = this.connectors.listTargets(c.id);
+    const exposed$ = multi ? this.connectors.listDestinations(c.id) : undefined;
+
+    (exposed$
+      ? forkJoin({ targets: targets$, exposed: exposed$ })
+      : forkJoin({ targets: targets$ })
+    ).subscribe({
+      next: (result: { targets: ConnectorTarget[]; exposed?: ConnectorDestination[] | null }) => {
+        this.targets.set(result.targets);
+        this.selectedExternalIds.set(new Set((result.exposed ?? []).map((d) => d.externalId)));
         this.targetsLoading.set(false);
       },
       error: () => {
@@ -496,6 +519,42 @@ export class ConnectorsComponent {
 
   closeTargets(): void {
     this.targetsFor.set(null);
+  }
+
+  isExposed(id: string): boolean {
+    return this.selectedExternalIds().has(id);
+  }
+
+  toggleDestination(id: string): void {
+    this.selectedExternalIds.update((set) => {
+      const next = new Set(set);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  saveDestinations(): void {
+    const c = this.targetsFor();
+    const available = this.targets();
+    if (!c || !available) return;
+    const selected = this.selectedExternalIds();
+    const destinations = available
+      .filter((t) => selected.has(t.id))
+      .map((t) => ({ externalId: t.id, name: t.name }));
+
+    this.destinationsSaving.set(true);
+    this.connectors.setDestinations(c.id, destinations).subscribe({
+      next: () => {
+        this.destinationsSaving.set(false);
+        this.toast.success('Destinations updated');
+        this.closeTargets();
+      },
+      error: (err) => {
+        this.destinationsSaving.set(false);
+        this.toast.error('Could not save destinations', err?.error?.error);
+      },
+    });
   }
 
   // ----- Telegram login -----------------------------------------------------
