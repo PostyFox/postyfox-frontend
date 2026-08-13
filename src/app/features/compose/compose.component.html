@@ -243,30 +243,30 @@
         species, gender, gallery folders). One section per selected target, since two accounts on the
         same platform can want different answers.
       -->
-      @for (group of targetOptionGroups(); track group.connector.id) {
+      @for (group of targetOptionGroups(); track group.target.selectionId) {
         <div class="card mb-4">
           <div class="card-body">
             <h5 class="card-title d-flex align-items-center gap-2 mb-1">
               <span
                 class="avatar avatar-sm"
-                [style.background]="brand(group.connector.platform).color + '22'"
-                [style.color]="brand(group.connector.platform).color"
+                [style.background]="brand(group.target.platform).color + '22'"
+                [style.color]="brand(group.target.platform).color"
               >
-                <i class="bi" [class]="brand(group.connector.platform).icon"></i>
+                <i class="bi" [class]="brand(group.target.platform).icon"></i>
               </span>
-              {{ group.connector.displayName }} options
+              {{ group.target.displayName }} options
             </h5>
             <p class="text-muted-2 small mb-3">
-              How this submission is filed on {{ brand(group.connector.platform).label }}. Anything
+              How this submission is filed on {{ brand(group.target.platform).label }}. Anything
               left unset uses the platform's own default.
             </p>
             @for (field of group.fields; track field.key) {
               <app-descriptor-field
-                [fieldId]="'opt-' + group.connector.id + '-' + field.key"
+                [fieldId]="'opt-' + group.target.selectionId + '-' + field.key"
                 [descriptor]="field.descriptor"
-                [value]="targetOption(group.connector.id, field.key)"
-                [error]="targetOptionError(group.connector.id, field.key)"
-                (valueChange)="patchTargetOption(group.connector.id, field.key, $event)"
+                [value]="targetOption(group.target.selectionId, field.key)"
+                [error]="targetOptionError(group.target.selectionId, field.key)"
+                (valueChange)="patchTargetOption(group.target.selectionId, field.key, $event)"
               />
             }
           </div>
@@ -280,28 +280,35 @@
         <div class="card-body">
           <h5 class="card-title mb-3">Deliver to</h5>
           <div class="d-flex flex-column gap-2">
-            @for (c of enabledConnectors(); track c.id) {
+            @for (t of selectableTargets(); track t.selectionId) {
               <label class="d-flex align-items-center gap-2 border rounded p-2 cursor-pointer">
                 <input
                   class="form-check-input mt-0"
                   type="checkbox"
-                  [checked]="isSelected(c.id)"
-                  (change)="toggleTarget(c.id)"
+                  [checked]="isSelected(t.selectionId)"
+                  (change)="toggleTarget(t.selectionId)"
                 />
                 <span
                   class="avatar avatar-sm"
-                  [style.background]="brand(c.platform).color + '22'"
-                  [style.color]="brand(c.platform).color"
+                  [style.background]="brand(t.platform).color + '22'"
+                  [style.color]="brand(t.platform).color"
                 >
-                  <i class="bi" [class]="brand(c.platform).icon"></i>
+                  <i class="bi" [class]="brand(t.platform).icon"></i>
                 </span>
                 <span class="flex-grow-1 min-w-0">
-                  <span class="fw-medium d-block text-truncate">{{ c.displayName }}</span>
-                  <small class="text-muted-2">{{ brand(c.platform).label }}</small>
+                  <span class="fw-medium d-block text-truncate">{{ t.displayName }}</span>
+                  <small class="text-muted-2">{{ brand(t.platform).label }}</small>
                 </span>
               </label>
             }
           </div>
+          @if (unconfiguredMultiTargetConnectors().length > 0) {
+            <div class="alert alert-warning small mt-3 mb-0">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              {{ names(unconfiguredMultiTargetConnectors()) }} — pick which chats/channels to expose
+              from <a routerLink="/connectors">Manage connectors</a>.
+            </div>
+          }
         </div>
       </div>
 

@@ -461,7 +461,10 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Targets — {{ c.displayName }}</h5>
+          <h5 class="modal-title">
+            {{ supportsMultipleTargets(c.platform) ? 'Destinations' : 'Targets' }} —
+            {{ c.displayName }}
+          </h5>
           <button type="button" class="btn-close" (click)="closeTargets()"></button>
         </div>
         <div class="modal-body">
@@ -470,10 +473,31 @@
               <span class="spinner-border spinner-border-sm me-1"></span> Loading targets…
             </div>
           } @else if (targets()?.length) {
+            @if (supportsMultipleTargets(c.platform)) {
+              <p class="text-muted-2 small">
+                Pick which chats/channels to expose as selectable destinations when composing a
+                post.
+              </p>
+            }
             <ul class="list-group">
               @for (t of targets(); track t.id) {
-                <li class="list-group-item d-flex justify-content-between">
-                  <span class="fw-medium">{{ t.name }}</span>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  @if (supportsMultipleTargets(c.platform)) {
+                    <div class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        [id]="'dest-' + t.id"
+                        [checked]="isExposed(t.id)"
+                        (change)="toggleDestination(t.id)"
+                      />
+                      <label class="form-check-label fw-medium" [for]="'dest-' + t.id">{{
+                        t.name
+                      }}</label>
+                    </div>
+                  } @else {
+                    <span class="fw-medium">{{ t.name }}</span>
+                  }
                   <code class="text-muted-2">{{ t.id }}</code>
                 </li>
               }
@@ -482,6 +506,21 @@
             <p class="text-muted-2 mb-0">No delivery targets available for this connector.</p>
           }
         </div>
+        @if (supportsMultipleTargets(c.platform) && targets()?.length) {
+          <div class="modal-footer">
+            <button class="btn btn-outline-secondary" (click)="closeTargets()">Cancel</button>
+            <button
+              class="btn btn-primary"
+              [disabled]="destinationsSaving()"
+              (click)="saveDestinations()"
+            >
+              @if (destinationsSaving()) {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+              }
+              Save destinations
+            </button>
+          </div>
+        }
       </div>
     </div>
   </div>

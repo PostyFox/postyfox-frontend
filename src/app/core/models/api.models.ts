@@ -93,6 +93,13 @@ export interface Capabilities {
   supportsRating: boolean;
   /** True when each delivery must include an explicit content rating. */
   requiresRating: boolean;
+  /**
+   * True when a single login can post to several distinct chats/channels (e.g. Telegram). The
+   * connector itself is not a selectable target for these platforms — the compose form offers each
+   * exposed {@link ConnectorDestinationSummary} instead. See connectors.component for how the user
+   * picks which of the platform's live targets to expose.
+   */
+  supportsMultipleTargets: boolean;
 }
 
 export interface ServiceDefinition extends Capabilities {
@@ -146,6 +153,41 @@ export interface ConnectorCookiePairingStart {
 export interface ConnectorTarget {
   id: string;
   name: string;
+}
+
+/**
+ * One destination (chat/channel) a user has exposed for posting under a connector — see
+ * `GET/PUT /api/connectors/{id}/destinations`. Only meaningful for connectors whose
+ * {@link ServiceDefinition.supportsMultipleTargets} is true.
+ */
+export interface ConnectorDestination {
+  id: string;
+  connectorId: string;
+  externalId: string;
+  name: string;
+}
+
+/**
+ * A {@link ConnectorDestination} flattened with its owning connector's identity, as returned by
+ * `GET /api/connectors/destinations` — everything the compose form needs to build its full set of
+ * selectable delivery targets.
+ */
+export interface ConnectorDestinationSummary {
+  id: string;
+  connectorId: string;
+  platform: string;
+  connectorDisplayName: string;
+  externalId: string;
+  name: string;
+}
+
+export interface ConnectorDestinationInput {
+  externalId: string;
+  name: string;
+}
+
+export interface SetConnectorDestinationsRequest {
+  destinations: ConnectorDestinationInput[];
 }
 
 export interface TelegramLoginStep {
@@ -221,6 +263,11 @@ export interface MediaCheckResultItem {
 // ---------------------------------------------------------------------------
 
 export interface CreatePostRequest {
+  /**
+   * Either a {@link UserConnector.id} (single-destination platforms) or a
+   * {@link ConnectorDestinationSummary.id} (multi-target platforms like Telegram — one entry per
+   * chat/channel the user picked).
+   */
   targets: string[];
   title?: string | null;
   description?: string | null;
@@ -269,7 +316,10 @@ export interface PostContent {
   media: MediaRef[];
   templateId: string | null;
   variables: Record<string, string>;
-  /** Connector ids the post targeted (used to re-tick the target checkboxes). */
+  /**
+   * Connector or destination ids the post targeted (used to re-tick the target checkboxes) — see
+   * {@link CreatePostRequest.targets}.
+   */
   connectorIds: string[];
   postAt: string | null;
   rating: ContentRating | null;

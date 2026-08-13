@@ -232,6 +232,7 @@ export function capabilitiesByPlatform(defs: ServiceDefinition[]): Record<string
       supportsCookiePairing: d.supportsCookiePairing,
       supportsRating: d.supportsRating,
       requiresRating: d.requiresRating,
+      supportsMultipleTargets: d.supportsMultipleTargets,
     };
   }
   return map;

@@ -4,6 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import {
   CreatePostRequest,
+  ConnectorDestinationSummary,
   ContentRating,
   MediaCheckResultItem,
   MediaRef,
@@ -41,6 +42,21 @@ interface MediaItem {
   resizeChecks?: MediaCheckResultItem[];
 }
 
+/**
+ * A single selectable posting target in the compose form. For single-destination platforms this is
+ * the connector itself (`selectionId === connectorId`, legacy behaviour); for multi-target platforms
+ * (Telegram) it's one of the connector's exposed destinations (`selectionId` is a
+ * {@link ConnectorDestinationSummary.id}, distinct from the owning connector's id). The form always
+ * submits {@link selectionId} values as `CreatePostRequest.targets` — the backend disambiguates which
+ * table each id belongs to.
+ */
+interface SelectableTarget {
+  selectionId: string;
+  connectorId: string;
+  platform: string;
+  displayName: string;
+}
+
 interface Variable {
   key: string;
   value: string;
@@ -53,7 +69,7 @@ interface Variable {
  * in the connector's settings.
  */
 interface TargetOptionsGroup {
-  connector: UserConnector;
+  target: SelectableTarget;
   fields: { key: string; descriptor: FieldDescriptor }[];
 }
 
@@ -78,6 +94,7 @@ export class ComposeComponent {
   private router = inject(Router);
 
   readonly connectorList = signal<UserConnector[]>([]);
+  readonly destinationList = signal<ConnectorDestinationSummary[]>([]);
   readonly templateList = signal<Template[]>([]);
   readonly catalogue = signal<ServiceDefinition[]>([]);
   brand = brandFor;
@@ -108,8 +125,41 @@ export class ComposeComponent {
   readonly enabledConnectors = computed(() => this.connectorList().filter((c) => c.enabled));
   readonly capsByPlatform = computed(() => capabilitiesByPlatform(this.catalogue()));
 
+  /**
+   * The full set of choosable posting targets: single-destination connectors as-is, plus each
+   * exposed destination of multi-target connectors (Telegram) in place of the raw connector — a
+   * multi-target connector is never itself directly selectable.
+   */
+  readonly selectableTargets = computed<SelectableTarget[]>(() => {
+    const caps = this.capsByPlatform();
+    const singles = this.enabledConnectors()
+      .filter((c) => !caps[c.platform]?.supportsMultipleTargets)
+      .map((c): SelectableTarget => ({
+        selectionId: c.id,
+        connectorId: c.id,
+        platform: c.platform,
+        displayName: c.displayName,
+      }));
+    const destinations = this.destinationList().map((d): SelectableTarget => ({
+      selectionId: d.id,
+      connectorId: d.connectorId,
+      platform: d.platform,
+      displayName: `${d.connectorDisplayName} — ${d.name}`,
+    }));
+    return [...singles, ...destinations];
+  });
+
+  /** Enabled multi-target connectors (Telegram) with nothing exposed yet — nudge to configure them. */
+  readonly unconfiguredMultiTargetConnectors = computed(() => {
+    const caps = this.capsByPlatform();
+    const exposedConnectorIds = new Set(this.destinationList().map((d) => d.connectorId));
+    return this.enabledConnectors().filter(
+      (c) => caps[c.platform]?.supportsMultipleTargets && !exposedConnectorIds.has(c.id),
+    );
+  });
+
   readonly selectedConnectors = computed(() =>
-    this.enabledConnectors().filter((c) => this.selectedTargets().has(c.id)),
+    this.selectableTargets().filter((t) => this.selectedTargets().has(t.selectionId)),
   );
 
   /**
@@ -133,20 +183,20 @@ export class ComposeComponent {
   readonly targetOptionGroups = computed<TargetOptionsGroup[]>(() => {
     const byPlatform = this.postOptionFields();
     return this.selectedConnectors()
-      .filter((c) => byPlatform[c.platform])
-      .map((connector) => ({ connector, fields: byPlatform[connector.platform] }));
+      .filter((t) => byPlatform[t.platform])
+      .map((target) => ({ target, fields: byPlatform[target.platform] }));
   });
 
-  /** `connectorId::fieldName` → validation message, mirroring the server's schema enforcement. */
+  /** `selectionId::fieldName` → validation message, mirroring the server's schema enforcement. */
   readonly targetOptionErrors = computed<Record<string, string>>(() => {
     const errors: Record<string, string> = {};
     for (const group of this.targetOptionGroups())
       for (const field of group.fields) {
         const err = validateField(
           field.descriptor,
-          this.targetOptions()[group.connector.id]?.[field.key],
+          this.targetOptions()[group.target.selectionId]?.[field.key],
         );
-        if (err) errors[`${group.connector.id}::${field.key}`] = err;
+        if (err) errors[`${group.target.selectionId}::${field.key}`] = err;
       }
     return errors;
   });
@@ -232,16 +282,16 @@ export class ComposeComponent {
   readonly mediaResizeTargets = computed(() => {
     const items = this.mediaItems();
     if (items.length === 0) return [];
-    const selectedIds = new Set(this.selectedConnectors().map((c) => c.id));
+    const selectedConnectorIds = new Set(this.selectedConnectors().map((t) => t.connectorId));
     const resizingIds = new Set<string>();
     for (const item of items) {
       for (const check of item.resizeChecks ?? []) {
-        if (selectedIds.has(check.connectorId) && check.willResize) {
+        if (selectedConnectorIds.has(check.connectorId) && check.willResize) {
           resizingIds.add(check.connectorId);
         }
       }
     }
-    return this.selectedConnectors().filter((c) => resizingIds.has(c.id));
+    return this.selectedConnectors().filter((t) => resizingIds.has(t.connectorId));
   });
 
   /** Selected targets that ignore the title (platform doesn't support one). */
@@ -271,15 +321,17 @@ export class ComposeComponent {
 
     forkJoin({
       connectors: this.connectors.list(),
+      destinations: this.connectors.listAllDestinations(),
       templates: this.templates.list(),
       catalogue: this.services.list(),
     }).subscribe({
-      next: ({ connectors, templates, catalogue }) => {
+      next: ({ connectors, destinations, templates, catalogue }) => {
         this.connectorList.set(connectors);
+        this.destinationList.set(destinations);
         this.templateList.set(templates);
         this.catalogue.set(catalogue);
         this.loading.set(false);
-        if (prefill) this.applyPrefill(prefill, connectors);
+        if (prefill) this.applyPrefill(prefill);
       },
       error: () => {
         this.toast.error('Could not load compose data');
@@ -289,8 +341,8 @@ export class ComposeComponent {
   }
 
   /** Re-seeds the form from a past post. Only re-ticks targets that still exist and are enabled. */
-  private applyPrefill(content: PostContent, connectors: UserConnector[]): void {
-    const available = new Set(connectors.filter((c) => c.enabled).map((c) => c.id));
+  private applyPrefill(content: PostContent): void {
+    const available = new Set(this.selectableTargets().map((t) => t.selectionId));
     this.selectedTargets.set(new Set(content.connectorIds.filter((id) => available.has(id))));
     this.title.set(content.title ?? '');
     this.description.set(content.description ?? '');
@@ -298,8 +350,8 @@ export class ComposeComponent {
     this.rating.set(content.rating);
     this.templateId.set(content.templateId ?? '');
     this.variables.set(Object.entries(content.variables).map(([key, value]) => ({ key, value })));
-    // Keep the platform choices only for targets that are still ticked; a connector that has since
-    // been removed or disabled would otherwise leave orphaned options on the request.
+    // Keep the platform choices only for targets that are still ticked; a connector/destination that
+    // has since been removed or disabled would otherwise leave orphaned options on the request.
     this.targetOptions.set(
       Object.fromEntries(
         Object.entries(content.targetOptions ?? {}).filter(([id]) => available.has(id)),
@@ -317,8 +369,8 @@ export class ComposeComponent {
   }
 
   /** Comma-joined display names, for capability warnings. */
-  names(connectors: UserConnector[]): string {
-    return connectors.map((c) => c.displayName).join(', ');
+  names(targets: { displayName: string }[]): string {
+    return targets.map((t) => t.displayName).join(', ');
   }
 
   isSelected(id: string): boolean {
@@ -413,9 +465,9 @@ export class ComposeComponent {
   /** Returns the names of selected connectors that will resize the given media item. */
   resizeLabelsFor(item: MediaItem): string {
     if (!item.resizeChecks?.length) return '';
-    const selectedIds = new Set(this.selectedConnectors().map((c) => c.id));
+    const selectedConnectorIds = new Set(this.selectedConnectors().map((t) => t.connectorId));
     return item.resizeChecks
-      .filter((c) => c.willResize && selectedIds.has(c.connectorId))
+      .filter((c) => c.willResize && selectedConnectorIds.has(c.connectorId))
       .map((c) => c.displayName)
       .join(', ');
   }
@@ -474,10 +526,10 @@ export class ComposeComponent {
     for (const group of this.targetOptionGroups()) {
       const chosen = Object.fromEntries(
         group.fields
-          .map((f) => [f.key, this.targetOption(group.connector.id, f.key).trim()] as const)
+          .map((f) => [f.key, this.targetOption(group.target.selectionId, f.key).trim()] as const)
           .filter(([, value]) => value.length > 0),
       );
-      if (Object.keys(chosen).length) targetOptions[group.connector.id] = chosen;
+      if (Object.keys(chosen).length) targetOptions[group.target.selectionId] = chosen;
     }
 
     const body: CreatePostRequest = {
