@@ -4,7 +4,11 @@ import { Router, RouterLink } from '@angular/router';
 import { Subscription, switchMap, timer } from 'rxjs';
 import { PostSummary } from '../../core/models/api.models';
 import { brandFor } from '../../core/models/platforms';
-import { ROOT_STATUS_META, isRootStatusPending } from '../../core/models/status.util';
+import {
+  ROOT_STATUS_META,
+  isRootStatusDraft,
+  isRootStatusPending,
+} from '../../core/models/status.util';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { PostsService } from '../../core/services/posts.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -37,7 +41,12 @@ export class PostsComponent implements OnInit, OnDestroy {
   brand = brandFor;
 
   readonly active = computed(() => this.all().filter((p) => isRootStatusPending(p.rootStatus)));
-  readonly history = computed(() => this.all().filter((p) => !isRootStatusPending(p.rootStatus)));
+  readonly drafts = computed(() => this.all().filter((p) => isRootStatusDraft(p.rootStatus)));
+  readonly history = computed(() =>
+    this.all().filter(
+      (p) => !isRootStatusPending(p.rootStatus) && !isRootStatusDraft(p.rootStatus),
+    ),
+  );
 
   rootMeta(p: PostSummary) {
     return ROOT_STATUS_META[p.rootStatus];
@@ -120,6 +129,21 @@ export class PostsComponent implements OnInit, OnDestroy {
       error: () => {
         this.setBusy(p.postId, false);
         this.toast.error('Could not load that post to reuse');
+      },
+    });
+  }
+
+  /** Open the composer to keep editing a draft (unlike "post again", edits save back to the same post). */
+  edit(p: PostSummary): void {
+    this.setBusy(p.postId, true);
+    this.posts.getContent(p.postId).subscribe({
+      next: (prefill) => {
+        this.setBusy(p.postId, false);
+        this.router.navigate(['/compose'], { state: { prefill, draftId: p.postId } });
+      },
+      error: () => {
+        this.setBusy(p.postId, false);
+        this.toast.error('Could not load that draft');
       },
     });
   }

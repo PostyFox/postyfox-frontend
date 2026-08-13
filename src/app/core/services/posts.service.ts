@@ -24,6 +24,21 @@ export class PostsService {
     return this.http.get<PostStatus>(`${this.base}/${id}`);
   }
 
+  /** Returns a post's authored content as-is (no media duplication) — used to load a draft for editing. */
+  getContent(id: string): Observable<PostContent> {
+    return this.http.get<PostContent>(`${this.base}/${id}/content`);
+  }
+
+  /** Overwrites a draft's authored content/targets in place. 409 if it's already been published. */
+  updateDraft(id: string, body: CreatePostRequest): Observable<void> {
+    return this.http.put<void>(`${this.base}/${id}`, body);
+  }
+
+  /** Resolves a draft's stored targets and submits it for delivery; it stops being a draft. */
+  publish(id: string): Observable<CreatePostResponse> {
+    return this.http.post<CreatePostResponse>(`${this.base}/${id}/publish`, null);
+  }
+
   /**
    * Prepares a post for "post again": returns its authored content with media copied to fresh blobs,
    * so the recreated post is independent of the original. Does not itself create a post.
