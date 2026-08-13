@@ -349,14 +349,32 @@
         </div>
       }
 
-      <button class="btn btn-primary btn-lg w-100" (click)="submit()" [disabled]="!canSubmit()">
-        @if (submitting()) {
-          <span class="spinner-border spinner-border-sm me-1"></span>
-        } @else {
-          <i class="bi bi-send me-1"></i>
-        }
-        {{ scheduleEnabled() && postAt() ? 'Schedule post' : 'Post now' }}
-      </button>
+      <div class="d-flex gap-2">
+        <button
+          class="btn btn-outline-secondary btn-lg flex-shrink-0"
+          (click)="saveDraft()"
+          [disabled]="!canSaveDraft()"
+        >
+          @if (savingDraft()) {
+            <span class="spinner-border spinner-border-sm me-1"></span>
+          } @else {
+            <i class="bi bi-save me-1"></i>
+          }
+          Save draft
+        </button>
+        <button
+          class="btn btn-primary btn-lg flex-grow-1"
+          (click)="submit()"
+          [disabled]="!canSubmit()"
+        >
+          @if (submitting()) {
+            <span class="spinner-border spinner-border-sm me-1"></span>
+          } @else {
+            <i class="bi bi-send me-1"></i>
+          }
+          {{ scheduleEnabled() && postAt() ? 'Schedule post' : 'Post now' }}
+        </button>
+      </div>
       <p class="text-muted-2 small text-center mt-2 mb-0">
         {{ selectedTargets().size }} target{{ selectedTargets().size === 1 ? '' : 's' }} selected
       </p>

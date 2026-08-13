@@ -29,6 +29,8 @@ export enum PostRootStatus {
   PartiallyFailed = 4,
   Failed = 5,
   Cancelled = 6,
+  /** Saved but not yet submitted; has no targets/queue activity until published. */
+  Draft = 7,
 }
 
 /** Author-selected audience/content classification for platforms that require it. */
@@ -284,6 +286,12 @@ export interface CreatePostRequest {
    * not declare is dropped.
    */
   targetOptions?: Record<string, Record<string, string>> | null;
+  /**
+   * Save this as a draft instead of submitting it: no targets are resolved/validated and nothing is
+   * enqueued for delivery. `targets`/`targetOptions` are still stored as-authored so the draft can be
+   * edited and eventually published (`POST /{id}/publish`).
+   */
+  isDraft?: boolean;
 }
 
 export interface CreatePostResponse {

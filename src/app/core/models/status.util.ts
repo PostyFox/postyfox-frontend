@@ -19,6 +19,7 @@ export const ROOT_STATUS_META: Record<PostRootStatus, StatusMeta> = {
   },
   [PostRootStatus.Failed]: { label: 'Failed', color: 'danger', icon: 'bi-x-circle' },
   [PostRootStatus.Cancelled]: { label: 'Cancelled', color: 'secondary', icon: 'bi-slash-circle' },
+  [PostRootStatus.Draft]: { label: 'Draft', color: 'secondary', icon: 'bi-pencil-square' },
 };
 
 export const TARGET_STATUS_META: Record<TargetStatus, StatusMeta> = {
@@ -38,4 +39,9 @@ export function isRootStatusPending(s: PostRootStatus): boolean {
     s === PostRootStatus.Generating ||
     s === PostRootStatus.Delivering
   );
+}
+
+/** A draft has never been submitted — it belongs in its own section, not history or "active now". */
+export function isRootStatusDraft(s: PostRootStatus): boolean {
+  return s === PostRootStatus.Draft;
 }

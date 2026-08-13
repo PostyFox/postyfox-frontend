@@ -101,6 +101,9 @@ export class ComposeComponent {
   readonly loading = signal(true);
   readonly submitting = signal(false);
   readonly uploading = signal(false);
+  readonly savingDraft = signal(false);
+  /** Set while editing an existing draft (came from the posts list "Edit"), so save/submit target it in place. */
+  readonly draftId = signal<string | null>(null);
 
   // form state
   readonly selectedTargets = signal<Set<string>>(new Set());
@@ -310,14 +313,25 @@ export class ComposeComponent {
       this.furAffinityIssues().length === 0 &&
       Object.keys(this.targetOptionErrors()).length === 0 &&
       !this.submitting() &&
-      !this.uploading(),
+      !this.uploading() &&
+      !this.savingDraft(),
+  );
+
+  /** Drafts are deliberately unvalidated — that's the point of saving one before it's ready. */
+  readonly canSaveDraft = computed(
+    () => !this.submitting() && !this.uploading() && !this.savingDraft(),
   );
 
   constructor() {
-    // "Post again" from history hands us the original content via router state.
-    const prefill = (this.router.getCurrentNavigation()?.extras.state ??
-      (typeof history !== 'undefined' ? history.state : null))?.['prefill'] as
-      PostContent | undefined;
+    // "Post again" (history) and "Edit" (drafts) hand us the original content via router state;
+    // only "Edit" also sets draftId, so saving/publishing target the same post instead of creating one.
+    const state = (this.router.getCurrentNavigation()?.extras.state ??
+      (typeof history !== 'undefined' ? history.state : null)) as {
+      prefill?: PostContent;
+      draftId?: string;
+    } | null;
+    const prefill = state?.prefill;
+    if (state?.draftId) this.draftId.set(state.draftId);
 
     forkJoin({
       connectors: this.connectors.list(),
@@ -340,7 +354,11 @@ export class ComposeComponent {
     });
   }
 
-  /** Re-seeds the form from a past post. Only re-ticks targets that still exist and are enabled. */
+  /**
+   * Re-seeds the form from a past post. Only re-ticks targets that still exist and are enabled.
+   * Editing a draft ({@link draftId} set) also restores its schedule — unlike "post again", it
+   * hasn't been sent yet, so a future schedule is still meaningful.
+   */
   private applyPrefill(content: PostContent): void {
     const available = new Set(this.selectableTargets().map((t) => t.selectionId));
     this.selectedTargets.set(new Set(content.connectorIds.filter((id) => available.has(id))));
@@ -365,7 +383,15 @@ export class ComposeComponent {
         mimeType: ref.contentType,
       })),
     );
-    // Deliberately not carrying the old schedule time across — it's almost certainly in the past.
+    if (this.draftId() && content.postAt) {
+      this.scheduleEnabled.set(true);
+      // <input type="datetime-local"> wants local time with no zone/seconds.
+      const local = new Date(content.postAt);
+      local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
+      this.postAt.set(local.toISOString().slice(0, 16));
+    }
+    // Otherwise ("post again") deliberately not carrying the old schedule time across — it's
+    // almost certainly in the past.
   }
 
   /** Comma-joined display names, for capability warnings. */
@@ -481,25 +507,8 @@ export class ComposeComponent {
   }
 
   // ----- submit -------------------------------------------------------------
-  submit(): void {
-    const targets = [...this.selectedTargets()];
-    if (targets.length === 0) {
-      this.toast.warning('Pick at least one target');
-      return;
-    }
-    if (this.furAffinityIssues().length) {
-      this.toast.warning('Complete the FurAffinity requirements');
-      return;
-    }
-    if (this.ratingRequired() && this.rating() == null) {
-      this.toast.warning('Choose a content rating');
-      return;
-    }
-    if (Object.keys(this.targetOptionErrors()).length) {
-      this.toast.warning('Fix the platform options');
-      return;
-    }
-
+  /** Assembles the request body from current form state. Shared by submit and saveDraft. */
+  private buildBody(): CreatePostRequest {
     const tags = this.tags()
       .split(',')
       .map((t) => t.trim())
@@ -532,8 +541,8 @@ export class ComposeComponent {
       if (Object.keys(chosen).length) targetOptions[group.target.selectionId] = chosen;
     }
 
-    const body: CreatePostRequest = {
-      targets,
+    return {
+      targets: [...this.selectedTargets()],
       title: this.title().trim() || null,
       description: this.description().trim() || null,
       htmlDescription: null,
@@ -545,11 +554,56 @@ export class ComposeComponent {
       rating: this.rating(),
       targetOptions: Object.keys(targetOptions).length ? targetOptions : null,
     };
+  }
+
+  submit(): void {
+    const targets = [...this.selectedTargets()];
+    if (targets.length === 0) {
+      this.toast.warning('Pick at least one target');
+      return;
+    }
+    if (this.furAffinityIssues().length) {
+      this.toast.warning('Complete the FurAffinity requirements');
+      return;
+    }
+    if (this.ratingRequired() && this.rating() == null) {
+      this.toast.warning('Choose a content rating');
+      return;
+    }
+    if (Object.keys(this.targetOptionErrors()).length) {
+      this.toast.warning('Fix the platform options');
+      return;
+    }
+
+    const body = this.buildBody();
+    const draftId = this.draftId();
 
     this.submitting.set(true);
+    if (draftId) {
+      // Editing an existing draft: persist the edits, then publish it — it stops being a draft.
+      this.posts.updateDraft(draftId, body).subscribe({
+        next: () =>
+          this.posts.publish(draftId).subscribe({
+            next: () => {
+              this.toast.success(body.postAt ? 'Post scheduled' : 'Post queued');
+              this.router.navigate(['/posts', draftId]);
+            },
+            error: (err) => {
+              this.toast.error('Could not publish draft', err?.error?.error);
+              this.submitting.set(false);
+            },
+          }),
+        error: (err) => {
+          this.toast.error('Could not save draft', err?.error?.error);
+          this.submitting.set(false);
+        },
+      });
+      return;
+    }
+
     this.posts.create(body).subscribe({
       next: (res) => {
-        this.toast.success(postAt ? 'Post scheduled' : 'Post queued');
+        this.toast.success(body.postAt ? 'Post scheduled' : 'Post queued');
         this.router.navigate(['/posts', res.postId]);
       },
       error: (err) => {
@@ -557,5 +611,41 @@ export class ComposeComponent {
         this.submitting.set(false);
       },
     });
+  }
+
+  /**
+   * Saves the current form state as a draft — deliberately skips the submit-time validation
+   * (rating/FurAffinity/target-option checks), since the whole point is to save something
+   * incomplete for later. Creates a new draft the first time, then updates that same post on
+   * every subsequent save.
+   */
+  saveDraft(): void {
+    const body: CreatePostRequest = { ...this.buildBody(), isDraft: true };
+    const draftId = this.draftId();
+
+    this.savingDraft.set(true);
+    const done = () => {
+      this.toast.success('Draft saved');
+      this.savingDraft.set(false);
+    };
+    const fail = (err: unknown) => {
+      this.toast.error(
+        'Could not save draft',
+        (err as { error?: { error?: string } })?.error?.error,
+      );
+      this.savingDraft.set(false);
+    };
+
+    if (draftId) {
+      this.posts.updateDraft(draftId, body).subscribe({ next: done, error: fail });
+    } else {
+      this.posts.create(body).subscribe({
+        next: (res) => {
+          this.draftId.set(res.postId);
+          done();
+        },
+        error: fail,
+      });
+    }
   }
 }
