@@ -49,21 +49,21 @@ Mirrors the core repo's split:
   `main`. Dev runs directly on the self-hosted runner node (the same box and `/opt/postyfox/dev`
   layout core deploys to), copies this repo's overlay + gateway fragments locally, then uses the
   latest successful `frontend-ci` build from `main` to roll the `frontend` service into the running
-  core stack. Manual dispatches use the same latest successful `frontend-ci` SHA for both dev and
-  prod. Production still uses SSH to the target host:
+  core stack (docker-compose). This workflow is **dev-only** — it does not touch production.
+- **`.github/workflows/release.yml`** (`release`) — manually dispatched, semver release. Deploys
+  DEV the same way as above (docker-compose overlay), then, after `production` environment
+  approval, deploys **PROD as its own Kubernetes/Helm release** (`deploy/helm/postyfox-frontend`),
+  into the SAME `postyfox` namespace as postyfox-core's release, via `helm upgrade --install`.
+  Requires a `KUBE_CONFIG` secret on the `production` GitHub Environment (base64-encoded
+  kubeconfig — the same cluster/namespace as core's release; a Service Account token scoped to
+  `postyfox` is recommended). See `deploy/helm/postyfox-frontend/values.yaml` for chart options.
 
-  ```
-  docker compose -f docker-compose.server.yml -f docker-compose.<env>.yml \
-                 -f docker-compose.frontend.server.yml up -d --no-deps frontend
-  docker compose ... restart gateway   # reload conf.d → SPA upstream + root route
-  ```
-
-  Dev deploys automatically; **production is gated** by the GitHub `production` environment's
-  protection rules. Requires the same secrets as core: `DEPLOY_HOST`, `DEPLOY_USER`,
-  `DEPLOY_SSH_KEY` (and optional `DEPLOY_PORT`), plus the server being logged in to GHCR.
-
-  > The frontend is an overlay on core's stack, so a core deploy that rewrites `gateway/conf.d`
-  > will drop the SPA's two fragments until the next frontend deploy re-applies them.
+  > Unlike dev (which drops gateway conf.d fragments onto core's shared nginx), prod wiring is
+  > declarative: set `gateway.frontend.enabled: true` (+ `serviceName`/`servicePort` matching this
+  > chart's Service, default `postyfox-frontend`) in postyfox-core's `values-prod.yaml`. Core's
+  > gateway then proxies `/` to this release's Service via an nginx resolver + variable
+  > `proxy_pass`, degrading gracefully to the maintenance page if this release isn't deployed yet
+  > (rather than needing this repo to touch core's config at all).
 
 ## Wiring behind the core edge
 
