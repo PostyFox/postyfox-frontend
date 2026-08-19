@@ -70,6 +70,13 @@
                 may be truncated or rejected.
               </div>
             }
+            @if (tagsByTarget().some((r) => !r.supportsTags)) {
+              <div class="form-text">
+                <i class="bi bi-info-circle me-1"></i>Platforms with no native tags field have none
+                — add <code>&#123;tags&#125;</code> anywhere in the text to place them there, or
+                leave it out and they'll be appended to the end.
+              </div>
+            }
           </div>
           <div class="mb-0">
             <label class="form-label" for="tags">Tags</label>
@@ -84,6 +91,54 @@
               <div class="form-text">
                 FurAffinity requires at least three comma-separated tags of three or more
                 characters.
+              </div>
+            }
+            @if (tagsByTarget().length) {
+              <div class="mt-2 d-flex flex-column gap-2">
+                @for (row of tagsByTarget(); track row.target.selectionId) {
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      [id]="'include-tags-' + row.target.selectionId"
+                      [ngModel]="row.includeTags"
+                      [disabled]="row.requiresTags"
+                      (ngModelChange)="setIncludeTags(row.target.selectionId, $event)"
+                    />
+                    <label
+                      class="form-check-label small"
+                      [for]="'include-tags-' + row.target.selectionId"
+                    >
+                      Include tags for {{ row.target.displayName }}
+                      @if (row.requiresTags) {
+                        <span class="text-danger">(required)</span>
+                      } @else if (!row.supportsTags) {
+                        <span class="text-muted-2">(no tags field — woven into the text)</span>
+                      }
+                    </label>
+                    @if (row.requiresTags && parsedTags().length === 0) {
+                      <div class="form-text text-danger">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        {{ row.target.displayName }} requires at least one tag.
+                      </div>
+                    }
+                    @if (row.preview) {
+                      <div class="form-text">
+                        @if (row.preview.omitted > 0) {
+                          <span class="text-warning-emphasis">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            {{ row.preview.omitted }} tag{{
+                              row.preview.omitted === 1 ? '' : 's'
+                            }}
+                            dropped to fit {{ row.target.displayName }}'s character limit —
+                          </span>
+                        }
+                        will be added as
+                        <code>{{ row.preview.included.join(' ') || '(none — no room left)' }}</code>
+                      </div>
+                    }
+                  </div>
+                }
               </div>
             }
           </div>

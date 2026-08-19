@@ -53,6 +53,7 @@
                 <th>Platform</th>
                 <th>Status</th>
                 <th>Attempts</th>
+                <th>Tags</th>
                 <th>Result</th>
               </tr>
             </thead>
@@ -62,6 +63,20 @@
                   <td class="fw-medium">{{ t.platform }}</td>
                   <td><app-status-badge [meta]="targetMeta(t)"></app-status-badge></td>
                   <td>{{ t.attempts }}</td>
+                  <td>
+                    @if (!t.includeTags) {
+                      <span class="text-muted-2">Excluded</span>
+                    } @else if (t.tagsOmitted > 0) {
+                      <span
+                        class="text-warning-emphasis"
+                        [title]="t.tagsOmitted + ' tag(s) dropped to fit the character limit'"
+                      >
+                        <i class="bi bi-exclamation-triangle me-1"></i>{{ t.tagsOmitted }} dropped
+                      </span>
+                    } @else {
+                      <span class="text-muted-2">Included</span>
+                    }
+                  </td>
                   <td>
                     @if (t.externalUrl) {
                       <a [href]="t.externalUrl" target="_blank" rel="noopener">

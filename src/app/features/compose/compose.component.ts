@@ -18,6 +18,7 @@ import {
   brandFor,
   capabilitiesByPlatform,
   parseFieldDescriptors,
+  previewInlineTags,
   validateField,
 } from '../../core/models/platforms';
 import { ConnectorsService } from '../../core/services/connectors.service';
@@ -118,6 +119,8 @@ export class ComposeComponent {
   readonly postAt = signal('');
   /** Per-submission platform choices, keyed by connector id then field name. */
   readonly targetOptions = signal<Record<string, Record<string, string>>>({});
+  /** Per-target "include tags" choice, keyed by selection id. Absent ⇒ include (the default). */
+  readonly targetIncludeTags = signal<Record<string, boolean>>({});
   readonly ratingOptions = [
     { value: ContentRating.General, label: 'General' },
     { value: ContentRating.Mature, label: 'Mature' },
@@ -222,6 +225,57 @@ export class ComposeComponent {
     this.selectedConnectors().some((c) => c.platform === 'FurAffinity'),
   );
 
+  /** The author's tags, parsed the same way as {@link buildBody} builds the request. */
+  readonly parsedTags = computed(() =>
+    this.tags()
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean),
+  );
+
+  /** Whether tags are currently switched on for a target (defaults to on when unset). */
+  includeTagsFor(selectionId: string): boolean {
+    return this.targetIncludeTags()[selectionId] ?? true;
+  }
+
+  setIncludeTags(selectionId: string, value: boolean): void {
+    this.targetIncludeTags.update((all) => ({ ...all, [selectionId]: value }));
+  }
+
+  /**
+   * One row per selected target describing how tags reach it: whether it has a native tags field,
+   * whether tags are required, the author's current include/exclude choice (forced on when
+   * required), and — for platforms with no native field — a preview of which tags will fit inline.
+   */
+  readonly tagsByTarget = computed(() => {
+    const caps = this.capsByPlatform();
+    const tags = this.parsedTags();
+    const description = this.description();
+    const hasPlaceholder = /\{tags\}/.test(description);
+    return this.selectedConnectors().map((target) => {
+      const c = caps[target.platform];
+      const supportsTags = c?.supportsTags ?? true;
+      const requiresTags = c?.requiresTags ?? false;
+      const includeTags = requiresTags || this.includeTagsFor(target.selectionId);
+      let preview: { included: string[]; omitted: number } | null = null;
+      if (!supportsTags && includeTags && tags.length > 0) {
+        const baseLength = hasPlaceholder
+          ? description.length - '{tags}'.length
+          : description.length + 2; // "\n\n" separator when appended rather than interpolated
+        preview = previewInlineTags(tags, Math.max(0, baseLength), c?.maxContentLength ?? null);
+      }
+      return { target, supportsTags, requiresTags, includeTags, preview };
+    });
+  });
+
+  /** Selected targets whose platform requires at least one tag but won't be getting any. */
+  readonly tagsRequiredIssues = computed(() => {
+    const hasTags = this.parsedTags().length > 0;
+    return this.tagsByTarget()
+      .filter((row) => row.requiresTags && !hasTags)
+      .map((row) => row.target.displayName);
+  });
+
   /** Requirements FurAffinity enforces at delivery time, surfaced before the post is queued. */
   readonly furAffinityIssues = computed(() => {
     if (!this.furAffinitySelected()) return [];
@@ -311,6 +365,7 @@ export class ComposeComponent {
       this.selectedTargets().size > 0 &&
       (!this.ratingRequired() || this.rating() != null) &&
       this.furAffinityIssues().length === 0 &&
+      this.tagsRequiredIssues().length === 0 &&
       Object.keys(this.targetOptionErrors()).length === 0 &&
       !this.submitting() &&
       !this.uploading() &&
@@ -373,6 +428,11 @@ export class ComposeComponent {
     this.targetOptions.set(
       Object.fromEntries(
         Object.entries(content.targetOptions ?? {}).filter(([id]) => available.has(id)),
+      ),
+    );
+    this.targetIncludeTags.set(
+      Object.fromEntries(
+        Object.entries(content.targetIncludeTags ?? {}).filter(([id]) => available.has(id)),
       ),
     );
     this.mediaItems.set(
@@ -541,6 +601,13 @@ export class ComposeComponent {
       if (Object.keys(chosen).length) targetOptions[group.target.selectionId] = chosen;
     }
 
+    // Only send a per-target choice that differs from the default (include) — an absent entry
+    // already means "include" server-side, and RequiresTags platforms ignore this regardless.
+    const targetIncludeTags: Record<string, boolean> = {};
+    for (const target of this.selectedConnectors()) {
+      if (!this.includeTagsFor(target.selectionId)) targetIncludeTags[target.selectionId] = false;
+    }
+
     return {
       targets: [...this.selectedTargets()],
       title: this.title().trim() || null,
@@ -553,6 +620,7 @@ export class ComposeComponent {
       postAt,
       rating: this.rating(),
       targetOptions: Object.keys(targetOptions).length ? targetOptions : null,
+      targetIncludeTags: Object.keys(targetIncludeTags).length ? targetIncludeTags : null,
     };
   }
 
@@ -564,6 +632,10 @@ export class ComposeComponent {
     }
     if (this.furAffinityIssues().length) {
       this.toast.warning('Complete the FurAffinity requirements');
+      return;
+    }
+    if (this.tagsRequiredIssues().length) {
+      this.toast.warning('Add tags', `Required by ${this.tagsRequiredIssues().join(', ')}`);
       return;
     }
     if (this.ratingRequired() && this.rating() == null) {
