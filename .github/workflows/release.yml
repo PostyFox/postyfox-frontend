@@ -12,6 +12,13 @@ name: release
 #
 # Everyday pushes to main still auto-deploy DEV via frontend-ci + deploy.yml; only this workflow
 # touches production. Versioned independently of postyfox-core.
+#
+# DEV stays on docker-compose (self-hosted runner) — the frontend image is dropped into the same
+# compose stack as core. PROD deploys as its OWN Helm release (deploy/helm/postyfox-frontend) into
+# the SAME namespace/cluster as postyfox-core's release, using a kubeconfig stored in the
+# `production` GitHub Environment's secrets. postyfox-core's gateway proxies "/" to this release's
+# Service (see postyfox-core's values-prod.yaml `gateway.frontend.*`) — nothing here needs to know
+# about core beyond deploying into the same namespace.
 
 on:
   workflow_dispatch:
@@ -27,10 +34,6 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-  DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-  DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
 
 jobs:
   compute-version:
@@ -38,7 +41,9 @@ jobs:
     outputs:
       version: ${{ steps.resolve.outputs.version }}   # bare semver, no leading v
       ref: ${{ steps.resolve.outputs.ref }}           # git ref the deploy jobs check out
-      is_new: ${{ steps.resolve.outputs.is_new }}     # 'true' = new release (build + tag); 'false' = redeploy
+      is_new: ${{ steps.resolve.outputs.is_new }}     # 'true' = new release; 'false' = redeploy
+      needs_build: ${{ steps.image_check.outputs.needs_build }}   # 'true' if the semver image must be (re)built
+      build_sha: ${{ steps.image_check.outputs.build_sha }}       # commit SHA actually being built (== ref, resolved)
     steps:
       - uses: actions/checkout@v7
         with:
@@ -74,17 +79,50 @@ jobs:
             echo "is_new=true" >> "$GITHUB_OUTPUT"
             echo "🆕 New release version ${{ steps.semver.outputs.version }}"
           fi
+      - name: Check whether the image needs (re)building
+        # A git tag existing does NOT guarantee its semver-tagged image was ever pushed to GHCR
+        # (e.g. a tag created before this pipeline existed, or created outside of it). Rather than
+        # silently deploying a differently-versioned image (or failing deep inside `docker compose
+        # pull`), rebuild from the tagged commit whenever the semver image is missing so the
+        # correct version is baked into the image (and therefore the footer) either way.
+        id: image_check
+        env:
+          IS_NEW: ${{ steps.resolve.outputs.is_new }}
+          VERSION: ${{ steps.resolve.outputs.version }}
+          REF: ${{ steps.resolve.outputs.ref }}
+        run: |
+          BUILD_SHA="$(git rev-parse "$REF")"
+          echo "build_sha=${BUILD_SHA}" >> "$GITHUB_OUTPUT"
+
+          if [ "$IS_NEW" = "true" ]; then
+            echo "needs_build=true" >> "$GITHUB_OUTPUT"
+            echo "🆕 New release — will build a fresh image."
+            exit 0
+          fi
+
+          IMAGE_REPOSITORY="${GITHUB_REPOSITORY,,}"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin >/dev/null
+          if docker manifest inspect "ghcr.io/${IMAGE_REPOSITORY}:${VERSION}" >/dev/null 2>&1; then
+            echo "needs_build=false" >> "$GITHUB_OUTPUT"
+            echo "✅ Found published image ghcr.io/${IMAGE_REPOSITORY}:${VERSION} — reusing it."
+          else
+            echo "needs_build=true" >> "$GITHUB_OUTPUT"
+            echo "⚠️ No image published for v${VERSION} (tag exists but was never built) — rebuilding from ${REF} (commit ${BUILD_SHA}) so the correct version is baked in."
+          fi
 
   build:
-    # New releases build a fresh image; a redeploy reuses the already-published tag.
+    # Builds whenever there's no already-published, correctly-versioned image: always for a new
+    # release, and for a redeploy only if that version's image was never actually pushed.
     needs: compute-version
-    if: needs.compute-version.outputs.is_new == 'true'
+    if: needs.compute-version.outputs.needs_build == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.compute-version.outputs.ref }}
       - name: Normalize image repository name
         run: echo "IMAGE_REPOSITORY=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - uses: docker/login-action@v4
@@ -97,17 +135,19 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          # Tag with the semver AND the commit SHA for traceability.
+          # Tag with the semver AND the actual built commit SHA for traceability. Note this is
+          # NOT necessarily `github.sha` — a rebuild-on-redeploy builds the tagged commit, which
+          # may differ from the commit that triggered this workflow run.
           tags: |
             ghcr.io/${{ env.IMAGE_REPOSITORY }}:${{ needs.compute-version.outputs.version }}
-            ghcr.io/${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+            ghcr.io/${{ env.IMAGE_REPOSITORY }}:${{ needs.compute-version.outputs.build_sha }}
           build-args: |
             BUILD_ENV=production
             VERSION=${{ needs.compute-version.outputs.version }}
 
   deploy-dev:
-    # Release artifacts MUST prove out on dev before prod. Runs whether we built a fresh image
-    # (new release) or are redeploying an existing tag (build job skipped).
+    # Release artifacts MUST prove out on dev before prod. Runs whether we (re)built the image
+    # this run or are redeploying an already-published, correctly-versioned one (build skipped).
     needs: [compute-version, build]
     if: |
       always() &&
@@ -165,6 +205,9 @@ jobs:
     needs: [compute-version, deploy-dev]
     runs-on: ubuntu-latest
     environment: production
+    env:
+      NAMESPACE: postyfox
+      RELEASE_NAME: postyfox-frontend
     steps:
       - uses: actions/checkout@v7
         with:
@@ -190,65 +233,45 @@ jobs:
           gh release create "v${VERSION}" --title "v${VERSION}" --generate-notes
           echo "🏷️ Tagged and released v${VERSION}"
 
-      - name: Prepare SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p ${{ env.DEPLOY_PORT }} ${{ env.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
 
-      - name: Copy deployment files
+      - name: Configure kubeconfig
+        # Uses the SAME kubeconfig secret as postyfox-core's release pipeline (this release is
+        # deployed into that same cluster/namespace) — a service-account token scoped to the
+        # `postyfox` namespace is strongly recommended over a personal/admin credential.
         run: |
-          echo "📦 Copying frontend overlay + gateway fragments to prod stack..."
-          ssh -p ${{ env.DEPLOY_PORT }} \
-            -i ~/.ssh/deploy_key \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
-            "mkdir -p /opt/postyfox/prod/gateway/conf.d/upstreams /opt/postyfox/prod/gateway/conf.d/routes" || {
-            echo "❌ Failed to ensure gateway conf.d directories exist"; exit 1; }
-          scp -P ${{ env.DEPLOY_PORT }} -i ~/.ssh/deploy_key \
-            deploy/docker-compose.frontend.server.yml \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/opt/postyfox/prod/ || { echo "❌ Failed to copy compose overlay"; exit 1; }
-          scp -P ${{ env.DEPLOY_PORT }} -i ~/.ssh/deploy_key \
-            deploy/gateway/conf.d/upstreams/frontend.conf \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/opt/postyfox/prod/gateway/conf.d/upstreams/frontend.conf || { echo "❌ Failed to copy upstream fragment"; exit 1; }
-          scp -P ${{ env.DEPLOY_PORT }} -i ~/.ssh/deploy_key \
-            deploy/gateway/conf.d/routes/90-root.conf \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }}:/opt/postyfox/prod/gateway/conf.d/routes/90-root.conf || { echo "❌ Failed to copy root route fragment"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/.kube"
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > "$RUNNER_TEMP/.kube/config"
+          chmod 600 "$RUNNER_TEMP/.kube/config"
+          echo "KUBECONFIG=$RUNNER_TEMP/.kube/config" >> "$GITHUB_ENV"
 
-      - name: Deploy frontend to prod stack
+      - name: Verify cluster connectivity
+        run: kubectl cluster-info
+
+      - name: Helm upgrade --install (⚠️ PRODUCTION)
         env:
           IMAGE_REPOSITORY: ${{ steps.image.outputs.repository }}
           IMAGE_TAG: ${{ needs.compute-version.outputs.version }}
         run: |
-          echo "🚀 Deploying release ${IMAGE_TAG} to prod stack (⚠️ PRODUCTION)..."
-          ssh -p ${{ env.DEPLOY_PORT }} \
-            -i ~/.ssh/deploy_key \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
-            "set -e; \
-            cd /opt/postyfox/prod && \
-            [ -f .env ] || { echo '❌ Missing .env file (core stack not initialised?)'; exit 1; }; \
-            source .env 2>/dev/null || true; \
-            export FRONTEND_IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }} && \
-            export FRONTEND_IMAGE_TAG=${{ env.IMAGE_TAG }} && \
-            export COMPOSE_PROJECT_NAME=postyfox-prod && \
-            COMPOSE_FILES='-f docker-compose.server.yml -f docker-compose.prod.yml -f docker-compose.frontend.server.yml' && \
-            docker compose \$COMPOSE_FILES pull frontend || { echo '❌ Failed to pull frontend image'; exit 1; }; \
-            docker compose \$COMPOSE_FILES up -d --no-deps frontend || { echo '❌ Failed to start frontend'; exit 1; }; \
-            docker compose \$COMPOSE_FILES restart gateway || { echo '❌ Failed to restart gateway'; exit 1; }; \
-            echo '✅ Prod frontend deployed successfully' && \
-            docker compose \$COMPOSE_FILES ps frontend gateway" || { echo "❌ Prod deployment failed"; exit 1; }
+          echo "🚀 Deploying release v${IMAGE_TAG} to prod k8s (namespace: ${NAMESPACE})..."
+          helm upgrade --install "$RELEASE_NAME" deploy/helm/postyfox-frontend \
+            --namespace "$NAMESPACE" --create-namespace \
+            --set image.repository="$IMAGE_REPOSITORY" \
+            --set image.tag="${IMAGE_TAG}" \
+            --set service.name="$RELEASE_NAME" \
+            --atomic --wait --timeout 5m \
+            || { echo "❌ Helm upgrade failed (auto-rolled back by --atomic)"; exit 1; }
+          echo "✅ Prod frontend release v${IMAGE_TAG} deployed"
 
       - name: Health check
         run: |
-          sleep 15
-          ssh -p ${{ env.DEPLOY_PORT }} \
-            -i ~/.ssh/deploy_key \
-            ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
-            "cd /opt/postyfox/prod && \
-            docker compose -f docker-compose.server.yml -f docker-compose.prod.yml -f docker-compose.frontend.server.yml ps frontend | grep -E '(Up|healthy)' || { \
-            echo '⚠️ Warning: frontend may not be healthy yet'; }; \
-            true"
+          kubectl -n "$NAMESPACE" get pods -l app.kubernetes.io/name=postyfox-frontend
+          kubectl -n "$NAMESPACE" rollout status deployment/"$RELEASE_NAME" --timeout=60s || \
+            echo "⚠️ Warning: frontend rollout not confirmed healthy within timeout"
 
-      - name: Cleanup SSH
+      - name: Cleanup kubeconfig
         if: always()
-        run: rm -f ~/.ssh/deploy_key
+        run: rm -f "$RUNNER_TEMP/.kube/config"
