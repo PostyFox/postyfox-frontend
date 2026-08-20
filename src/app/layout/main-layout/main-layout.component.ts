@@ -40,6 +40,7 @@ export class MainLayoutComponent {
     { label: 'Posts', icon: 'bi-collection', link: '/posts' },
     { label: 'Connectors', icon: 'bi-plug', link: '/connectors' },
     { label: 'Templates', icon: 'bi-file-earmark-text', link: '/templates' },
+    { label: 'Tag presets', icon: 'bi-tags', link: '/tag-presets' },
     { label: 'Triggers', icon: 'bi-lightning-charge', link: '/triggers' },
     { label: 'API keys', icon: 'bi-key', link: '/keys' },
   ];
