@@ -222,6 +222,22 @@ export interface TemplateUpsertRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Tag presets
+// ---------------------------------------------------------------------------
+
+export interface TagPreset {
+  id: string;
+  name: string;
+  tags: string[];
+}
+
+export interface TagPresetUpsertRequest {
+  id?: string | null;
+  name: string;
+  tags: string[];
+}
+
+// ---------------------------------------------------------------------------
 // Media
 // ---------------------------------------------------------------------------
 

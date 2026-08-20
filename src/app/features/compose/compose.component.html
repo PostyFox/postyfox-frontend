@@ -79,7 +79,25 @@
             }
           </div>
           <div class="mb-0">
-            <label class="form-label" for="tags">Tags</label>
+            <div class="d-flex justify-content-between align-items-end gap-2 mb-1">
+              <label class="form-label mb-0" for="tags">Tags</label>
+              @if (tagPresetList().length) {
+                <div class="input-group input-group-sm" style="width: auto">
+                  <label class="input-group-text" for="tagPreset">Preset</label>
+                  <select
+                    id="tagPreset"
+                    class="form-select form-select-sm"
+                    [ngModel]="tagPresetId()"
+                    (ngModelChange)="applyTagPreset($event)"
+                  >
+                    <option value="">Load a preset…</option>
+                    @for (p of tagPresetList(); track p.id) {
+                      <option [value]="p.id">{{ p.name }}</option>
+                    }
+                  </select>
+                </div>
+              }
+            </div>
             <input
               id="tags"
               class="form-control"

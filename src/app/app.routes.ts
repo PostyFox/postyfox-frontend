@@ -29,6 +29,12 @@ export const routes: Routes = [
           import('./features/templates/templates.component').then((m) => m.TemplatesComponent),
       },
       {
+        path: 'tag-presets',
+        title: 'Tag presets · PostyFox',
+        loadComponent: () =>
+          import('./features/tag-presets/tag-presets.component').then((m) => m.TagPresetsComponent),
+      },
+      {
         path: 'compose',
         title: 'Compose · PostyFox',
         loadComponent: () =>

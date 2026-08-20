@@ -10,6 +10,7 @@ import {
   MediaRef,
   PostContent,
   ServiceDefinition,
+  TagPreset,
   Template,
   UserConnector,
 } from '../../core/models/api.models';
@@ -25,6 +26,7 @@ import { ConnectorsService } from '../../core/services/connectors.service';
 import { MediaService } from '../../core/services/media.service';
 import { PostsService } from '../../core/services/posts.service';
 import { ServicesService } from '../../core/services/services.service';
+import { TagPresetsService } from '../../core/services/tag-presets.service';
 import { TemplatesService } from '../../core/services/templates.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DescriptorFieldComponent } from '../../shared/components/descriptor-field.component';
@@ -88,6 +90,7 @@ interface TargetOptionsGroup {
 export class ComposeComponent {
   private connectors = inject(ConnectorsService);
   private templates = inject(TemplatesService);
+  private tagPresets = inject(TagPresetsService);
   private services = inject(ServicesService);
   private posts = inject(PostsService);
   private media = inject(MediaService);
@@ -97,6 +100,7 @@ export class ComposeComponent {
   readonly connectorList = signal<UserConnector[]>([]);
   readonly destinationList = signal<ConnectorDestinationSummary[]>([]);
   readonly templateList = signal<Template[]>([]);
+  readonly tagPresetList = signal<TagPreset[]>([]);
   readonly catalogue = signal<ServiceDefinition[]>([]);
   brand = brandFor;
   readonly loading = signal(true);
@@ -111,6 +115,8 @@ export class ComposeComponent {
   readonly title = signal('');
   readonly description = signal('');
   readonly tags = signal('');
+  /** Which tag preset is selected in the "load a tag preset" dropdown; not submitted, just a UI aid. */
+  readonly tagPresetId = signal('');
   readonly rating = signal<ContentRating | null>(null);
   readonly templateId = signal('');
   readonly variables = signal<Variable[]>([]);
@@ -392,12 +398,14 @@ export class ComposeComponent {
       connectors: this.connectors.list(),
       destinations: this.connectors.listAllDestinations(),
       templates: this.templates.list(),
+      tagPresets: this.tagPresets.list(),
       catalogue: this.services.list(),
     }).subscribe({
-      next: ({ connectors, destinations, templates, catalogue }) => {
+      next: ({ connectors, destinations, templates, tagPresets, catalogue }) => {
         this.connectorList.set(connectors);
         this.destinationList.set(destinations);
         this.templateList.set(templates);
+        this.tagPresetList.set(tagPresets);
         this.catalogue.set(catalogue);
         this.loading.set(false);
         if (prefill) this.applyPrefill(prefill);
@@ -407,6 +415,14 @@ export class ComposeComponent {
         this.loading.set(false);
       },
     });
+  }
+
+  /** Loads a saved tag preset's tags into the tags field, replacing whatever is there. */
+  applyTagPreset(id: string): void {
+    this.tagPresetId.set(id);
+    if (!id) return;
+    const preset = this.tagPresetList().find((p) => p.id === id);
+    if (preset) this.tags.set(preset.tags.join(', '));
   }
 
   /**
