@@ -1,0 +1,123 @@
+<app-page-header title="Tag presets" subtitle="Reusable sets of tags for your posts">
+  <button class="btn btn-primary" (click)="newPreset()">
+    <i class="bi bi-plus-lg me-1"></i> New preset
+  </button>
+</app-page-header>
+
+@if (loading()) {
+  <div class="row g-4">
+    @for (i of [1, 2, 3]; track i) {
+      <div class="col-md-6 col-xl-4">
+        <div class="card">
+          <div class="card-body placeholder-glow">
+            <span class="placeholder col-6 mb-2"></span><span class="placeholder col-12"></span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+} @else if (list().length === 0) {
+  <div class="card">
+    <div class="card-body">
+      <app-empty-state
+        icon="bi-tags"
+        title="No tag presets yet"
+        text="Tag presets let you quickly load a saved set of tags into the compose form."
+      >
+        <button class="btn btn-primary" (click)="newPreset()">
+          <i class="bi bi-plus-lg me-1"></i> Create your first preset
+        </button>
+      </app-empty-state>
+    </div>
+  </div>
+} @else {
+  <div class="row g-4">
+    @for (p of list(); track p.id) {
+      <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <h6 class="card-title mb-0">{{ p.name }}</h6>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-link text-muted-2 p-0" data-bs-toggle="dropdown">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                  <li>
+                    <button class="dropdown-item" (click)="openEdit(p)">
+                      <i class="bi bi-pencil me-2"></i>Edit
+                    </button>
+                  </li>
+                  <li>
+                    <button class="dropdown-item text-danger" (click)="remove(p)">
+                      <i class="bi bi-trash me-2"></i>Delete
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="d-flex flex-wrap gap-1 flex-grow-1">
+              @for (tag of p.tags; track tag) {
+                <span class="badge text-bg-secondary">{{ tag }}</span>
+              } @empty {
+                <p class="text-muted-2 small mb-0">No tags</p>
+              }
+            </div>
+            <button
+              class="btn btn-sm btn-outline-primary mt-3 align-self-start"
+              (click)="openEdit(p)"
+            >
+              <i class="bi bi-pencil me-1"></i> Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Editor modal -->
+@if (edit(); as e) {
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ e.id ? 'Edit tag preset' : 'New tag preset' }}</h5>
+          <button type="button" class="btn-close" (click)="close()"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="tpName">Name</label>
+            <input
+              id="tpName"
+              class="form-control"
+              placeholder="e.g. Weekly art"
+              [ngModel]="e.name"
+              (ngModelChange)="patch('name', $event)"
+            />
+          </div>
+          <div class="mb-0">
+            <label class="form-label" for="tpTags">Tags</label>
+            <input
+              id="tpTags"
+              class="form-control"
+              placeholder="comma, separated, tags"
+              [ngModel]="e.tagsText"
+              (ngModelChange)="patch('tagsText', $event)"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="close()">Cancel</button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="saving() || !e.name.trim()">
+            @if (saving()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Save preset
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show"></div>
+}
