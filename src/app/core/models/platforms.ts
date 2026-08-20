@@ -232,6 +232,8 @@ export function capabilitiesByPlatform(defs: ServiceDefinition[]): Record<string
       supportsCookiePairing: d.supportsCookiePairing,
       supportsRating: d.supportsRating,
       requiresRating: d.requiresRating,
+      supportsTags: d.supportsTags,
+      requiresTags: d.requiresTags,
       supportsMultipleTargets: d.supportsMultipleTargets,
     };
   }
@@ -244,4 +246,48 @@ export function capabilitiesForConnector(
   byPlatform: Record<string, Capabilities>,
 ): Capabilities | null {
   return byPlatform[connector.platform] ?? null;
+}
+
+/**
+ * Formats a single author tag as `#tag`, replacing internal whitespace with `_` — mirrors the
+ * server's `TemplateEngine.FormatHashtag`, used for platforms with no native tags field (see
+ * {@link Capabilities.supportsTags}). Returns `''` for a blank tag.
+ */
+export function formatHashtag(tag: string): string {
+  const trimmed = tag.trim().replace(/\s+/g, '_');
+  if (!trimmed) return '';
+  return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+}
+
+/** Result of {@link previewInlineTags}: which tags fit, and how many had to be dropped. */
+export interface InlineTagsPreview {
+  included: string[];
+  omitted: number;
+}
+
+/**
+ * Client-side estimate of which tags will fit when woven into a body as `#hashtag`s, mirroring the
+ * server's `TemplateEngine.InterpolateTags` trimming so the compose form can warn before submit —
+ * the server enforces the actual limit at render time; this is a best-effort preview only (some
+ * platforms, e.g. Fediverse instances, only report their real cap live, at delivery).
+ */
+export function previewInlineTags(
+  tags: string[],
+  bodyLengthWithoutTags: number,
+  maxContentLength: number | null,
+): InlineTagsPreview {
+  const hashtags = tags.map(formatHashtag).filter((t) => t.length > 0);
+  if (hashtags.length === 0) return { included: [], omitted: 0 };
+  if (maxContentLength == null) return { included: hashtags, omitted: 0 };
+
+  const available = Math.max(0, maxContentLength - bodyLengthWithoutTags);
+  const included: string[] = [];
+  let length = 0;
+  for (const tag of hashtags) {
+    const added = tag.length + (included.length > 0 ? 1 : 0); // leading space between tags
+    if (length + added > available) break;
+    included.push(tag);
+    length += added;
+  }
+  return { included, omitted: hashtags.length - included.length };
 }

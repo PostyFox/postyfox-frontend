@@ -95,6 +95,10 @@ export interface Capabilities {
   supportsRating: boolean;
   /** True when each delivery must include an explicit content rating. */
   requiresRating: boolean;
+  /** True when the platform has a native tags field it sends tags through directly. */
+  supportsTags: boolean;
+  /** True when a delivery to this platform must include at least one tag. */
+  requiresTags: boolean;
   /**
    * True when a single login can post to several distinct chats/channels (e.g. Telegram). The
    * connector itself is not a selectable target for these platforms — the compose form offers each
@@ -287,6 +291,12 @@ export interface CreatePostRequest {
    */
   targetOptions?: Record<string, Record<string, string>> | null;
   /**
+   * Per-target "include tags" choice, keyed by the same target id used in {@link targets}. Absent
+   * entries default to true. Forced true (ignored) for a target whose platform requires tags —
+   * see {@link ServiceDefinition.requiresTags}.
+   */
+  targetIncludeTags?: Record<string, boolean> | null;
+  /**
    * Save this as a draft instead of submitting it: no targets are resolved/validated and nothing is
    * enqueued for delivery. `targets`/`targetOptions` are still stored as-authored so the draft can be
    * edited and eventually published (`POST /{id}/publish`).
@@ -307,6 +317,10 @@ export interface PostTargetStatus {
   externalUrl: string | null;
   error: string | null;
   attempts: number;
+  /** Whether tags were included for this target. */
+  includeTags: boolean;
+  /** How many tags were dropped to fit an inline hashtag interpolation under the platform's character limit. */
+  tagsOmitted: number;
 }
 
 export interface PostStatus {
@@ -333,6 +347,8 @@ export interface PostContent {
   rating: ContentRating | null;
   /** The per-submission platform choices it was created with, keyed by connector id. */
   targetOptions: Record<string, Record<string, string>>;
+  /** The per-target "include tags" choices it was created with, keyed by connector id. */
+  targetIncludeTags: Record<string, boolean>;
 }
 
 /** Lightweight row from `GET /api/posts` (list / activity view — no per-target detail). */
