@@ -5,6 +5,15 @@ import { MainLayoutComponent } from './layout/main-layout/main-layout.component'
 
 export const routes: Routes = [
   {
+    // Kept outside the guarded layout so it's reachable without an authenticated session.
+    path: 'privacy',
+    title: 'Privacy Policy · PostyFox',
+    loadComponent: () =>
+      import('./features/privacy-policy/privacy-policy.component').then(
+        (m) => m.PrivacyPolicyComponent,
+      ),
+  },
+  {
     path: '',
     component: MainLayoutComponent,
     canActivate: [authGuard],
