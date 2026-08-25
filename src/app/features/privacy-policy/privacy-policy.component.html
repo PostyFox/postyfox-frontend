@@ -9,21 +9,26 @@
   <h1 class="h3 mb-1">Privacy Policy</h1>
   <p class="text-muted-2 mb-4">Last updated: {{ lastUpdated }}</p>
 
-  <div class="alert alert-secondary small mb-4">
-    <strong>Note for operators:</strong> PostyFox is self-hosted software — there is no central
-    "PostyFox" company processing your data. This policy describes what <em>this instance</em>,
-    running the PostyFox platform, collects and does with it. Replace <code>[Operator]</code> and
-    <code>[contact address]</code> below with your own details before publishing.
-  </div>
+  @if (!isConfigured()) {
+    <div class="alert alert-secondary small mb-4">
+      <strong>Note for operators:</strong> PostyFox is self-hosted software — there is no central
+      "PostyFox" company processing your data. This policy describes what <em>this instance</em>,
+      running the PostyFox platform, collects and does with it. Set the
+      <code>OPERATOR_NAME</code> and <code>OPERATOR_CONTACT</code> environment variables on this
+      deployment to replace the <code>[Operator]</code> and
+      <code>[contact address]</code> placeholders below before publishing.
+    </div>
+  }
 
   <section class="mb-4">
     <h2 class="h5">1. Who this policy covers</h2>
     <p>
       This privacy policy applies to this PostyFox instance, operated by
-      <strong>[Operator]</strong> ("we", "us", "the operator"). It explains what information is
-      collected when you use this instance to compose and deliver posts to third-party platforms
-      (Discord, Telegram, Bluesky, Tumblr, FurAffinity, and Fediverse/ActivityPub servers such as
-      Mastodon), and how that information is stored, used, and protected.
+      <strong>{{ operatorName() || '[Operator]' }}</strong> ("we", "us", "the operator"). It
+      explains what information is collected when you use this instance to compose and deliver posts
+      to third-party platforms (Discord, Telegram, Bluesky, Tumblr, FurAffinity, and
+      Fediverse/ActivityPub servers such as Mastodon), and how that information is stored, used, and
+      protected.
     </p>
   </section>
 
@@ -92,10 +97,10 @@
   <section class="mb-4">
     <h2 class="h5">5. Where data is stored</h2>
     <p>
-      Data is stored on infrastructure operated by [Operator]: structured data (accounts,
-      connectors, posts, templates, triggers) in a PostgreSQL database, uploaded media in
-      S3-compatible object storage, and secrets/credentials in a dedicated secrets store. Some
-      connectors (e.g. Telegram) additionally retain a persistent session on the destination
+      Data is stored on infrastructure operated by {{ operatorName() || '[Operator]' }}: structured
+      data (accounts, connectors, posts, templates, triggers) in a PostgreSQL database, uploaded
+      media in S3-compatible object storage, and secrets/credentials in a dedicated secrets store.
+      Some connectors (e.g. Telegram) additionally retain a persistent session on the destination
       platform's own servers in order to post on your behalf.
     </p>
   </section>
@@ -114,8 +119,9 @@
     <p>
       Posts, templates, tag presets, triggers, connectors, and API keys are retained until you
       delete them yourself from the relevant page, or until you ask us to remove them. To request
-      deletion of your account and all associated data, contact <strong>[contact address]</strong>.
-      Removing a connector deletes its stored credentials; it does not retract content already
+      deletion of your account and all associated data, contact
+      <strong>{{ operatorContact() || '[contact address]' }}</strong
+      >. Removing a connector deletes its stored credentials; it does not retract content already
       delivered to the destination platform.
     </p>
   </section>
@@ -150,7 +156,8 @@
     <h2 class="h5">11. Contact</h2>
     <p>
       Questions about this policy or your data should be directed to
-      <strong>[contact address]</strong>.
+      <strong>{{ operatorContact() || '[contact address]' }}</strong
+      >.
     </p>
   </section>
 </div>

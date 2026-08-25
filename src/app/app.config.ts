@@ -11,6 +11,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { AuthService } from './core/services/auth.service';
+import { DeploymentConfigService } from './core/services/deployment-config.service';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -25,5 +26,7 @@ export const appConfig: ApplicationConfig = {
     provideMarkdown(),
     // Resolve the current user (via the proxy) before the first route renders.
     provideAppInitializer(() => firstValueFrom(inject(AuthService).loadUser())),
+    // Load this instance's deployment config (operator name/contact) before the first route renders.
+    provideAppInitializer(() => firstValueFrom(inject(DeploymentConfigService).load())),
   ],
 };

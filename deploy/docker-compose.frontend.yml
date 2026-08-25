@@ -32,6 +32,11 @@ services:
       dockerfile: Dockerfile
       args:
         BUILD_ENV: production
+    environment:
+      # Shown in the privacy policy in place of the [Operator] / [contact address] placeholders.
+      # Leave unset to keep the generic placeholders and the "Note for operators" banner.
+      OPERATOR_NAME: "${OPERATOR_NAME:-}"
+      OPERATOR_CONTACT: "${OPERATOR_CONTACT:-}"
     expose:
       - "80"
 
