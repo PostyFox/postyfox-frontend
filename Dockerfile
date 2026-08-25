@@ -29,6 +29,10 @@ FROM nginx:alpine
 # SPA-aware server config (client-side routing fallback + asset caching).
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Writes deployment-config.json (operator name/contact) from env vars at container startup.
+COPY docker-entrypoint.sh /docker-entrypoint.d/40-deployment-config.sh
+RUN chmod +x /docker-entrypoint.d/40-deployment-config.sh
+
 # The Angular `application` builder emits the browser bundle under dist/spa/browser.
 COPY --from=build /app/dist/spa/browser /usr/share/nginx/html
 
