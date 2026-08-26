@@ -266,7 +266,7 @@ jobs:
           echo "🚀 Deploying release v${IMAGE_TAG} to prod k8s (namespace: ${NAMESPACE})..."
           helm upgrade --install "$RELEASE_NAME" deploy/helm/postyfox-frontend \
             --namespace "$NAMESPACE" --create-namespace \
-            -f deploy/helm/postyfox/values-prod.yaml \
+            -f deploy/helm/postyfox-frontend/values-prod.yaml \
             --set image.repository="$IMAGE_REPOSITORY" \
             --set image.tag="${IMAGE_TAG}" \
             --set service.name="$RELEASE_NAME" \
