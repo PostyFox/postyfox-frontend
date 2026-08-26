@@ -1,0 +1,30 @@
+# Production values for the postyfox-frontend Helm chart.
+# This file should be used when deploying to production environments.
+
+ingress:
+  enabled: true
+  className: "contour"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
+  host: app.postyfox.com
+  tls:
+   - secretName: postyfox-tls
+     hosts:
+       - app.postyfox.com
+
+image:
+  registry: ghcr.io
+  repository: postyfox/postyfox-core
+  # tag is set via --set image.tag at deploy time
+
+# Resource limits and requests for production
+resources:
+  limits:
+    cpu: "500m"
+    memory: 512Mi
+  requests:
+    cpu: "100m"
+    memory: 128Mi
+
+# Number of replicas for production
+replicaCount: 2
