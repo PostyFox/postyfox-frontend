@@ -5,10 +5,10 @@
 replicaCount: 1
 
 image:
-  repository: postyfox/frontend
+  registry: ghcr.io
+  repository: postyfox/postyfox-core
+  # tag is set via --set image.tag at deploy time
   pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
 
 imagePullSecrets: []
 nameOverride: ""

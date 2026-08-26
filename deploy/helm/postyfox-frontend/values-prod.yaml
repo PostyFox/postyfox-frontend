@@ -1,21 +1,18 @@
 # Production values for the postyfox-frontend Helm chart.
 # This file should be used when deploying to production environments.
 
-ingress:
-  enabled: true
-  className: "contour"
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-cloudflare
-  host: app.postyfox.com
-  tls:
-   - secretName: postyfox-tls
-     hosts:
-       - app.postyfox.com
-
 image:
   registry: ghcr.io
   repository: postyfox/postyfox-core
   # tag is set via --set image.tag at deploy time
+  pullPolicy: IfNotPresent
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: ""
+  tls: []
 
 # Resource limits and requests for production
 resources:
