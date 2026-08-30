@@ -73,9 +73,9 @@ interface Variable {
 
 /**
  * A selected target's per-submission platform choices, ready to render: the fields its platform
- * declares plus the values chosen for this post. FurAffinity's category/species/gender/folders are
- * the current example — they describe the submission, not the account, so they live here rather than
- * in the connector's settings.
+ * declares plus the values chosen for this post. FurAffinity's category/species/gender/folders and a
+ * Fediverse target's content warning text are current examples — they describe the submission, not
+ * the account, so they live here rather than in the connector's settings.
  */
 interface TargetOptionsGroup {
   target: SelectableTarget;

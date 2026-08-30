@@ -106,6 +106,12 @@ export interface Capabilities {
    * picks which of the platform's live targets to expose.
    */
   supportsMultipleTargets: boolean;
+  /**
+   * True when the platform supports a click-to-reveal content warning (Fediverse's "CW"). The actual
+   * per-submission text (when the author opts in) travels as a {@link ServiceDefinition.postOptionsSchema}
+   * field, same as FurAffinity's category/species/gender — never inferred from the post title.
+   */
+  supportsContentWarning: boolean;
 }
 
 export interface ServiceDefinition extends Capabilities {
