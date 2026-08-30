@@ -246,6 +246,12 @@ export interface MediaRef {
   key: string;
   contentType: string;
   alt?: string | null;
+  /**
+   * Author-chosen "primary" image among several attachments. Platforms limited to a single image
+   * (FurAffinity) submit this one instead of rejecting a multi-image post; platforms that accept
+   * multiple images ignore it and attach everything.
+   */
+  isDefault?: boolean;
 }
 
 /** Live per-connector limits reported by `GET /api/connectors/{id}/limits`. */

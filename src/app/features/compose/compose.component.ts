@@ -43,6 +43,12 @@ interface MediaItem {
   mimeType?: string;
   /** Per-connector resize analysis from the media-check endpoint; populated after upload. */
   resizeChecks?: MediaCheckResultItem[];
+  /**
+   * The image a single-image platform (FurAffinity) will use when several are attached. Exactly one
+   * item carries this whenever {@link mediaItems} is non-empty — enforced by {@link setDefaultMedia},
+   * the upload/remove handlers, and prefill restoration.
+   */
+  isDefault: boolean;
 }
 
 /**
@@ -292,20 +298,22 @@ export class ComposeComponent {
     if (this.rating() == null) issues.push('Choose a content rating.');
 
     const media = this.mediaItems();
-    if (media.length !== 1) {
-      issues.push('Attach exactly one image.');
+    if (media.length === 0) {
+      issues.push('Attach an image.');
     } else {
-      const item = media[0];
+      // FurAffinity's gallery form takes exactly one file. When several are attached (for platforms
+      // that support multiple images), it uses the author's chosen default image and drops the rest.
+      const item = media.find((m) => m.isDefault) ?? media[0];
       const contentType = (item.mimeType || item.ref.contentType).toLowerCase();
       if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(contentType)) {
-        issues.push('Use a JPEG, PNG, or GIF image.');
+        issues.push('Use a JPEG, PNG, or GIF image for the default image.');
       }
       if (
         contentType === 'image/gif' &&
         item.fileSize != null &&
         item.fileSize > 10 * 1024 * 1024
       ) {
-        issues.push('Keep animated GIFs at or below 10 MiB.');
+        issues.push('Keep the default animated GIF at or below 10 MiB.');
       }
     }
 
@@ -457,8 +465,10 @@ export class ComposeComponent {
         name: ref.key.split('/').pop() ?? ref.key,
         alt: ref.alt ?? '',
         mimeType: ref.contentType,
+        isDefault: ref.isDefault ?? false,
       })),
     );
+    this.ensureDefaultMedia();
     if (this.draftId() && content.postAt) {
       this.scheduleEnabled.set(true);
       // <input type="datetime-local"> wants local time with no zone/seconds.
@@ -533,8 +543,13 @@ export class ComposeComponent {
             alt: '',
             fileSize: file.size,
             mimeType: file.type,
+            // The very first image attached becomes the default; later ones don't disturb an
+            // existing choice. ensureDefaultMedia() below covers the empty-list race between
+            // concurrent uploads.
+            isDefault: this.mediaItems().length === 0,
           };
           this.mediaItems.update((m) => [...m, item]);
+          this.ensureDefaultMedia();
 
           // Pre-flight check: find which enabled connectors would resize this file.
           const connectorIds = this.enabledConnectors().map((c) => c.id);
@@ -578,8 +593,26 @@ export class ComposeComponent {
     this.mediaItems.update((m) => m.map((x, idx) => (idx === i ? { ...x, alt: value } : x)));
   }
 
+  /**
+   * Marks one attached image as the "default" — the one single-image platforms (FurAffinity) use
+   * when several are attached, instead of rejecting the post.
+   */
+  setDefaultMedia(i: number): void {
+    this.mediaItems.update((m) => m.map((x, idx) => ({ ...x, isDefault: idx === i })));
+  }
+
   removeMedia(i: number): void {
     this.mediaItems.update((m) => m.filter((_, idx) => idx !== i));
+    this.ensureDefaultMedia();
+  }
+
+  /** Guarantees exactly one item is flagged default whenever media is attached. */
+  private ensureDefaultMedia(): void {
+    this.mediaItems.update((m) =>
+      m.length > 0 && !m.some((x) => x.isDefault)
+        ? m.map((x, idx) => (idx === 0 ? { ...x, isDefault: true } : x))
+        : m,
+    );
   }
 
   // ----- submit -------------------------------------------------------------
@@ -598,6 +631,7 @@ export class ComposeComponent {
     const media: MediaRef[] = this.mediaItems().map((m) => ({
       ...m.ref,
       alt: m.alt.trim() || null,
+      isDefault: m.isDefault,
     }));
 
     let postAt: string | null = null;
