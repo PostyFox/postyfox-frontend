@@ -70,6 +70,21 @@
                 may be truncated or rejected.
               </div>
             }
+            @if (textTemplateList().length) {
+              <div class="d-flex flex-wrap align-items-center gap-1 mt-2">
+                <span class="text-muted-2 small me-1">Insert:</span>
+                @for (t of textTemplateList(); track t.id) {
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary py-0"
+                    title="Resolved per connector at delivery — see Text templates"
+                    (click)="insertTextTemplate(t.name)"
+                  >
+                    {{ '{{tt:' + t.name + '}}' }}
+                  </button>
+                }
+              </div>
+            }
             @if (tagsByTarget().some((r) => !r.supportsTags)) {
               <div class="form-text">
                 <i class="bi bi-info-circle me-1"></i>Platforms with no native tags field have none

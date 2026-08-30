@@ -244,6 +244,30 @@ export interface TagPresetUpsertRequest {
 }
 
 // ---------------------------------------------------------------------------
+// Text templates
+// ---------------------------------------------------------------------------
+
+/**
+ * A reusable, named text snippet referenced inline in a post's title/description as `{{tt:name}}`
+ * and resolved per delivery target: the entry in {@link connectorValues} for that target's connector,
+ * falling back to {@link defaultValue}, falling back to an empty string.
+ */
+export interface TextTemplate {
+  id: string;
+  name: string;
+  defaultValue: string;
+  /** Per-connector override values, keyed by {@link UserConnector.id}. */
+  connectorValues: Record<string, string>;
+}
+
+export interface TextTemplateUpsertRequest {
+  id?: string | null;
+  name: string;
+  defaultValue: string;
+  connectorValues: Record<string, string>;
+}
+
+// ---------------------------------------------------------------------------
 // Media
 // ---------------------------------------------------------------------------
 

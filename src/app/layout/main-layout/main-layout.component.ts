@@ -41,6 +41,7 @@ export class MainLayoutComponent {
     { label: 'Connectors', icon: 'bi-plug', link: '/connectors' },
     { label: 'Templates', icon: 'bi-file-earmark-text', link: '/templates' },
     { label: 'Tag presets', icon: 'bi-tags', link: '/tag-presets' },
+    { label: 'Text templates', icon: 'bi-braces', link: '/text-templates' },
     { label: 'Triggers', icon: 'bi-lightning-charge', link: '/triggers' },
     { label: 'API keys', icon: 'bi-key', link: '/keys' },
   ];
