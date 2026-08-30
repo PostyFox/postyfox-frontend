@@ -211,6 +211,7 @@ export function capabilityChips(c: Capabilities): CapabilityChip[] {
     { label: 'Title', icon: 'bi-fonts', on: c.supportsTitle },
     { label: 'Media', icon: 'bi-images', on: c.supportsMedia },
     { label: 'Threads', icon: 'bi-chat-square-text', on: c.supportsThreads },
+    { label: 'Content warning', icon: 'bi-eye-slash', on: c.supportsContentWarning },
     {
       label: c.maxContentLength ? `${c.maxContentLength} chars` : 'No limit',
       icon: 'bi-type',
@@ -235,6 +236,7 @@ export function capabilitiesByPlatform(defs: ServiceDefinition[]): Record<string
       supportsTags: d.supportsTags,
       requiresTags: d.requiresTags,
       supportsMultipleTargets: d.supportsMultipleTargets,
+      supportsContentWarning: d.supportsContentWarning,
     };
   }
   return map;
