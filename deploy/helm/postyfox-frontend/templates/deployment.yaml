@@ -6,6 +6,7 @@ metadata:
     {{- include "postyfox-frontend.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       {{- include "postyfox-frontend.selectorLabels" . | nindent 6 }}
