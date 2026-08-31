@@ -36,6 +36,9 @@ spec:
             - name: http
               containerPort: 80
               protocol: TCP
+          env:
+            - { name: OPERATOR_NAME, value: {{ .Values.operator.name | quote }} }
+            - { name: OPERATOR_CONTACT, value: {{ .Values.operator.contact | quote }} }
           livenessProbe:
             httpGet:
               path: /

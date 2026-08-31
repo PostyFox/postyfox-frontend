@@ -25,3 +25,7 @@ resources:
 
 # Number of replicas for production
 replicaCount: 2
+
+operator:
+  name: "PostyFox"
+  contact: "data@postyfox.com"
