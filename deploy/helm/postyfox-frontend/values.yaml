@@ -4,6 +4,12 @@
 
 replicaCount: 1
 
+# Shown on the privacy policy page (see docker-entrypoint.sh / DeploymentConfigService). Leave
+# both empty to fall back to the generic [Operator] / [contact address] placeholders.
+operator:
+  name: ""
+  contact: ""
+
 image:
   registry: ghcr.io
   repository: postyfox/postyfox-core
