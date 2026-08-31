@@ -12,6 +12,7 @@ import {
   ServiceDefinition,
   TagPreset,
   Template,
+  TextTemplate,
   UserConnector,
 } from '../../core/models/api.models';
 import {
@@ -28,6 +29,7 @@ import { PostsService } from '../../core/services/posts.service';
 import { ServicesService } from '../../core/services/services.service';
 import { TagPresetsService } from '../../core/services/tag-presets.service';
 import { TemplatesService } from '../../core/services/templates.service';
+import { TextTemplatesService } from '../../core/services/text-templates.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DescriptorFieldComponent } from '../../shared/components/descriptor-field.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state.component';
@@ -97,6 +99,7 @@ export class ComposeComponent {
   private connectors = inject(ConnectorsService);
   private templates = inject(TemplatesService);
   private tagPresets = inject(TagPresetsService);
+  private textTemplates = inject(TextTemplatesService);
   private services = inject(ServicesService);
   private posts = inject(PostsService);
   private media = inject(MediaService);
@@ -107,6 +110,8 @@ export class ComposeComponent {
   readonly destinationList = signal<ConnectorDestinationSummary[]>([]);
   readonly templateList = signal<Template[]>([]);
   readonly tagPresetList = signal<TagPreset[]>([]);
+  /** Available {{tt:name}} tokens — just for the compose hint; resolution happens server-side. */
+  readonly textTemplateList = signal<TextTemplate[]>([]);
   readonly catalogue = signal<ServiceDefinition[]>([]);
   brand = brandFor;
   readonly loading = signal(true);
@@ -407,13 +412,15 @@ export class ComposeComponent {
       destinations: this.connectors.listAllDestinations(),
       templates: this.templates.list(),
       tagPresets: this.tagPresets.list(),
+      textTemplates: this.textTemplates.list(),
       catalogue: this.services.list(),
     }).subscribe({
-      next: ({ connectors, destinations, templates, tagPresets, catalogue }) => {
+      next: ({ connectors, destinations, templates, tagPresets, textTemplates, catalogue }) => {
         this.connectorList.set(connectors);
         this.destinationList.set(destinations);
         this.templateList.set(templates);
         this.tagPresetList.set(tagPresets);
+        this.textTemplateList.set(textTemplates);
         this.catalogue.set(catalogue);
         this.loading.set(false);
         if (prefill) this.applyPrefill(prefill);
@@ -431,6 +438,16 @@ export class ComposeComponent {
     if (!id) return;
     const preset = this.tagPresetList().find((p) => p.id === id);
     if (preset) this.tags.set(preset.tags.join(', '));
+  }
+
+  /**
+   * Appends a `{{tt:name}}` reference to the description — resolution (per-connector override, else
+   * the template's default, else blank) happens server-side at delivery, not here.
+   */
+  insertTextTemplate(name: string): void {
+    const current = this.description();
+    const separator = current && !current.endsWith(' ') && !current.endsWith('\n') ? ' ' : '';
+    this.description.set(`${current}${separator}{{tt:${name}}}`);
   }
 
   /**

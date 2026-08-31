@@ -44,6 +44,14 @@ export const routes: Routes = [
           import('./features/tag-presets/tag-presets.component').then((m) => m.TagPresetsComponent),
       },
       {
+        path: 'text-templates',
+        title: 'Text templates · PostyFox',
+        loadComponent: () =>
+          import('./features/text-templates/text-templates.component').then(
+            (m) => m.TextTemplatesComponent,
+          ),
+      },
+      {
         path: 'compose',
         title: 'Compose · PostyFox',
         loadComponent: () =>

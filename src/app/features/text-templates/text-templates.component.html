@@ -1,0 +1,166 @@
+<app-page-header
+  title="Text templates"
+  subtitle="Reusable text snippets that can vary by connector"
+>
+  <button class="btn btn-primary" (click)="newTemplate()">
+    <i class="bi bi-plus-lg me-1"></i> New text template
+  </button>
+</app-page-header>
+
+@if (loading()) {
+  <div class="row g-4">
+    @for (i of [1, 2, 3]; track i) {
+      <div class="col-md-6 col-xl-4">
+        <div class="card">
+          <div class="card-body placeholder-glow">
+            <span class="placeholder col-6 mb-2"></span><span class="placeholder col-12"></span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+} @else if (list().length === 0) {
+  <div class="card">
+    <div class="card-body">
+      <app-empty-state
+        icon="bi-braces"
+        title="No text templates yet"
+        text="Define a name and default value, reference it in a post as {{ '{{tt:name}}' }}, and optionally override the value per connector — e.g. tag someone directly on Bluesky but use their plain name on Telegram."
+      >
+        <button class="btn btn-primary" (click)="newTemplate()">
+          <i class="bi bi-plus-lg me-1"></i> Create your first text template
+        </button>
+      </app-empty-state>
+    </div>
+  </div>
+} @else {
+  <div class="row g-4">
+    @for (t of list(); track t.id) {
+      <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div class="min-w-0">
+                <h6 class="card-title mb-0 text-truncate">{{ t.name }}</h6>
+                <code class="small text-muted-2">{{ '{{tt:' + t.name + '}}' }}</code>
+              </div>
+              <div class="dropdown">
+                <button class="btn btn-sm btn-link text-muted-2 p-0" data-bs-toggle="dropdown">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                  <li>
+                    <button class="dropdown-item" (click)="openEdit(t)">
+                      <i class="bi bi-pencil me-2"></i>Edit
+                    </button>
+                  </li>
+                  <li>
+                    <button class="dropdown-item text-danger" (click)="remove(t)">
+                      <i class="bi bi-trash me-2"></i>Delete
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <p class="text-muted-2 small flex-grow-1 mb-2">
+              @if (t.defaultValue) {
+                Default: <span class="text-body">{{ t.defaultValue }}</span>
+              } @else {
+                No default value (blank unless overridden)
+              }
+            </p>
+            @if (overrideCount(t) > 0) {
+              <span class="badge bg-label-primary align-self-start">
+                {{ overrideCount(t) }} connector override{{ overrideCount(t) === 1 ? '' : 's' }}
+              </span>
+            }
+            <button
+              class="btn btn-sm btn-outline-primary mt-3 align-self-start"
+              (click)="openEdit(t)"
+            >
+              <i class="bi bi-pencil me-1"></i> Edit
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Editor modal -->
+@if (edit(); as e) {
+  <div class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ e.id ? 'Edit text template' : 'New text template' }}</h5>
+          <button type="button" class="btn-close" (click)="close()"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="ttName">Name</label>
+            <input
+              id="ttName"
+              class="form-control"
+              placeholder="e.g. mention"
+              [ngModel]="e.name"
+              (ngModelChange)="patchName($event)"
+            />
+            <div class="form-text">
+              Letters, digits, underscores and hyphens only — referenced in a post as
+              <code>{{ '{{tt:' + (e.name || 'name') + '}}' }}</code>.
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="ttDefault">Default value</label>
+            <input
+              id="ttDefault"
+              class="form-control"
+              placeholder="Used when a target's connector has no override below (may be left blank)"
+              [ngModel]="e.defaultValue"
+              (ngModelChange)="patchDefaultValue($event)"
+            />
+          </div>
+          <div class="mb-0">
+            <label class="form-label">Per-connector overrides</label>
+            @if (enabledConnectors().length === 0) {
+              <p class="text-muted-2 small mb-0">
+                No connectors configured yet — add one to set overrides here.
+              </p>
+            } @else {
+              <div class="d-flex flex-column gap-2">
+                @for (c of enabledConnectors(); track c.id) {
+                  <div class="input-group">
+                    <span class="input-group-text" style="min-width: 10rem">
+                      <i
+                        class="bi {{ brand(c.platform).icon }} me-2"
+                        [style.color]="brand(c.platform).color"
+                      ></i>
+                      <span class="text-truncate">{{ c.displayName }}</span>
+                    </span>
+                    <input
+                      class="form-control"
+                      placeholder="Use default value"
+                      [ngModel]="connectorOverride(c.id)"
+                      (ngModelChange)="patchConnectorOverride(c.id, $event)"
+                    />
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-outline-secondary" (click)="close()">Cancel</button>
+          <button class="btn btn-primary" (click)="save()" [disabled]="saving() || !e.name.trim()">
+            @if (saving()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Save text template
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-backdrop fade show"></div>
+}
