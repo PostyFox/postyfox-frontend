@@ -41,7 +41,7 @@ export function isRootStatusPending(s: PostRootStatus): boolean {
   );
 }
 
-/** A draft has never been submitted — it belongs in its own section, not history or "active now". */
+/** A draft has never been submitted: it belongs in its own section, not history or "active now". */
 export function isRootStatusDraft(s: PostRootStatus): boolean {
   return s === PostRootStatus.Draft;
 }

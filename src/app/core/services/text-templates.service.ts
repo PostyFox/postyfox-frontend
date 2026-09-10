@@ -5,7 +5,7 @@ import { environment } from '../../../environments/environment';
 import { TextTemplate, TextTemplateUpsertRequest } from '../models/api.models';
 
 /**
- * `/api/text-templates` — reusable named text-snippet CRUD. Referenced inline in a post as
+ * `/api/text-templates`: reusable named text-snippet CRUD. Referenced inline in a post as
  * `{{tt:name}}` and resolved server-side per delivery target at generation time.
  */
 @Injectable({ providedIn: 'root' })

@@ -18,7 +18,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge.compo
 
 /**
  * Posts / activity view. Shows what's being processed *right now* (auto-refreshing while anything is
- * in flight) plus the recent history the backend retains — so a user who navigated away from the
+ * in flight) plus the recent history the backend retains, so a user who navigated away from the
  * compose screen can always find an in-progress post again.
  */
 @Component({

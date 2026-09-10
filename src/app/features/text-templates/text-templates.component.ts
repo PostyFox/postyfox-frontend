@@ -35,7 +35,7 @@ export class TextTemplatesComponent {
   readonly saving = signal(false);
   readonly edit = signal<EditModel | null>(null);
 
-  /** Connectors shown as override rows in the editor — enabled ones the author can actually post to. */
+  /** Connectors shown as override rows in the editor: enabled ones the author can actually post to. */
   readonly enabledConnectors = computed(() => this.connectorList().filter((c) => c.enabled));
 
   constructor() {
@@ -101,7 +101,7 @@ export class TextTemplatesComponent {
   save(): void {
     const e = this.edit();
     if (!e || !e.name.trim()) return;
-    // Drop blanks — an empty override means "use the default", same as never having set one.
+    // Drop blanks: an empty override means "use the default", same as never having set one.
     const connectorValues = Object.fromEntries(
       Object.entries(e.connectorValues).filter(([, v]) => v.trim().length > 0),
     );

@@ -1,7 +1,7 @@
 # Server/CI overlay that adds the PostyFox SPA to the core platform stack.
 #
 # Unlike docker-compose.frontend.yml (local dev, which BUILDS the image), this pulls a prebuilt
-# image from GHCR — published by the frontend CI, tagged with the commit SHA. It is layered on top
+# image from GHCR (published by the frontend CI, tagged with the commit SHA). It is layered on top
 # of core's compose files and run inside the SAME compose project as core (COMPOSE_PROJECT_NAME=
 # postyfox-dev / -prod) so the SPA container shares core's network and the gateway can resolve it.
 #
@@ -16,10 +16,10 @@
 #     up -d --no-deps frontend
 #   docker compose ... restart gateway   # reload conf.d to pick up the SPA upstream + root route
 #
-# The gateway routing is NOT declared here. Its two fragments —
+# The gateway routing is NOT declared here. Its two fragments:
 #   gateway/conf.d/upstreams/frontend.conf  (SPA upstream)
 #   gateway/conf.d/routes/90-root.conf      (root → SPA, shadows core's core-only catch-all)
-# — are dropped onto the server into core's bind-mounted gateway/conf.d and picked up by a
+# These are dropped onto the server into core's bind-mounted gateway/conf.d and picked up by a
 # `restart gateway`, mirroring how core reloads its own gateway on deploy.
 services:
   frontend:

@@ -6,7 +6,7 @@
  */
 
 // ---------------------------------------------------------------------------
-// Enums (numeric — must match PostyFox.Domain.Enums)
+// Enums (numeric: must match PostyFox.Domain.Enums)
 // ---------------------------------------------------------------------------
 
 /** Status of a single per-platform delivery target. */
@@ -101,7 +101,7 @@ export interface Capabilities {
   requiresTags: boolean;
   /**
    * True when a single login can post to several distinct chats/channels (e.g. Telegram). The
-   * connector itself is not a selectable target for these platforms — the compose form offers each
+   * connector itself is not a selectable target for these platforms: the compose form offers each
    * exposed {@link ConnectorDestinationSummary} instead. See connectors.component for how the user
    * picks which of the platform's live targets to expose.
    */
@@ -109,7 +109,7 @@ export interface Capabilities {
   /**
    * True when the platform supports a click-to-reveal content warning (Fediverse's "CW"). The actual
    * per-submission text (when the author opts in) travels as a {@link ServiceDefinition.postOptionsSchema}
-   * field, same as FurAffinity's category/species/gender — never inferred from the post title.
+   * field, same as FurAffinity's category/species/gender. Never inferred from the post title.
    */
   supportsContentWarning: boolean;
 }
@@ -123,7 +123,7 @@ export interface ServiceDefinition extends Capabilities {
   /** Flat JSON object of secret config fields, or null. */
   secureConfigSchema: string | null;
   /**
-   * Field descriptors for choices the platform takes *per submission* rather than per account —
+   * Field descriptors for choices the platform takes *per submission* rather than per account:
    * FurAffinity's category, species, gender and gallery folders. Same format as
    * {@link configSchema}; null when the platform has none. Rendered by the compose form once per
    * selected target and submitted as {@link CreatePostRequest.targetOptions}.
@@ -168,7 +168,7 @@ export interface ConnectorTarget {
 }
 
 /**
- * One destination (chat/channel) a user has exposed for posting under a connector — see
+ * One destination (chat/channel) a user has exposed for posting under a connector. See
  * `GET/PUT /api/connectors/{id}/destinations`. Only meaningful for connectors whose
  * {@link ServiceDefinition.supportsMultipleTargets} is true.
  */
@@ -181,7 +181,7 @@ export interface ConnectorDestination {
 
 /**
  * A {@link ConnectorDestination} flattened with its owning connector's identity, as returned by
- * `GET /api/connectors/destinations` — everything the compose form needs to build its full set of
+ * `GET /api/connectors/destinations`: everything the compose form needs to build its full set of
  * selectable delivery targets.
  */
 export interface ConnectorDestinationSummary {
@@ -323,7 +323,7 @@ export interface MediaCheckResultItem {
 export interface CreatePostRequest {
   /**
    * Either a {@link UserConnector.id} (single-destination platforms) or a
-   * {@link ConnectorDestinationSummary.id} (multi-target platforms like Telegram — one entry per
+   * {@link ConnectorDestinationSummary.id} (multi-target platforms like Telegram, one entry per
    * chat/channel the user picked).
    */
   targets: string[];
@@ -344,8 +344,8 @@ export interface CreatePostRequest {
   targetOptions?: Record<string, Record<string, string>> | null;
   /**
    * Per-target "include tags" choice, keyed by the same target id used in {@link targets}. Absent
-   * entries default to true. Forced true (ignored) for a target whose platform requires tags —
-   * see {@link ServiceDefinition.requiresTags}.
+   * entries default to true. Forced true (ignored) for a target whose platform requires tags.
+   * See {@link ServiceDefinition.requiresTags}.
    */
   targetIncludeTags?: Record<string, boolean> | null;
   /**
@@ -391,7 +391,7 @@ export interface PostContent {
   templateId: string | null;
   variables: Record<string, string>;
   /**
-   * Connector or destination ids the post targeted (used to re-tick the target checkboxes) — see
+   * Connector or destination ids the post targeted (used to re-tick the target checkboxes). See
    * {@link CreatePostRequest.targets}.
    */
   connectorIds: string[];
@@ -403,7 +403,7 @@ export interface PostContent {
   targetIncludeTags: Record<string, boolean>;
 }
 
-/** Lightweight row from `GET /api/posts` (list / activity view — no per-target detail). */
+/** Lightweight row from `GET /api/posts` (list / activity view, no per-target detail). */
 export interface PostSummary {
   postId: string;
   rootStatus: PostRootStatus;

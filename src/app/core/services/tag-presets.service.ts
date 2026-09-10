@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { TagPreset, TagPresetUpsertRequest } from '../models/api.models';
 
-/** `/api/tag-presets` — reusable named tag-set CRUD, applied client-side into the compose tags field. */
+/** `/api/tag-presets`: reusable named tag-set CRUD, applied client-side into the compose tags field. */
 @Injectable({ providedIn: 'root' })
 export class TagPresetsService {
   private http = inject(HttpClient);

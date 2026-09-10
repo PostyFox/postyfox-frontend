@@ -1,7 +1,7 @@
 import { Capabilities, ServiceDefinition, UserConnector } from './api.models';
 
 /**
- * Presentation-only branding for known platforms — iconography and human copy.
+ * Presentation-only branding for known platforms: iconography and human copy.
  * This is deliberately NOT capability data: capabilities (title/media/threads/char-limit) come
  * from the API (`/api/services`, sourced from each connector's Describe()), and per-field metadata
  * (label/help/placeholder/type/link) + validation now travel in the service definition's
@@ -39,7 +39,7 @@ export interface FieldDescriptor {
   required?: boolean;
   /** Regex source the value must match (applied only when a value is present). */
   pattern?: string;
-  /** Error shown when `pattern` (or `options`) fails — falls back to a generic message. */
+  /** Error shown when `pattern` (or `options`) fails, falls back to a generic message. */
   message?: string;
   minLength?: number;
   maxLength?: number;
@@ -142,7 +142,7 @@ export function brandFor(platform: string | null | undefined): PlatformBrand {
  * Parse a service-definition config/secure schema into field descriptors keyed by field name.
  *
  * A schema is a JSON object keyed by field name whose value is either a legacy placeholder string
- * (`""` — no metadata, so just `{ label: key }`) or a descriptor object. Order is preserved.
+ * (`""`: no metadata, so just `{ label: key }`) or a descriptor object. Order is preserved.
  * Keys starting with `$` are schema metadata (e.g. `$comment`), not fields, and are skipped.
  * Returns `{}` for a null/blank/malformed schema.
  */
@@ -251,7 +251,7 @@ export function capabilitiesForConnector(
 }
 
 /**
- * Formats a single author tag as `#tag`, replacing internal whitespace with `_` — mirrors the
+ * Formats a single author tag as `#tag`, replacing internal whitespace with `_`; mirrors the
  * server's `TemplateEngine.FormatHashtag`, used for platforms with no native tags field (see
  * {@link Capabilities.supportsTags}). Returns `''` for a blank tag.
  */
@@ -269,8 +269,8 @@ export interface InlineTagsPreview {
 
 /**
  * Client-side estimate of which tags will fit when woven into a body as `#hashtag`s, mirroring the
- * server's `TemplateEngine.InterpolateTags` trimming so the compose form can warn before submit —
- * the server enforces the actual limit at render time; this is a best-effort preview only (some
+ * server's `TemplateEngine.InterpolateTags` trimming so the compose form can warn before submit.
+ * The server enforces the actual limit at render time; this is a best-effort preview only (some
  * platforms, e.g. Fediverse instances, only report their real cap live, at delivery).
  */
 export function previewInlineTags(
