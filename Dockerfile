@@ -1,7 +1,7 @@
-# Stage 1 — build the Angular application (Angular 21 requires Node >= 22.12 / 24)
+# Stage 1: build the Angular application (Angular 21 requires Node >= 22.12 / 24)
 FROM node:22-alpine AS build
 
-# production | dev — selects the Angular build configuration
+# production | dev: selects the Angular build configuration
 ARG BUILD_ENV=production
 # Human-readable build version, baked into src/version.ts and shown in the footer.
 ARG VERSION=0.0.0-dev
@@ -23,7 +23,7 @@ RUN if [ "$BUILD_ENV" = "dev" ]; then \
       npm run build -- --configuration production; \
     fi
 
-# Stage 2 — serve the static assets with nginx
+# Stage 2: serve the static assets with nginx
 FROM nginx:alpine
 
 # SPA-aware server config (client-side routing fallback + asset caching).

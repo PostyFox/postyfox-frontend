@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Template, TemplateUpsertRequest } from '../models/api.models';
 
-/** `/api/templates` — posting template CRUD. */
+/** `/api/templates`: posting template CRUD. */
 @Injectable({ providedIn: 'root' })
 export class TemplatesService {
   private http = inject(HttpClient);

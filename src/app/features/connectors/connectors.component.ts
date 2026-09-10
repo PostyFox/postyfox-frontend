@@ -118,7 +118,7 @@ export class ConnectorsComponent {
   /**
    * Per-field validation errors for the connector currently being edited, driven entirely by the
    * field descriptors the backend ships in the service definition schema (see {@link validateField}).
-   * The server re-validates on save — this is inline UX only.
+   * The server re-validates on save; this is inline UX only.
    */
   readonly configErrors = computed<Record<string, string>>(() => {
     const e = this.editor();
@@ -129,7 +129,7 @@ export class ConnectorsComponent {
       if (err) errors[key] = err;
     }
     for (const key of e.secureFields) {
-      // A blank secret on an existing connector means "keep the stored value" — nothing to validate.
+      // A blank secret on an existing connector means "keep the stored value": nothing to validate.
       if (!e.secure[key] && e.hasExistingSecret) continue;
       const err = validateField(e.descriptors[key], e.secure[key]);
       if (err) errors[key] = err;
@@ -320,7 +320,7 @@ export class ConnectorsComponent {
   private openOAuthPopup(url: string): void {
     const popup = window.open(url, 'pf-oauth', 'width=760,height=820');
     if (!popup) {
-      // Popups blocked — fall back to a full-page redirect; the callback returns to /connectors.
+      // Popups blocked: fall back to a full-page redirect; the callback returns to /connectors.
       window.location.href = url;
       return;
     }
@@ -380,7 +380,7 @@ export class ConnectorsComponent {
   }
 
   /**
-   * Shows the hand-off instructions. Nothing is minted up front — the extension authenticates with
+   * Shows the hand-off instructions. Nothing is minted up front: the extension authenticates with
    * the user's own PostyFox session, so a five-minute token would usually expire unused.
    */
   openCookieConnect(connector: UserConnector): void {

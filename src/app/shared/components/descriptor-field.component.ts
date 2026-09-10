@@ -7,7 +7,7 @@ import { FieldDescriptor, groupedOptions } from '../../core/models/platforms';
  * of `options`, a text input otherwise, plus its error, help text and doc link.
  *
  * Used by both the connector editor (account config) and the compose form (per-submission platform
- * options), which describe their fields in exactly the same format — so neither owns the markup.
+ * options), which describe their fields in exactly the same format, so neither owns the markup.
  */
 @Component({
   selector: 'app-descriptor-field',
@@ -72,14 +72,14 @@ export class DescriptorFieldComponent {
   readonly value = input<string>('');
   /** Validation message to show, or empty/undefined when the value is acceptable. */
   readonly error = input<string | undefined>();
-  /** Overrides the descriptor's input type — secret fields force `password` regardless of schema. */
+  /** Overrides the descriptor's input type: secret fields force `password` regardless of schema. */
   readonly type = input<string | undefined>();
   readonly autocomplete = input<string | undefined>();
   readonly valueChange = output<string>();
 
   /**
    * The descriptor's options as `<optgroup>` runs. Derived from the descriptor input, so it is
-   * recomputed only when the descriptor itself changes — FurAffinity's species list is ~400 entries.
+   * recomputed only when the descriptor itself changes (FurAffinity's species list is ~400 entries).
    */
   readonly optionGroups = computed(() => groupedOptions(this.descriptor()));
 }

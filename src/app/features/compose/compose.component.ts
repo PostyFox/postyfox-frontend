@@ -47,7 +47,7 @@ interface MediaItem {
   resizeChecks?: MediaCheckResultItem[];
   /**
    * The image a single-image platform (FurAffinity) will use when several are attached. Exactly one
-   * item carries this whenever {@link mediaItems} is non-empty — enforced by {@link setDefaultMedia},
+   * item carries this whenever {@link mediaItems} is non-empty, enforced by {@link setDefaultMedia},
    * the upload/remove handlers, and prefill restoration.
    */
   isDefault: boolean;
@@ -58,7 +58,7 @@ interface MediaItem {
  * the connector itself (`selectionId === connectorId`, legacy behaviour); for multi-target platforms
  * (Telegram) it's one of the connector's exposed destinations (`selectionId` is a
  * {@link ConnectorDestinationSummary.id}, distinct from the owning connector's id). The form always
- * submits {@link selectionId} values as `CreatePostRequest.targets` — the backend disambiguates which
+ * submits {@link selectionId} values as `CreatePostRequest.targets`: the backend disambiguates which
  * table each id belongs to.
  */
 interface SelectableTarget {
@@ -76,7 +76,7 @@ interface Variable {
 /**
  * A selected target's per-submission platform choices, ready to render: the fields its platform
  * declares plus the values chosen for this post. FurAffinity's category/species/gender/folders and a
- * Fediverse target's content warning text are current examples — they describe the submission, not
+ * Fediverse target's content warning text are current examples: they describe the submission, not
  * the account, so they live here rather than in the connector's settings.
  */
 interface TargetOptionsGroup {
@@ -110,7 +110,7 @@ export class ComposeComponent {
   readonly destinationList = signal<ConnectorDestinationSummary[]>([]);
   readonly templateList = signal<Template[]>([]);
   readonly tagPresetList = signal<TagPreset[]>([]);
-  /** Available {{tt:name}} tokens — just for the compose hint; resolution happens server-side. */
+  /** Available {{tt:name}} tokens: just for the compose hint; resolution happens server-side. */
   readonly textTemplateList = signal<TextTemplate[]>([]);
   readonly catalogue = signal<ServiceDefinition[]>([]);
   brand = brandFor;
@@ -150,7 +150,7 @@ export class ComposeComponent {
 
   /**
    * The full set of choosable posting targets: single-destination connectors as-is, plus each
-   * exposed destination of multi-target connectors (Telegram) in place of the raw connector — a
+   * exposed destination of multi-target connectors (Telegram) in place of the raw connector: a
    * multi-target connector is never itself directly selectable.
    */
   readonly selectableTargets = computed<SelectableTarget[]>(() => {
@@ -172,7 +172,7 @@ export class ComposeComponent {
     return [...singles, ...destinations];
   });
 
-  /** Enabled multi-target connectors (Telegram) with nothing exposed yet — nudge to configure them. */
+  /** Enabled multi-target connectors (Telegram) with nothing exposed yet: nudge to configure them. */
   readonly unconfiguredMultiTargetConnectors = computed(() => {
     const caps = this.capsByPlatform();
     const exposedConnectorIds = new Set(this.destinationList().map((d) => d.connectorId));
@@ -262,7 +262,7 @@ export class ComposeComponent {
   /**
    * One row per selected target describing how tags reach it: whether it has a native tags field,
    * whether tags are required, the author's current include/exclude choice (forced on when
-   * required), and — for platforms with no native field — a preview of which tags will fit inline.
+   * required), and, for platforms with no native field, a preview of which tags will fit inline.
    */
   readonly tagsByTarget = computed(() => {
     const caps = this.capsByPlatform();
@@ -391,7 +391,7 @@ export class ComposeComponent {
       !this.savingDraft(),
   );
 
-  /** Drafts are deliberately unvalidated — that's the point of saving one before it's ready. */
+  /** Drafts are deliberately unvalidated: that's the point of saving one before it's ready. */
   readonly canSaveDraft = computed(
     () => !this.submitting() && !this.uploading() && !this.savingDraft(),
   );
@@ -441,7 +441,7 @@ export class ComposeComponent {
   }
 
   /**
-   * Appends a `{{tt:name}}` reference to the description — resolution (per-connector override, else
+   * Appends a `{{tt:name}}` reference to the description: resolution (per-connector override, else
    * the template's default, else blank) happens server-side at delivery, not here.
    */
   insertTextTemplate(name: string): void {
@@ -452,7 +452,7 @@ export class ComposeComponent {
 
   /**
    * Re-seeds the form from a past post. Only re-ticks targets that still exist and are enabled.
-   * Editing a draft ({@link draftId} set) also restores its schedule — unlike "post again", it
+   * Editing a draft ({@link draftId} set) also restores its schedule. Unlike "post again", it
    * hasn't been sent yet, so a future schedule is still meaningful.
    */
   private applyPrefill(content: PostContent): void {
@@ -493,7 +493,7 @@ export class ComposeComponent {
       local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
       this.postAt.set(local.toISOString().slice(0, 16));
     }
-    // Otherwise ("post again") deliberately not carrying the old schedule time across — it's
+    // Otherwise ("post again") deliberately not carrying the old schedule time across: it's
     // almost certainly in the past.
   }
 
@@ -611,7 +611,7 @@ export class ComposeComponent {
   }
 
   /**
-   * Marks one attached image as the "default" — the one single-image platforms (FurAffinity) use
+   * Marks one attached image as the "default": the one single-image platforms (FurAffinity) use
    * when several are attached, instead of rejecting the post.
    */
   setDefaultMedia(i: number): void {
@@ -656,7 +656,7 @@ export class ComposeComponent {
       postAt = new Date(this.postAt()).toISOString();
     }
 
-    // Only send choices for targets actually being posted to, and drop blanks — an unset field means
+    // Only send choices for targets actually being posted to, and drop blanks: an unset field means
     // "use the platform's default", which the server represents by the key being absent.
     const targetOptions: Record<string, Record<string, string>> = {};
     for (const group of this.targetOptionGroups()) {
@@ -668,7 +668,7 @@ export class ComposeComponent {
       if (Object.keys(chosen).length) targetOptions[group.target.selectionId] = chosen;
     }
 
-    // Only send a per-target choice that differs from the default (include) — an absent entry
+    // Only send a per-target choice that differs from the default (include): an absent entry
     // already means "include" server-side, and RequiresTags platforms ignore this regardless.
     const targetIncludeTags: Record<string, boolean> = {};
     for (const target of this.selectedConnectors()) {
@@ -719,7 +719,7 @@ export class ComposeComponent {
 
     this.submitting.set(true);
     if (draftId) {
-      // Editing an existing draft: persist the edits, then publish it — it stops being a draft.
+      // Editing an existing draft: persist the edits, then publish it. It stops being a draft.
       this.posts.updateDraft(draftId, body).subscribe({
         next: () =>
           this.posts.publish(draftId).subscribe({
@@ -753,7 +753,7 @@ export class ComposeComponent {
   }
 
   /**
-   * Saves the current form state as a draft — deliberately skips the submit-time validation
+   * Saves the current form state as a draft: deliberately skips the submit-time validation
    * (rating/FurAffinity/target-option checks), since the whole point is to save something
    * incomplete for later. Creates a new draft the first time, then updates that same post on
    * every subsequent save.

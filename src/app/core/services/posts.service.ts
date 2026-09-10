@@ -10,7 +10,7 @@ import {
   PostSummary,
 } from '../models/api.models';
 
-/** `/api/posts` — post intake (post-api) + aggregated status + history/activity list. */
+/** `/api/posts`: post intake (post-api) + aggregated status + history/activity list. */
 @Injectable({ providedIn: 'root' })
 export class PostsService {
   private http = inject(HttpClient);
@@ -24,7 +24,7 @@ export class PostsService {
     return this.http.get<PostStatus>(`${this.base}/${id}`);
   }
 
-  /** Returns a post's authored content as-is (no media duplication) — used to load a draft for editing. */
+  /** Returns a post's authored content as-is (no media duplication), used to load a draft for editing. */
   getContent(id: string): Observable<PostContent> {
     return this.http.get<PostContent>(`${this.base}/${id}/content`);
   }
