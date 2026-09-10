@@ -1,4 +1,4 @@
-# PostyFox — frontend
+# PostyFox: frontend
 
 Angular 21 (LTS Version) single-page app for the [PostyFox platform](../postyfox-core). Write a post once and
 deliver it to Discord, Telegram, BlueSky and Tumblr; manage connectors, templates, external triggers

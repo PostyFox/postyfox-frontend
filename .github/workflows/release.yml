@@ -13,11 +13,11 @@ name: release
 # Everyday pushes to main still auto-deploy DEV via frontend-ci + deploy.yml; only this workflow
 # touches production. Versioned independently of postyfox-core.
 #
-# DEV stays on docker-compose (self-hosted runner) — the frontend image is dropped into the same
+# DEV stays on docker-compose (self-hosted runner). The frontend image is dropped into the same
 # compose stack as core. PROD deploys as its OWN Helm release (deploy/helm/postyfox-frontend) into
 # the SAME namespace/cluster as postyfox-core's release, using a kubeconfig stored in the
 # `production` GitHub Environment's secrets. postyfox-core's gateway proxies "/" to this release's
-# Service (see postyfox-core's values-prod.yaml `gateway.frontend.*`) — nothing here needs to know
+# Service (see postyfox-core's values-prod.yaml `gateway.frontend.*`); nothing here needs to know
 # about core beyond deploying into the same namespace.
 
 on:
@@ -136,7 +136,7 @@ jobs:
           file: Dockerfile
           push: true
           # Tag with the semver AND the actual built commit SHA for traceability. Note this is
-          # NOT necessarily `github.sha` — a rebuild-on-redeploy builds the tagged commit, which
+          # NOT necessarily `github.sha`: a rebuild-on-redeploy builds the tagged commit, which
           # may differ from the commit that triggered this workflow run.
           tags: |
             ghcr.io/${{ env.IMAGE_REPOSITORY }}:${{ needs.compute-version.outputs.version }}
@@ -202,7 +202,7 @@ jobs:
 
   deploy-prod:
     # Approval-gated via the `production` GitHub environment.
-    # NOTE: can't rely on the default success() here — it evaluates the whole transitive needs
+    # NOTE: can't rely on the default success() here, it evaluates the whole transitive needs
     # chain, and `build` (a dependency of deploy-dev) is legitimately skipped on a redeploy of
     # already-published images. Mirror deploy-dev's explicit result check instead.
     needs: [compute-version, deploy-dev]
@@ -225,7 +225,7 @@ jobs:
         run: echo "repository=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Tag release + publish GitHub Release
-        # New releases only — a redeploy targets an existing tag, so there's nothing to tag.
+        # New releases only, a redeploy targets an existing tag, so there's nothing to tag.
         # Runs post-approval (this whole job is gated by the `production` environment) but BEFORE
         # the deploy, so the tag exists the moment we ship to prod.
         if: needs.compute-version.outputs.is_new == 'true'
@@ -247,7 +247,7 @@ jobs:
 
       - name: Configure kubeconfig
         # Uses the SAME kubeconfig secret as postyfox-core's release pipeline (this release is
-        # deployed into that same cluster/namespace) — a service-account token scoped to the
+        # deployed into that same cluster/namespace): a service-account token scoped to the
         # `postyfox` namespace is strongly recommended over a personal/admin credential.
         run: |
           mkdir -p "$RUNNER_TEMP/.kube"

@@ -1,4 +1,4 @@
-# PostyFox frontend — architecture & deployment
+# PostyFox frontend: architecture & deployment
 
 The frontend is an **Angular 19 SPA** (Materio-inspired Bootstrap 5 theme). It holds **no tokens**:
 authentication is owned entirely by the **oauth2-proxy** edge that fronts the PostyFox platform.
@@ -23,15 +23,15 @@ authentication is owned entirely by the **oauth2-proxy** edge that fronts the Po
   attaches the validated `Authorization: Bearer` token to the upstream request.
 - The app reads `/oauth2/userinfo` for the signed-in identity and drives sign-out via
   `/oauth2/sign_out`. A `401` from any `/api/*` call triggers a re-auth redirect
-  (`/oauth2/sign_in`) — see `src/app/core/interceptors/auth.interceptor.ts`.
+  (`/oauth2/sign_in`). See `src/app/core/interceptors/auth.interceptor.ts`.
 
-Because of this, there is **no OIDC client config in the browser** — no issuer, client id, or PKCE.
+Because of this, there is **no OIDC client config in the browser**: no issuer, client id, or PKCE.
 That responsibility lives in `deploy/oauth2-proxy/oauth2-proxy.cfg` in the core repo.
 
 ## The container
 
 `Dockerfile` builds the SPA and serves the static bundle with nginx (`nginx.conf`), which does the
-SPA deep-link fallback to `index.html`. The image only serves static files — it never handles API
+SPA deep-link fallback to `index.html`. The image only serves static files. It never handles API
 or `/oauth2` traffic (the gateway routes those elsewhere).
 
 - `BUILD_ENV=production` (default) → `ng build --configuration production`
@@ -41,21 +41,21 @@ or `/oauth2` traffic (the gateway routes those elsewhere).
 
 Mirrors the core repo's split:
 
-- **`.github/workflows/frontend-ci.yml`** (`frontend-ci`) — lint, production build and unit tests on
+- **`.github/workflows/frontend-ci.yml`** (`frontend-ci`): lint, production build and unit tests on
   every push/PR; on a push to `main` it builds the container image and pushes it to
   `ghcr.io/<owner>/postyfox-frontend:<sha>`. Every environment runs this one production image (the
   SPA is same-origin `/api` + `/oauth2` everywhere, so there is no per-environment build).
-- **`.github/workflows/deploy.yml`** (`deploy`) — triggered by a successful `frontend-ci` run on
+- **`.github/workflows/deploy.yml`** (`deploy`): triggered by a successful `frontend-ci` run on
   `main`. Dev runs directly on the self-hosted runner node (the same box and `/opt/postyfox/dev`
   layout core deploys to), copies this repo's overlay + gateway fragments locally, then uses the
   latest successful `frontend-ci` build from `main` to roll the `frontend` service into the running
-  core stack (docker-compose). This workflow is **dev-only** — it does not touch production.
-- **`.github/workflows/release.yml`** (`release`) — manually dispatched, semver release. Deploys
+  core stack (docker-compose). This workflow is **dev-only**: it does not touch production.
+- **`.github/workflows/release.yml`** (`release`): manually dispatched, semver release. Deploys
   DEV the same way as above (docker-compose overlay), then, after `production` environment
   approval, deploys **PROD as its own Kubernetes/Helm release** (`deploy/helm/postyfox-frontend`),
   into the SAME `postyfox` namespace as postyfox-core's release, via `helm upgrade --install`.
   Requires a `KUBE_CONFIG` secret on the `production` GitHub Environment (base64-encoded
-  kubeconfig — the same cluster/namespace as core's release; a Service Account token scoped to
+  kubeconfig, the same cluster/namespace as core's release; a Service Account token scoped to
   `postyfox` is recommended). See `deploy/helm/postyfox-frontend/values.yaml` for chart options.
 
   > Unlike dev (which drops gateway conf.d fragments onto core's shared nginx), prod wiring is
@@ -68,7 +68,7 @@ Mirrors the core repo's split:
 ## Wiring behind the core edge
 
 The core gateway is a single nginx reverse proxy composed from **`conf.d` fragments**, so routing
-ownership is cleanly split — the frontend never redefines core's API routes. The core base
+ownership is cleanly split: the frontend never redefines core's API routes. The core base
 (`postyfox-core/deploy/gateway/nginx.conf`) does `include conf.d/upstreams/*.conf` (http context)
 and `include conf.d/routes/*.conf` (inside its one `server`), loading fragments in filename order:
 
@@ -81,7 +81,7 @@ postyfox-core/deploy/gateway/
   conf.d/routes/90-root.conf       # catch-all: / → core   (core-only default)
 ```
 
-This repo contributes just its own two fragments — **no API routing**:
+This repo contributes just its own two fragments, **no API routing**:
 
 ```
 postyfox-frontend/deploy/gateway/

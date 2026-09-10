@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Trigger, TriggerRegistrationRequest } from '../models/api.models';
 
-/** `/api/triggers` — external-trigger registration. */
+/** `/api/triggers`: external-trigger registration. */
 @Injectable({ providedIn: 'root' })
 export class TriggersService {
   private http = inject(HttpClient);
