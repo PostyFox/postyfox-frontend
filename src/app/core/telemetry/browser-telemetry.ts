@@ -22,12 +22,12 @@ let started = false;
  * MUST run before Angular bootstraps, so the XHR/fetch instrumentations patch the browser globals
  * before the app issues any request. It emits spans for document load, resource timing, and every
  * HttpClient (XHR) / `fetch` call, and injects the W3C `traceparent` header on same-origin `/api`
- * requests — so a browser span becomes the parent of the API server span and the whole
+ * requests, so a browser span becomes the parent of the API server span and the whole
  * click → API → queue → worker chain is a single distributed trace.
  *
  * Transport: OTLP/HTTP to {@link OtelConfig.collectorUrl}, which the gateway proxies to the OTel
  * collector. Because it's same-origin there is no CORS, and because it sits behind oauth2-proxy only
- * authenticated sessions can post. `deployment.environment` / `deployment.cluster` are NOT set here —
+ * authenticated sessions can post. `deployment.environment` / `deployment.cluster` are NOT set here:
  * the collector stamps them server-side (single source of truth).
  */
 export function initBrowserTelemetry(cfg: OtelConfig): void {
@@ -42,7 +42,7 @@ export function initBrowserTelemetry(cfg: OtelConfig): void {
   // ZoneContextManager keeps the active span across Angular's zone.js async boundaries.
   provider.register({ contextManager: new ZoneContextManager() });
 
-  // Don't trace the telemetry export itself (POSTs to /otlp — would recurse into more spans).
+  // Don't trace the telemetry export itself (POSTs to /otlp, would recurse into more spans).
   // Same-origin /api requests get the traceparent header automatically, so no
   // propagateTraceHeaderCorsUrls is needed while the API stays same-origin.
   const ignoreUrls = [/\/otlp\//];

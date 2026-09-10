@@ -17,7 +17,7 @@ import {
   UserConnectorUpsertRequest,
 } from '../models/api.models';
 
-/** `/api/connectors` — the user's configured connector instances + platform operations. */
+/** `/api/connectors`: the user's configured connector instances + platform operations. */
 @Injectable({ providedIn: 'root' })
 export class ConnectorsService {
   private http = inject(HttpClient);
@@ -54,7 +54,7 @@ export class ConnectorsService {
 
   /**
    * Replace the full set of destinations exposed for a multi-target connector (matched by
-   * `externalId`) — entries not included are removed, new ones added, names refreshed.
+   * `externalId`): entries not included are removed, new ones added, names refreshed.
    */
   setDestinations(
     id: string,
@@ -90,7 +90,7 @@ export class ConnectorsService {
   /**
    * Pre-flight media check: given a file's size and MIME type, returns per-connector analysis of
    * whether the file will be resized/transcoded before delivery. Call this after the user selects
-   * a file to surface "file too large — will be resized" warnings in the compose UI.
+   * a file to surface "file too large, will be resized" warnings in the compose UI.
    */
   checkMedia(body: MediaCheckRequest): Observable<MediaCheckResultItem[]> {
     return this.http.post<MediaCheckResultItem[]>(`${this.base}/media-check`, body);

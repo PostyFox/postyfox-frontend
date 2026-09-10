@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ServiceDefinition } from '../models/api.models';
 
-/** `/api/services` — the platform catalogue (Discord, Telegram, BlueSky, Tumblr, …). */
+/** `/api/services`: the platform catalogue (Discord, Telegram, BlueSky, Tumblr, …). */
 @Injectable({ providedIn: 'root' })
 export class ServicesService {
   private http = inject(HttpClient);

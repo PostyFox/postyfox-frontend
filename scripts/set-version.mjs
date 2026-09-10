@@ -9,7 +9,7 @@ const target = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'versi
 
 writeFileSync(
   target,
-  `// Generated at build time by scripts/set-version.mjs — do not edit by hand.
+  `// Generated at build time by scripts/set-version.mjs. Do not edit by hand.
 export const APP_VERSION = '${version}';
 `,
 );
