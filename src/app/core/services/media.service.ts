@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { MediaRef } from '../models/api.models';
 
-/** `/api/media` — multipart upload returning a MediaRef to attach to a post. */
+/** `/api/media`: multipart upload returning a MediaRef to attach to a post. */
 @Injectable({ providedIn: 'root' })
 export class MediaService {
   private http = inject(HttpClient);

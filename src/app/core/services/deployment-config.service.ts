@@ -12,7 +12,7 @@ interface DeploymentConfig {
  * and contact address used in the privacy policy).
  *
  * PostyFox ships as a single prebuilt image shared across every deployment, so these values can't
- * be baked in at build time — instead they're written into `deployment-config.json` (a static
+ * be baked in at build time; instead they're written into `deployment-config.json` (a static
  * asset) by the container's nginx entrypoint from the `OPERATOR_NAME` / `OPERATOR_CONTACT`
  * environment variables, and fetched once here at app startup (see provideAppInitializer).
  */

@@ -5,7 +5,7 @@ import { AuthService } from '../services/auth.service';
 
 /**
  * Ensures cookies ride along (so the oauth2-proxy session is presented) and turns an
- * upstream 401 into a re-authentication redirect through the proxy — the session cookie
+ * upstream 401 into a re-authentication redirect through the proxy: the session cookie
  * has expired, so bounce the user back through Keycloak.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {

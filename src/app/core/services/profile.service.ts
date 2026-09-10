@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiKey, ApiKeyCreated, CreateKeyRequest } from '../models/api.models';
 
-/** `/api/profile/keys` — API key management. */
+/** `/api/profile/keys`: API key management. */
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
   private http = inject(HttpClient);
