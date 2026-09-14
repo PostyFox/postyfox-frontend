@@ -456,6 +456,11 @@ export interface PostSummary {
   postAt: string | null;
 }
 
+/** Result of `DELETE /api/posts/history`: how many posts were removed. */
+export interface DeleteHistoryResponse {
+  deletedCount: number;
+}
+
 // ---------------------------------------------------------------------------
 // Triggers
 // ---------------------------------------------------------------------------

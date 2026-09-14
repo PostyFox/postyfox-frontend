@@ -144,8 +144,23 @@
 
   <!-- History -->
   <div class="card">
-    <div class="card-body pb-0">
+    <div class="card-body pb-0 d-flex align-items-center gap-2">
       <h5 class="card-title mb-0">History</h5>
+      @if (history().length > 0) {
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-danger ms-auto"
+          [disabled]="clearingHistory()"
+          (click)="clearHistory()"
+        >
+          @if (clearingHistory()) {
+            <span class="spinner-border spinner-border-sm me-1"></span>
+          } @else {
+            <i class="bi bi-trash3 me-1"></i>
+          }
+          Delete all
+        </button>
+      }
     </div>
     @if (history().length === 0) {
       <div class="card-body">
