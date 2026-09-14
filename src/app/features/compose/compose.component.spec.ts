@@ -1,3 +1,4 @@
+import { HttpResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
@@ -67,7 +68,9 @@ describe('ComposeComponent — default media selection', () => {
     const file = new File(['x'], name, { type: 'image/png' });
     const ref: MediaRef = { container: 'media', key: `u/${name}`, contentType: 'image/png' };
     uploadedRefs.push(ref);
-    media.upload.and.returnValue(of(ref));
+    media.upload.and.returnValue(
+      of(new HttpResponse({ body: ref, status: 200, statusText: 'OK' })),
+    );
     fixture.componentInstance.onFilesSelected({
       target: { files: [file], value: '' },
     } as unknown as Event);
@@ -76,7 +79,8 @@ describe('ComposeComponent — default media selection', () => {
 
   function configure(prefill?: PostContent): ComponentFixture<ComposeComponent> {
     uploadedRefs = [];
-    media = jasmine.createSpyObj<MediaService>('MediaService', ['upload']);
+    media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
+    media.getLimits.and.returnValue(of({ maxUploadSizeBytes: null }));
     connectors = jasmine.createSpyObj<ConnectorsService>('ConnectorsService', [
       'list',
       'listAllDestinations',
@@ -317,5 +321,181 @@ describe('ComposeComponent — default media selection', () => {
     upload(fixture, 'a.png');
 
     expect(mediaCard(fixture).textContent).not.toContain('Set as default');
+  });
+});
+
+/**
+ * Covers issue #333 (faster upload feedback): a file over the gateway's reported cap
+ * (`GET /api/media/limits`) is rejected the moment it's selected — no request at all, so it never
+ * reaches `MediaService.upload` — instead of only failing after a full, possibly slow, transfer.
+ */
+describe('ComposeComponent — client-side upload size cap', () => {
+  const connector: UserConnector = {
+    id: 'conn-1',
+    serviceDefinitionId: 'Mastodon',
+    platform: 'Mastodon',
+    displayName: 'My Mastodon',
+    configJson: '{}',
+    enabled: true,
+    defaultIncludeTags: true,
+    defaultRating: null,
+  };
+
+  const definition: ServiceDefinition = {
+    id: 'Mastodon',
+    name: 'Mastodon',
+    enabled: true,
+    configSchema: '{}',
+    secureConfigSchema: null,
+    postOptionsSchema: null,
+    platform: 'Mastodon',
+    supportsTitle: true,
+    supportsMedia: true,
+    supportsThreads: true,
+    maxContentLength: 500,
+    supportsOAuth: true,
+    supportsCookiePairing: false,
+    supportsRating: false,
+    requiresRating: false,
+    supportsTags: false,
+    requiresTags: false,
+    supportsMultipleTargets: false,
+    supportsContentWarning: true,
+  };
+
+  let media: jasmine.SpyObj<MediaService>;
+
+  function configure(maxUploadSizeBytes: number | null): ComponentFixture<ComposeComponent> {
+    media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
+    media.getLimits.and.returnValue(of({ maxUploadSizeBytes }));
+
+    const connectors = jasmine.createSpyObj<ConnectorsService>('ConnectorsService', [
+      'list',
+      'listAllDestinations',
+      'checkMedia',
+    ]);
+    connectors.list.and.returnValue(of([connector]));
+    connectors.listAllDestinations.and.returnValue(of([]));
+    connectors.checkMedia.and.returnValue(of([]));
+
+    const router = jasmine.createSpyObj<Router>('Router', ['getCurrentNavigation', 'navigate']);
+    router.getCurrentNavigation.and.returnValue(null);
+
+    TestBed.configureTestingModule({
+      imports: [ComposeComponent],
+      providers: [
+        { provide: ConnectorsService, useValue: connectors },
+        {
+          provide: TemplatesService,
+          useValue: jasmine.createSpyObj<TemplatesService>('TemplatesService', { list: of([]) }),
+        },
+        {
+          provide: TagPresetsService,
+          useValue: jasmine.createSpyObj<TagPresetsService>('TagPresetsService', { list: of([]) }),
+        },
+        {
+          provide: TextTemplatesService,
+          useValue: jasmine.createSpyObj<TextTemplatesService>('TextTemplatesService', {
+            list: of([]),
+          }),
+        },
+        {
+          provide: ServicesService,
+          useValue: jasmine.createSpyObj<ServicesService>('ServicesService', {
+            list: of([definition]),
+          }),
+        },
+        {
+          provide: PostsService,
+          useValue: jasmine.createSpyObj<PostsService>('PostsService', [
+            'create',
+            'updateDraft',
+            'publish',
+            'list',
+          ]),
+        },
+        { provide: MediaService, useValue: media },
+        {
+          provide: ToastService,
+          useValue: jasmine.createSpyObj<ToastService>('ToastService', [
+            'success',
+            'error',
+            'warning',
+          ]),
+        },
+        { provide: Router, useValue: router },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ComposeComponent);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  function select(fixture: ComponentFixture<ComposeComponent>, name: string, size: number): void {
+    const file = new File([new Uint8Array(size)], name, { type: 'image/png' });
+    fixture.componentInstance.onFilesSelected({
+      target: { files: [file], value: '' },
+    } as unknown as Event);
+    fixture.detectChanges();
+  }
+
+  it('rejects an oversized file immediately, without ever calling MediaService.upload', () => {
+    const fixture = configure(1_000_000);
+    select(fixture, 'big.png', 2_000_000);
+
+    const tasks = fixture.componentInstance.uploadTasks();
+    expect(tasks.length).toBe(1);
+    expect(tasks[0].status).toBe('error');
+    expect(tasks[0].error).toContain('exceeds');
+    expect(media.upload).not.toHaveBeenCalled();
+  });
+
+  it('uploads a file within the cap as normal', () => {
+    const fixture = configure(1_000_000);
+    media.upload.and.returnValue(
+      of(
+        new HttpResponse({
+          body: { container: 'media', key: 'u/ok.png', contentType: 'image/png' },
+          status: 200,
+          statusText: 'OK',
+        }),
+      ),
+    );
+
+    select(fixture, 'ok.png', 500_000);
+
+    expect(media.upload).toHaveBeenCalled();
+    expect(fixture.componentInstance.uploadTasks().length).toBe(0);
+    expect(fixture.componentInstance.mediaItems().length).toBe(1);
+  });
+
+  it('applies no cap at all when the endpoint reports none configured', () => {
+    const fixture = configure(null);
+    media.upload.and.returnValue(
+      of(
+        new HttpResponse({
+          body: { container: 'media', key: 'u/huge.png', contentType: 'image/png' },
+          status: 200,
+          statusText: 'OK',
+        }),
+      ),
+    );
+
+    select(fixture, 'huge.png', 500_000_000);
+
+    expect(media.upload).toHaveBeenCalled();
+  });
+
+  it('retrying an oversized file re-applies the cap rather than forcing the upload through', () => {
+    const fixture = configure(1_000_000);
+    select(fixture, 'big.png', 2_000_000);
+
+    const id = fixture.componentInstance.uploadTasks()[0].id;
+    fixture.componentInstance.retryUpload(id);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.uploadTasks()[0].status).toBe('error');
+    expect(media.upload).not.toHaveBeenCalled();
   });
 });

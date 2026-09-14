@@ -1,12 +1,14 @@
+import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
 import {
   CreatePostRequest,
   ConnectorDestinationSummary,
   ContentRating,
   MediaCheckResultItem,
+  MediaLimits,
   MediaRef,
   PostContent,
   ServiceDefinition,
@@ -52,6 +54,21 @@ interface MediaItem {
    * the upload/remove handlers, and prefill restoration.
    */
   isDefault: boolean;
+}
+
+/**
+ * One file's journey from selection through the pre-flight check to the upload itself, shown in
+ * the upload tray until it either resolves into a {@link MediaItem} or is dismissed after an error.
+ */
+interface UploadTask {
+  id: string;
+  file: File;
+  name: string;
+  size: number;
+  /** 0-100. Only meaningful once {@link status} is 'uploading'. */
+  progress: number;
+  status: 'checking' | 'uploading' | 'error';
+  error?: string;
 }
 
 /**
@@ -121,7 +138,6 @@ export class ComposeComponent {
   brand = brandFor;
   readonly loading = signal(true);
   readonly submitting = signal(false);
-  readonly uploading = signal(false);
   readonly savingDraft = signal(false);
   /** Set while editing an existing draft (came from the posts list "Edit"), so save/submit target it in place. */
   readonly draftId = signal<string | null>(null);
@@ -136,6 +152,15 @@ export class ComposeComponent {
   readonly templateId = signal('');
   readonly variables = signal<Variable[]>([]);
   readonly mediaItems = signal<MediaItem[]>([]);
+  /** Files currently being pre-flight-checked or uploaded; removed once each resolves into a MediaItem. */
+  readonly uploadTasks = signal<UploadTask[]>([]);
+  /** Most recent media-check result per connector id, refreshed on every file selected. */
+  readonly mediaLimitsByConnector = signal<Record<string, MediaCheckResultItem>>({});
+  /** The gateway's configured upload cap, fetched once at startup; null until loaded (or unconfigured). */
+  readonly mediaLimits = signal<MediaLimits | null>(null);
+  readonly uploading = computed(() =>
+    this.uploadTasks().some((t) => t.status === 'checking' || t.status === 'uploading'),
+  );
   readonly scheduleEnabled = signal(false);
   readonly postAt = signal('');
   /** Per-submission platform choices, keyed by connector id then field name. */
@@ -396,6 +421,21 @@ export class ComposeComponent {
     return this.selectedConnectors().filter((t) => resizingIds.has(t.connectorId));
   });
 
+  /**
+   * Selected targets whose attachment cap is smaller than the number of images currently attached —
+   * the platform is sent only the first {@link MediaCheckResultItem.maxMediaAttachments} of them and
+   * silently drops the rest, so this is surfaced before submit rather than after.
+   */
+  readonly mediaAttachmentLimitTargets = computed(() => {
+    const count = this.mediaItems().length;
+    if (count === 0) return [];
+    const limits = this.mediaLimitsByConnector();
+    return this.selectedConnectors().filter((t) => {
+      const max = limits[t.connectorId]?.maxMediaAttachments;
+      return max != null && count > max;
+    });
+  });
+
   /** Selected targets that ignore the title (platform doesn't support one). */
   readonly titleIgnoredTargets = computed(() => {
     if (!this.title().trim()) return [];
@@ -454,6 +494,15 @@ export class ComposeComponent {
       error: () => {
         this.toast.error('Could not load compose data');
         this.loading.set(false);
+      },
+    });
+
+    // Fetched separately (not in the forkJoin above): best-effort, and shouldn't block the rest of
+    // the form loading if it fails — an unset limit just means no client-side cap is enforced.
+    this.media.getLimits().subscribe({
+      next: (limits) => this.mediaLimits.set(limits),
+      error: () => {
+        /* no client-side upload cap if this fails to load */
       },
     });
   }
@@ -581,52 +630,148 @@ export class ComposeComponent {
   onFilesSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
-    if (!files.length) return;
-    this.uploading.set(true);
-    let remaining = files.length;
-    for (const file of files) {
-      this.media.upload(file).subscribe({
-        next: (ref) => {
-          const item: MediaItem = {
-            ref,
-            name: file.name,
-            alt: '',
-            fileSize: file.size,
-            mimeType: file.type,
-            // The very first image attached becomes the default; later ones don't disturb an
-            // existing choice. ensureDefaultMedia() below covers the empty-list race between
-            // concurrent uploads.
-            isDefault: this.mediaItems().length === 0,
-          };
-          this.mediaItems.update((m) => [...m, item]);
-          this.ensureDefaultMedia();
-
-          // Pre-flight check: find which enabled connectors would resize this file.
-          const connectorIds = this.enabledConnectors().map((c) => c.id);
-          if (connectorIds.length > 0) {
-            this.connectors
-              .checkMedia({ connectorIds, fileSize: file.size, mimeType: file.type })
-              .subscribe({
-                next: (checks) => {
-                  this.mediaItems.update((items) =>
-                    items.map((m) => (m.ref.key === ref.key ? { ...m, resizeChecks: checks } : m)),
-                  );
-                },
-                error: () => {
-                  /* resize check is best-effort; silently ignore failures */
-                },
-              });
-          }
-
-          if (--remaining === 0) this.uploading.set(false);
-        },
-        error: () => {
-          this.toast.error('Upload failed', file.name);
-          if (--remaining === 0) this.uploading.set(false);
-        },
-      });
-    }
     input.value = '';
+    for (const file of files) this.queueUpload(file);
+  }
+
+  /** Starts one file on its way: tray entry first, then pre-flight check, then the upload itself. */
+  private queueUpload(file: File): void {
+    const task: UploadTask = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      file,
+      name: file.name,
+      size: file.size,
+      progress: 0,
+      status: 'checking',
+    };
+    this.uploadTasks.update((tasks) => [...tasks, task]);
+    this.startUpload(task);
+  }
+
+  /**
+   * The gateway's own hard cap (see {@link MediaLimits}): checked purely locally, against a value
+   * already fetched at form load, so an oversized file is rejected instantly — no request at all —
+   * instead of only failing partway through (or after) the upload itself.
+   */
+  private startUpload(task: UploadTask): void {
+    const cap = this.mediaLimits()?.maxUploadSizeBytes;
+    if (cap != null && task.file.size > cap) {
+      this.patchUploadTask(task.id, {
+        status: 'error',
+        error: `File exceeds the ${this.humanFileSize(cap)} upload limit`,
+      });
+      return;
+    }
+    this.runPreflightThenUpload(task);
+  }
+
+  /**
+   * Checks the file against every enabled connector's size caps before uploading it. This needs
+   * only the file's size and MIME type, not its bytes, so it's a small, fast request that surfaces
+   * resize warnings well ahead of the (potentially slow) upload — instead of after it, as before.
+   */
+  private runPreflightThenUpload(task: UploadTask): void {
+    const connectorIds = this.enabledConnectors().map((c) => c.id);
+    const checked$ = connectorIds.length
+      ? this.connectors.checkMedia({
+          connectorIds,
+          fileSize: task.file.size,
+          mimeType: task.file.type,
+        })
+      : of<MediaCheckResultItem[]>([]);
+
+    checked$.subscribe({
+      next: (checks) => {
+        this.mediaLimitsByConnector.update((all) => {
+          const next = { ...all };
+          for (const c of checks) next[c.connectorId] = c;
+          return next;
+        });
+        this.beginTransfer(task, checks);
+      },
+      // Best-effort: a failed pre-flight check shouldn't block the upload itself.
+      error: () => this.beginTransfer(task, []),
+    });
+  }
+
+  private beginTransfer(task: UploadTask, resizeChecks: MediaCheckResultItem[]): void {
+    this.patchUploadTask(task.id, { status: 'uploading' });
+    this.media.upload(task.file).subscribe({
+      next: (event) => {
+        if (event.type === HttpEventType.UploadProgress && event.total) {
+          this.patchUploadTask(task.id, {
+            progress: Math.round((100 * event.loaded) / event.total),
+          });
+        } else if (event.type === HttpEventType.Response && event.body) {
+          this.completeUpload(task, event.body, resizeChecks);
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.patchUploadTask(task.id, { status: 'error', error: this.uploadErrorMessage(err) });
+      },
+    });
+  }
+
+  private completeUpload(
+    task: UploadTask,
+    ref: MediaRef,
+    resizeChecks: MediaCheckResultItem[],
+  ): void {
+    const item: MediaItem = {
+      ref,
+      name: task.name,
+      alt: '',
+      fileSize: task.size,
+      mimeType: task.file.type,
+      resizeChecks,
+      // The very first image attached becomes the default; later ones don't disturb an existing
+      // choice. ensureDefaultMedia() below covers the empty-list race between concurrent uploads.
+      isDefault: this.mediaItems().length === 0,
+    };
+    this.mediaItems.update((m) => [...m, item]);
+    this.ensureDefaultMedia();
+    this.uploadTasks.update((tasks) => tasks.filter((t) => t.id !== task.id));
+  }
+
+  private patchUploadTask(id: string, patch: Partial<UploadTask>): void {
+    this.uploadTasks.update((tasks) => tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+
+  private uploadErrorMessage(err: HttpErrorResponse): string {
+    if (err.status === 413) return 'File is too large to upload';
+    if (err.status === 0) return 'Network error — check your connection';
+    return (err.error as { error?: string } | null)?.error || 'Upload failed';
+  }
+
+  /** Drops a failed upload from the tray without retrying it. */
+  dismissUploadTask(id: string): void {
+    this.uploadTasks.update((tasks) => tasks.filter((t) => t.id !== id));
+  }
+
+  /** Re-attempts a failed upload from scratch, using the same file. */
+  retryUpload(id: string): void {
+    const task = this.uploadTasks().find((t) => t.id === id);
+    if (!task) return;
+    this.patchUploadTask(id, { status: 'checking', progress: 0, error: undefined });
+    this.startUpload(task);
+  }
+
+  /** e.g. 4.2 MB — for the upload tray, where a raw byte count isn't very readable. */
+  humanFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    const units = ['KB', 'MB', 'GB'];
+    let value = bytes / 1024;
+    let unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit++;
+    }
+    return `${value.toFixed(1)} ${units[unit]}`;
+  }
+
+  /** The attachment cap reported for a target's connector, if known (see {@link mediaLimitsByConnector}). */
+  maxAttachmentsFor(target: SelectableTarget): number | null {
+    return this.mediaLimitsByConnector()[target.connectorId]?.maxMediaAttachments ?? null;
   }
 
   /** Returns the names of selected connectors that will resize the given media item. */

@@ -250,9 +250,78 @@
               </span>
             </div>
           }
-          @if (mediaItems().length === 0) {
+          @if (mediaAttachmentLimitTargets().length) {
+            <div class="alert alert-warning py-2 small d-flex align-items-start gap-2">
+              <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+              <div>
+                @for (t of mediaAttachmentLimitTargets(); track t.selectionId) {
+                  <div>
+                    {{ t.displayName }} only accepts {{ maxAttachmentsFor(t) }} attachment{{
+                      maxAttachmentsFor(t) === 1 ? '' : 's'
+                    }}
+                    per post — only the first {{ maxAttachmentsFor(t) }} will be sent, the rest
+                    dropped.
+                  </div>
+                }
+              </div>
+            </div>
+          }
+          @if (mediaItems().length === 0 && uploadTasks().length === 0) {
             <p class="text-muted-2 mb-0">No media attached.</p>
           } @else {
+            @if (uploadTasks().length) {
+              <div class="d-flex flex-column gap-2 mb-2">
+                @for (t of uploadTasks(); track t.id) {
+                  <div class="border rounded p-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <i class="bi bi-file-earmark-arrow-up fs-4 text-primary"></i>
+                      <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex justify-content-between gap-2">
+                          <div class="text-truncate fw-medium">{{ t.name }}</div>
+                          <div class="text-muted-2 small text-nowrap">
+                            {{ humanFileSize(t.size) }}
+                          </div>
+                        </div>
+                        @if (t.status === 'checking') {
+                          <div class="small text-muted-2 mt-1">
+                            <span class="spinner-border spinner-border-sm me-1"></span>Checking…
+                          </div>
+                        } @else if (t.status === 'uploading') {
+                          <div class="progress mt-1" style="height: 6px">
+                            <div
+                              class="progress-bar"
+                              role="progressbar"
+                              [style.width.%]="t.progress"
+                              [attr.aria-valuenow]="t.progress"
+                              aria-valuemin="0"
+                              aria-valuemax="100"
+                            ></div>
+                          </div>
+                        } @else if (t.status === 'error') {
+                          <div class="small text-danger mt-1 d-flex align-items-center gap-2">
+                            <span>{{ t.error }}</span>
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-link p-0"
+                              (click)="retryUpload(t.id)"
+                            >
+                              Retry
+                            </button>
+                            <button
+                              type="button"
+                              class="btn btn-sm btn-link p-0 text-muted-2"
+                              (click)="dismissUploadTask(t.id)"
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
             @if (mediaItems().length > 1) {
               <div class="small text-muted-2 mb-2">
                 <i class="bi bi-info-circle me-1"></i>Platforms that support several images post all
