@@ -245,6 +245,8 @@ export function capabilitiesByPlatform(defs: ServiceDefinition[]): Record<string
       requiresTags: d.requiresTags,
       supportsMultipleTargets: d.supportsMultipleTargets,
       supportsContentWarning: d.supportsContentWarning,
+      supportsRepost: d.supportsRepost,
+      supportsDelete: d.supportsDelete,
     };
   }
   return map;

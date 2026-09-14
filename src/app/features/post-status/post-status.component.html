@@ -56,6 +56,7 @@
                 <th>Tags</th>
                 <th>Rating</th>
                 <th>Result</th>
+                <th>Automation</th>
               </tr>
             </thead>
             <tbody>
@@ -98,6 +99,55 @@
                       <code class="text-muted-2">{{ t.externalId }}</code>
                     } @else {
                       <span class="text-muted-2">—</span>
+                    }
+                  </td>
+                  <td>
+                    @if (!t.automations || t.automations.length === 0) {
+                      <span class="text-muted-2">&mdash;</span>
+                    } @else {
+                      <div class="d-flex flex-column gap-1">
+                        @for (a of t.automations; track a.id) {
+                          <div class="d-flex align-items-center gap-1 small">
+                            <span class="fw-medium">{{ automationActionLabel(a.action) }}</span>
+                            @switch (a.status) {
+                              @case (automationStatus.Pending) {
+                                <span
+                                  class="text-muted-2"
+                                  [title]="a.dueAt ?? 'Waiting for delivery'"
+                                >
+                                  {{ a.dueAt ? 'in ' + a.delayHours + 'h' : 'pending delivery' }}
+                                </span>
+                                <button
+                                  type="button"
+                                  class="btn btn-sm btn-link text-danger p-0 ms-1"
+                                  title="Cancel this automation"
+                                  [disabled]="isCancellingAutomation(a.id)"
+                                  (click)="cancelAutomation(s.postId, a)"
+                                >
+                                  @if (isCancellingAutomation(a.id)) {
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                  } @else {
+                                    <i class="bi bi-x-circle"></i>
+                                  }
+                                </button>
+                              }
+                              @case (automationStatus.Done) {
+                                <span class="text-success"
+                                  ><i class="bi bi-check-circle me-1"></i>Done</span
+                                >
+                              }
+                              @case (automationStatus.Failed) {
+                                <span class="text-danger" [title]="a.error ?? ''">
+                                  <i class="bi bi-exclamation-circle me-1"></i>Failed
+                                </span>
+                              }
+                              @case (automationStatus.Cancelled) {
+                                <span class="text-muted-2">Cancelled</span>
+                              }
+                            }
+                          </div>
+                        }
+                      </div>
                     }
                   </td>
                 </tr>

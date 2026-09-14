@@ -41,6 +41,26 @@ export enum ContentRating {
   Extreme = 3,
 }
 
+/** A post-delivery action a target automation rule can take (issue #323). */
+export enum AutomationAction {
+  /** Repost/reblog/boost the delivered target on its own platform. */
+  Repost = 0,
+  /** Delete the delivered target from its platform. */
+  Delete = 1,
+}
+
+/** Lifecycle of a single target automation rule. */
+export enum AutomationStatus {
+  /** Not yet run: either still waiting for its target to deliver, or waiting for its due time. */
+  Pending = 0,
+  /** Ran successfully. */
+  Done = 1,
+  /** Ran and failed (see {@link PostTargetAutomation.error}). */
+  Failed = 2,
+  /** Cancelled by the user, or by its target being cancelled, before it ran. */
+  Cancelled = 3,
+}
+
 // ---------------------------------------------------------------------------
 // Profile / API keys
 // ---------------------------------------------------------------------------
@@ -112,6 +132,10 @@ export interface Capabilities {
    * field, same as FurAffinity's category/species/gender. Never inferred from the post title.
    */
   supportsContentWarning: boolean;
+  /** True when the platform can repost/reblog/boost an already-delivered post. */
+  supportsRepost: boolean;
+  /** True when the platform can delete an already-delivered post. */
+  supportsDelete: boolean;
 }
 
 export interface ServiceDefinition extends Capabilities {
@@ -385,11 +409,36 @@ export interface CreatePostRequest {
    */
   targetRating?: Record<string, ContentRating> | null;
   /**
+   * Post-delivery automation rules per target (issue #323), keyed by the same target id used in
+   * {@link targets}: repost/reblog or delete a delivered target after an author-chosen delay.
+   * Rejected if the target's platform doesn't declare the requested action ({@link Capabilities.supportsRepost}/
+   * {@link Capabilities.supportsDelete}).
+   */
+  targetAutomations?: Record<string, AutomationRequest[]> | null;
+  /**
    * Save this as a draft instead of submitting it: no targets are resolved/validated and nothing is
    * enqueued for delivery. `targets`/`targetOptions` are still stored as-authored so the draft can be
    * edited and eventually published (`POST /{id}/publish`).
    */
   isDraft?: boolean;
+}
+
+/** One "do X after Y hours" automation rule requested for a target (issue #323). */
+export interface AutomationRequest {
+  action: AutomationAction;
+  delayHours: number;
+}
+
+/** A requested automation rule and its current state. */
+export interface PostTargetAutomation {
+  id: string;
+  action: AutomationAction;
+  delayHours: number;
+  /** When this becomes due; null until the target it's attached to actually delivers. */
+  dueAt: string | null;
+  status: AutomationStatus;
+  error: string | null;
+  executedAt: string | null;
 }
 
 export interface CreatePostResponse {
@@ -411,6 +460,8 @@ export interface PostTargetStatus {
   tagsOmitted: number;
   /** The content rating actually stored for this target, on platforms that can represent one. */
   rating: ContentRating | null;
+  /** This target's post-delivery automation rules (issue #323), if any. */
+  automations: PostTargetAutomation[] | null;
 }
 
 export interface PostStatus {
@@ -440,6 +491,8 @@ export interface PostContent {
   targetIncludeTags: Record<string, boolean>;
   /** The per-target content ratings it was created with, keyed by connector id. */
   targetRating: Record<string, ContentRating>;
+  /** The per-target automation rules (issue #323) it was created with, keyed by connector id. */
+  targetAutomations: Record<string, AutomationRequest[]>;
 }
 
 /** Lightweight row from `GET /api/posts` (list / activity view, no per-target detail). */
@@ -454,6 +507,8 @@ export interface PostSummary {
   createdAt: string;
   updatedAt: string;
   postAt: string | null;
+  /** How many of this post's automation rules (issue #323) are still pending. */
+  pendingAutomationCount: number;
 }
 
 /** Result of `DELETE /api/posts/history`: how many posts were removed. */

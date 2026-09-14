@@ -56,6 +56,8 @@ describe('ComposeComponent — default media selection', () => {
     requiresTags: false,
     supportsMultipleTargets: false,
     supportsContentWarning: true,
+    supportsRepost: true,
+    supportsDelete: true,
   };
 
   let media: jasmine.SpyObj<MediaService>;
@@ -254,6 +256,7 @@ describe('ComposeComponent — default media selection', () => {
       targetOptions: {},
       targetIncludeTags: {},
       targetRating: {},
+      targetAutomations: {},
     });
 
     expect(fixture.componentInstance.mediaItems().map((i) => i.isDefault)).toEqual([false, true]);
@@ -277,6 +280,7 @@ describe('ComposeComponent — default media selection', () => {
       targetOptions: {},
       targetIncludeTags: {},
       targetRating: {},
+      targetAutomations: {},
     });
 
     expect(fixture.componentInstance.mediaItems().map((i) => i.isDefault)).toEqual([true, false]);
@@ -361,6 +365,8 @@ describe('ComposeComponent — client-side upload size cap', () => {
     requiresTags: false,
     supportsMultipleTargets: false,
     supportsContentWarning: true,
+    supportsRepost: true,
+    supportsDelete: true,
   };
 
   let media: jasmine.SpyObj<MediaService>;

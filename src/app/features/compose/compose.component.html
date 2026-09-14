@@ -213,6 +213,50 @@
               }
             </div>
           }
+          @if (automationByTarget().length) {
+            <div class="mt-3 d-flex flex-column gap-2">
+              @for (row of automationByTarget(); track row.target.selectionId) {
+                <div>
+                  <label class="form-label mb-1">Automation for {{ row.target.displayName }}</label>
+                  <div class="d-flex gap-2 flex-wrap">
+                    <select
+                      class="form-select"
+                      style="max-width: 14rem"
+                      [ngModel]="row.rule?.action ?? null"
+                      (ngModelChange)="setAutomationAction(row.target.selectionId, $event)"
+                    >
+                      <option [ngValue]="null">None</option>
+                      @if (row.canRepost) {
+                        <option [ngValue]="automationAction.Repost">Repost after a delay</option>
+                      }
+                      @if (row.canDelete) {
+                        <option [ngValue]="automationAction.Delete">Delete after a delay</option>
+                      }
+                    </select>
+                    @if (row.rule) {
+                      <div class="input-group" style="max-width: 12rem">
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          class="form-control"
+                          [ngModel]="row.rule.delayHours"
+                          (ngModelChange)="setAutomationDelay(row.target.selectionId, $event)"
+                        />
+                        <span class="input-group-text">hours</span>
+                      </div>
+                    }
+                  </div>
+                  @if (row.rule && !(row.rule.delayHours > 0)) {
+                    <div class="form-text text-danger">
+                      <i class="bi bi-exclamation-triangle me-1"></i>
+                      Delay must be greater than 0 hours.
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
         </div>
       </div>
 
