@@ -6,6 +6,7 @@ import {
   ConnectorCookiePairingStart,
   ConnectorDestination,
   ConnectorTarget,
+  ContentRating,
   ServiceDefinition,
   TelegramLoginStep,
   UserConnector,
@@ -15,6 +16,7 @@ import {
   brandFor,
   capabilitiesByPlatform,
   capabilityChips,
+  contentRatingOptions,
   parseFieldDescriptors,
   validateField,
 } from '../../core/models/platforms';
@@ -33,6 +35,8 @@ interface EditorModel {
   platform: string;
   displayName: string;
   enabled: boolean;
+  defaultIncludeTags: boolean;
+  defaultRating: ContentRating | null;
   configFields: string[];
   config: Record<string, string>;
   secureFields: string[];
@@ -159,6 +163,12 @@ export class ConnectorsComponent {
     return this.capsByPlatform()[platform]?.supportsMultipleTargets ?? false;
   }
 
+  supportsRating(platform: string): boolean {
+    return this.capsByPlatform()[platform]?.supportsRating ?? false;
+  }
+
+  readonly ratingOptions = contentRatingOptions;
+
   chipsForPlatform(platform: string) {
     const caps = this.capsByPlatform()[platform];
     return caps ? capabilityChips(caps) : [];
@@ -208,6 +218,8 @@ export class ConnectorsComponent {
       platform: def.platform,
       displayName: def.name,
       enabled: true,
+      defaultIncludeTags: true,
+      defaultRating: null,
       configFields,
       config: Object.fromEntries(configFields.map((k) => [k, ''])),
       secureFields,
@@ -230,6 +242,8 @@ export class ConnectorsComponent {
       platform: c.platform,
       displayName: c.displayName,
       enabled: c.enabled,
+      defaultIncludeTags: c.defaultIncludeTags,
+      defaultRating: c.defaultRating,
       configFields,
       config: Object.fromEntries(configFields.map((k) => [k, existing[k] ?? ''])),
       secureFields,
@@ -259,6 +273,14 @@ export class ConnectorsComponent {
     this.editor.update((e) => (e ? { ...e, enabled: value } : e));
   }
 
+  patchDefaultIncludeTags(value: boolean): void {
+    this.editor.update((e) => (e ? { ...e, defaultIncludeTags: value } : e));
+  }
+
+  patchDefaultRating(value: ContentRating | null): void {
+    this.editor.update((e) => (e ? { ...e, defaultRating: value } : e));
+  }
+
   save(): void {
     const e = this.editor();
     if (!e || !e.displayName.trim() || this.hasConfigErrors()) return;
@@ -275,6 +297,8 @@ export class ConnectorsComponent {
         configJson: JSON.stringify(e.config),
         secureConfigJson,
         enabled: e.enabled,
+        defaultIncludeTags: e.defaultIncludeTags,
+        defaultRating: e.defaultRating,
       })
       .subscribe({
         next: () => {
@@ -306,6 +330,8 @@ export class ConnectorsComponent {
           // Never clear an OAuth-managed secret here; the callback writes it.
           secureConfigJson: null,
           enabled: e.enabled,
+          defaultIncludeTags: e.defaultIncludeTags,
+          defaultRating: e.defaultRating,
         }),
       );
       this.editor.update((cur) => (cur ? { ...cur, id: saved.id } : cur));
@@ -367,6 +393,8 @@ export class ConnectorsComponent {
           configJson: JSON.stringify(e.config),
           secureConfigJson: null,
           enabled: e.enabled,
+          defaultIncludeTags: e.defaultIncludeTags,
+          defaultRating: e.defaultRating,
         }),
       );
       this.closeEditor();

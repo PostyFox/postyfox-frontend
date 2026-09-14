@@ -311,6 +311,40 @@
             />
             <label class="form-check-label" for="enabledSwitch">Enabled</label>
           </div>
+          <div class="form-check form-switch mt-2">
+            <input
+              class="form-check-input"
+              type="checkbox"
+              id="defaultIncludeTagsSwitch"
+              [ngModel]="e.defaultIncludeTags"
+              (ngModelChange)="patchDefaultIncludeTags($event)"
+            />
+            <label class="form-check-label" for="defaultIncludeTagsSwitch"
+              >Include tags by default</label
+            >
+          </div>
+          <p class="small text-muted-2 mt-1">
+            Whether new posts to this connector start with tags on. Still overridable per post.
+          </p>
+          @if (supportsRating(e.platform)) {
+            <div class="mt-3">
+              <label class="form-label" for="defaultRating">Default content rating</label>
+              <select
+                id="defaultRating"
+                class="form-select"
+                [ngModel]="e.defaultRating"
+                (ngModelChange)="patchDefaultRating($event)"
+              >
+                <option [ngValue]="null">No default</option>
+                @for (option of ratingOptions; track option.value) {
+                  <option [ngValue]="option.value">{{ option.label }}</option>
+                }
+              </select>
+              <p class="small text-muted-2 mt-1">
+                Pre-fills the rating for a new post to this connector. Still overridable per post.
+              </p>
+            </div>
+          }
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline-secondary" (click)="closeEditor()">Cancel</button>

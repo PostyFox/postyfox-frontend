@@ -19,6 +19,7 @@ import {
   FieldDescriptor,
   brandFor,
   capabilitiesByPlatform,
+  contentRatingOptions,
   parseFieldDescriptors,
   previewInlineTags,
   validateField,
@@ -66,6 +67,10 @@ interface SelectableTarget {
   connectorId: string;
   platform: string;
   displayName: string;
+  /** The owning connector's configured "include tags by default" choice (see {@link UserConnector}). */
+  defaultIncludeTags: boolean;
+  /** The owning connector's configured default content rating (see {@link UserConnector.defaultRating}). */
+  defaultRating: ContentRating | null;
 }
 
 interface Variable {
@@ -128,7 +133,6 @@ export class ComposeComponent {
   readonly tags = signal('');
   /** Which tag preset is selected in the "load a tag preset" dropdown; not submitted, just a UI aid. */
   readonly tagPresetId = signal('');
-  readonly rating = signal<ContentRating | null>(null);
   readonly templateId = signal('');
   readonly variables = signal<Variable[]>([]);
   readonly mediaItems = signal<MediaItem[]>([]);
@@ -138,12 +142,13 @@ export class ComposeComponent {
   readonly targetOptions = signal<Record<string, Record<string, string>>>({});
   /** Per-target "include tags" choice, keyed by selection id. Absent ⇒ include (the default). */
   readonly targetIncludeTags = signal<Record<string, boolean>>({});
-  readonly ratingOptions = [
-    { value: ContentRating.General, label: 'General' },
-    { value: ContentRating.Mature, label: 'Mature' },
-    { value: ContentRating.Adult, label: 'Adult' },
-    { value: ContentRating.Extreme, label: 'Extreme' },
-  ] as const;
+  /**
+   * Per-target content rating, keyed by selection id. A key present with a `null` value means the
+   * author explicitly cleared the connector's own default for this post; an absent key means
+   * "untouched", so the connector's default (if any) still shows in the picker.
+   */
+  readonly targetRating = signal<Record<string, ContentRating | null>>({});
+  readonly ratingOptions = contentRatingOptions;
 
   readonly enabledConnectors = computed(() => this.connectorList().filter((c) => c.enabled));
   readonly capsByPlatform = computed(() => capabilitiesByPlatform(this.catalogue()));
@@ -162,12 +167,17 @@ export class ComposeComponent {
         connectorId: c.id,
         platform: c.platform,
         displayName: c.displayName,
+        defaultIncludeTags: c.defaultIncludeTags,
+        defaultRating: c.defaultRating,
       }));
+    const connectorsById = new Map(this.connectorList().map((c) => [c.id, c]));
     const destinations = this.destinationList().map((d): SelectableTarget => ({
       selectionId: d.id,
       connectorId: d.connectorId,
       platform: d.platform,
       displayName: `${d.connectorDisplayName} — ${d.name}`,
+      defaultIncludeTags: connectorsById.get(d.connectorId)?.defaultIncludeTags ?? true,
+      defaultRating: connectorsById.get(d.connectorId)?.defaultRating ?? null,
     }));
     return [...singles, ...destinations];
   });
@@ -224,18 +234,33 @@ export class ComposeComponent {
     return errors;
   });
 
-  readonly ratingRequired = computed(() => {
+  /** The author's current rating choice for a target: their override, else the connector's own default. */
+  ratingFor(target: SelectableTarget): ContentRating | null {
+    const overrides = this.targetRating();
+    return target.selectionId in overrides ? overrides[target.selectionId] : target.defaultRating;
+  }
+
+  setRating(selectionId: string, value: ContentRating | null): void {
+    this.targetRating.update((all) => ({ ...all, [selectionId]: value }));
+  }
+
+  /** One row per selected target whose platform can represent a rating, with the author's current choice. */
+  readonly ratingByTarget = computed(() => {
     const caps = this.capsByPlatform();
-    return this.selectedConnectors().some((c) => caps[c.platform]?.requiresRating);
+    return this.selectedConnectors()
+      .filter((t) => caps[t.platform]?.supportsRating)
+      .map((target) => ({
+        target,
+        required: caps[target.platform]?.requiresRating ?? false,
+        rating: this.ratingFor(target),
+      }));
   });
 
-  readonly ratingSupported = computed(() => {
-    const caps = this.capsByPlatform();
-    return this.selectedConnectors().some((c) => caps[c.platform]?.supportsRating);
-  });
-
-  readonly blueskySelected = computed(() =>
-    this.selectedConnectors().some((c) => c.platform === 'BlueSky'),
+  /** Selected targets whose platform requires a rating but won't be getting one. */
+  readonly ratingRequiredIssues = computed(() =>
+    this.ratingByTarget()
+      .filter((row) => row.required && row.rating == null)
+      .map((row) => row.target.displayName),
   );
 
   readonly furAffinitySelected = computed(() =>
@@ -250,9 +275,9 @@ export class ComposeComponent {
       .filter(Boolean),
   );
 
-  /** Whether tags are currently switched on for a target (defaults to on when unset). */
-  includeTagsFor(selectionId: string): boolean {
-    return this.targetIncludeTags()[selectionId] ?? true;
+  /** Whether tags are currently switched on for a target (defaults to its connector's own setting when unset). */
+  includeTagsFor(target: SelectableTarget): boolean {
+    return this.targetIncludeTags()[target.selectionId] ?? target.defaultIncludeTags;
   }
 
   setIncludeTags(selectionId: string, value: boolean): void {
@@ -273,7 +298,7 @@ export class ComposeComponent {
       const c = caps[target.platform];
       const supportsTags = c?.supportsTags ?? true;
       const requiresTags = c?.requiresTags ?? false;
-      const includeTags = requiresTags || this.includeTagsFor(target.selectionId);
+      const includeTags = requiresTags || this.includeTagsFor(target);
       let preview: { included: string[]; omitted: number } | null = null;
       if (!supportsTags && includeTags && tags.length > 0) {
         const baseLength = hasPlaceholder
@@ -300,7 +325,8 @@ export class ComposeComponent {
     if (!this.title().trim()) issues.push('Add a title.');
     else if (this.title().trim().length > 60)
       issues.push('Keep the title to 60 characters or fewer.');
-    if (this.rating() == null) issues.push('Choose a content rating.');
+    // The generic "requires a rating" check (ratingRequiredIssues) covers this for every selected
+    // FurAffinity target, so it isn't duplicated here.
 
     const media = this.mediaItems();
     if (media.length === 0) {
@@ -382,7 +408,7 @@ export class ComposeComponent {
   readonly canSubmit = computed(
     () =>
       this.selectedTargets().size > 0 &&
-      (!this.ratingRequired() || this.rating() != null) &&
+      this.ratingRequiredIssues().length === 0 &&
       this.furAffinityIssues().length === 0 &&
       this.tagsRequiredIssues().length === 0 &&
       Object.keys(this.targetOptionErrors()).length === 0 &&
@@ -461,7 +487,6 @@ export class ComposeComponent {
     this.title.set(content.title ?? '');
     this.description.set(content.description ?? '');
     this.tags.set(content.tags.join(', '));
-    this.rating.set(content.rating);
     this.templateId.set(content.templateId ?? '');
     this.variables.set(Object.entries(content.variables).map(([key, value]) => ({ key, value })));
     // Keep the platform choices only for targets that are still ticked; a connector/destination that
@@ -474,6 +499,14 @@ export class ComposeComponent {
     this.targetIncludeTags.set(
       Object.fromEntries(
         Object.entries(content.targetIncludeTags ?? {}).filter(([id]) => available.has(id)),
+      ),
+    );
+    // Every entry here is a resolved rating the post was actually created with, so it's re-seeded as
+    // an explicit choice (not left "untouched", which would let the connector's current default
+    // silently override what this post was really sent with).
+    this.targetRating.set(
+      Object.fromEntries(
+        Object.entries(content.targetRating ?? {}).filter(([id]) => available.has(id)),
       ),
     );
     this.mediaItems.set(
@@ -668,11 +701,21 @@ export class ComposeComponent {
       if (Object.keys(chosen).length) targetOptions[group.target.selectionId] = chosen;
     }
 
-    // Only send a per-target choice that differs from the default (include): an absent entry
-    // already means "include" server-side, and RequiresTags platforms ignore this regardless.
+    // Only send a per-target choice that differs from the connector's own default — an absent
+    // entry already falls back to that default server-side, and RequiresTags platforms ignore
+    // this regardless.
     const targetIncludeTags: Record<string, boolean> = {};
     for (const target of this.selectedConnectors()) {
-      if (!this.includeTagsFor(target.selectionId)) targetIncludeTags[target.selectionId] = false;
+      const chosen = this.includeTagsFor(target);
+      if (chosen !== target.defaultIncludeTags) targetIncludeTags[target.selectionId] = chosen;
+    }
+
+    // Unlike targetIncludeTags, the server applies no fallback of its own for rating (it's a
+    // per-target value now, not one shared field): send whatever's actually showing for each rated
+    // target, default-resolved or overridden, and omit only where nothing is chosen at all.
+    const targetRating: Record<string, ContentRating> = {};
+    for (const row of this.ratingByTarget()) {
+      if (row.rating != null) targetRating[row.target.selectionId] = row.rating;
     }
 
     return {
@@ -685,9 +728,9 @@ export class ComposeComponent {
       templateId: this.templateId() || null,
       variables,
       postAt,
-      rating: this.rating(),
       targetOptions: Object.keys(targetOptions).length ? targetOptions : null,
       targetIncludeTags: Object.keys(targetIncludeTags).length ? targetIncludeTags : null,
+      targetRating: Object.keys(targetRating).length ? targetRating : null,
     };
   }
 
@@ -705,8 +748,11 @@ export class ComposeComponent {
       this.toast.warning('Add tags', `Required by ${this.tagsRequiredIssues().join(', ')}`);
       return;
     }
-    if (this.ratingRequired() && this.rating() == null) {
-      this.toast.warning('Choose a content rating');
+    if (this.ratingRequiredIssues().length) {
+      this.toast.warning(
+        'Choose a content rating',
+        `Required by ${this.ratingRequiredIssues().join(', ')}`,
+      );
       return;
     }
     if (Object.keys(this.targetOptionErrors()).length) {

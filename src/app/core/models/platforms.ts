@@ -1,4 +1,12 @@
-import { Capabilities, ServiceDefinition, UserConnector } from './api.models';
+import { Capabilities, ContentRating, ServiceDefinition, UserConnector } from './api.models';
+
+/** Human labels for {@link ContentRating}, shared by the connector settings and compose forms. */
+export const contentRatingOptions: { value: ContentRating; label: string }[] = [
+  { value: ContentRating.General, label: 'General' },
+  { value: ContentRating.Mature, label: 'Mature' },
+  { value: ContentRating.Adult, label: 'Adult' },
+  { value: ContentRating.Extreme, label: 'Extreme' },
+];
 
 /**
  * Presentation-only branding for known platforms: iconography and human copy.
