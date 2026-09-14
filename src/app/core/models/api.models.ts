@@ -286,6 +286,16 @@ export interface TextTemplateUpsertRequest {
 // Media
 // ---------------------------------------------------------------------------
 
+/**
+ * Global upload limits from `GET /api/media/limits`. Mirrors the gateway's own configured cap
+ * (kept in sync by the deployment, not introspected) so the frontend can reject an oversized file
+ * before attempting the upload, instead of only discovering it from a failed request.
+ */
+export interface MediaLimits {
+  /** Max upload size in bytes the gateway accepts for POST /api/media; null = not configured. */
+  maxUploadSizeBytes: number | null;
+}
+
 export interface MediaRef {
   container: string;
   key: string;
@@ -320,7 +330,8 @@ export interface MediaCheckRequest {
 /**
  * Per-connector result from `POST /api/connectors/media-check`.
  * `willResize` is true when the file exceeds the connector's size cap and will be
- * automatically resized/transcoded before delivery.
+ * automatically resized/transcoded before delivery. Needs only the file's size and MIME type
+ * (not its bytes), so it's cheap to call the moment a file is selected, ahead of the upload itself.
  */
 export interface MediaCheckResultItem {
   connectorId: string;
@@ -329,6 +340,8 @@ export interface MediaCheckResultItem {
   willResize: boolean;
   imageSizeLimit: number | null;
   videoSizeLimit: number | null;
+  /** The platform's cap on attachments per post; null means no reported cap. */
+  maxMediaAttachments: number | null;
 }
 
 // ---------------------------------------------------------------------------
