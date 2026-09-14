@@ -1,7 +1,8 @@
 import { Component, Input, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Subscription, switchMap, timer } from 'rxjs';
-import { PostStatus, PostTargetStatus } from '../../core/models/api.models';
+import { ContentRating, PostStatus, PostTargetStatus } from '../../core/models/api.models';
+import { contentRatingOptions } from '../../core/models/platforms';
 import {
   ROOT_STATUS_META,
   TARGET_STATUS_META,
@@ -37,6 +38,10 @@ export class PostStatusComponent implements OnInit, OnDestroy {
 
   targetMeta(t: PostTargetStatus) {
     return TARGET_STATUS_META[t.status];
+  }
+
+  ratingLabel(rating: ContentRating | null): string | null {
+    return contentRatingOptions.find((o) => o.value === rating)?.label ?? null;
   }
 
   ngOnInit(): void {

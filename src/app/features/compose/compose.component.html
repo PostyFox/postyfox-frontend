@@ -175,34 +175,40 @@
               </div>
             }
           </div>
-          @if (ratingSupported()) {
-            <div class="mt-3">
-              <label class="form-label" for="rating">
-                Content rating
-                @if (ratingRequired()) {
-                  <span class="text-danger">*</span>
-                }
-              </label>
-              <select
-                id="rating"
-                class="form-select"
-                [ngModel]="rating()"
-                (ngModelChange)="rating.set($event)"
-              >
-                <option [ngValue]="null" [disabled]="ratingRequired()">
-                  {{ ratingRequired() ? 'Choose a rating' : 'No rating' }}
-                </option>
-                @for (option of ratingOptions; track option.value) {
-                  <option [ngValue]="option.value">{{ option.label }}</option>
-                }
-              </select>
-              @if (ratingRequired()) {
-                <div class="form-text">
-                  FurAffinity requires an explicit audience rating for every submission.
-                </div>
-              } @else if (blueskySelected()) {
-                <div class="form-text">
-                  Optional. Mature, Adult, and Extreme are published as Bluesky content self-labels.
+          @if (ratingByTarget().length) {
+            <div class="mt-3 d-flex flex-column gap-2">
+              @for (row of ratingByTarget(); track row.target.selectionId) {
+                <div>
+                  <label class="form-label mb-1" [for]="'rating-' + row.target.selectionId">
+                    Content rating for {{ row.target.displayName }}
+                    @if (row.required) {
+                      <span class="text-danger">*</span>
+                    }
+                  </label>
+                  <select
+                    [id]="'rating-' + row.target.selectionId"
+                    class="form-select"
+                    [ngModel]="row.rating"
+                    (ngModelChange)="setRating(row.target.selectionId, $event)"
+                  >
+                    <option [ngValue]="null" [disabled]="row.required">
+                      {{ row.required ? 'Choose a rating' : 'No rating' }}
+                    </option>
+                    @for (option of ratingOptions; track option.value) {
+                      <option [ngValue]="option.value">{{ option.label }}</option>
+                    }
+                  </select>
+                  @if (row.required && row.rating === null) {
+                    <div class="form-text text-danger">
+                      <i class="bi bi-exclamation-triangle me-1"></i>
+                      {{ row.target.displayName }} requires an explicit audience rating.
+                    </div>
+                  } @else if (row.target.platform === 'BlueSky') {
+                    <div class="form-text">
+                      Optional. Mature, Adult, and Extreme are published as Bluesky content
+                      self-labels.
+                    </div>
+                  }
                 </div>
               }
             </div>

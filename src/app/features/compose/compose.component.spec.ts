@@ -3,7 +3,6 @@ import { Router } from '@angular/router';
 import { of } from 'rxjs';
 
 import {
-  ContentRating,
   MediaRef,
   PostContent,
   ServiceDefinition,
@@ -32,6 +31,8 @@ describe('ComposeComponent — default media selection', () => {
     displayName: 'My Mastodon',
     configJson: '{}',
     enabled: true,
+    defaultIncludeTags: true,
+    defaultRating: null,
   };
 
   const mastodonDefinition: ServiceDefinition = {
@@ -246,9 +247,9 @@ describe('ComposeComponent — default media selection', () => {
       variables: {},
       connectorIds: ['conn-1'],
       postAt: null,
-      rating: ContentRating.General,
       targetOptions: {},
       targetIncludeTags: {},
+      targetRating: {},
     });
 
     expect(fixture.componentInstance.mediaItems().map((i) => i.isDefault)).toEqual([false, true]);
@@ -269,9 +270,9 @@ describe('ComposeComponent — default media selection', () => {
       variables: {},
       connectorIds: ['conn-1'],
       postAt: null,
-      rating: ContentRating.General,
       targetOptions: {},
       targetIncludeTags: {},
+      targetRating: {},
     });
 
     expect(fixture.componentInstance.mediaItems().map((i) => i.isDefault)).toEqual([true, false]);

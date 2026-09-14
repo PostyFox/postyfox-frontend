@@ -140,6 +140,17 @@ export interface UserConnector {
   /** JSON string of the stored non-secret config. */
   configJson: string;
   enabled: boolean;
+  /**
+   * This connector's default "include tags" value for a new post target. Pre-fills the compose
+   * form's per-target toggle unless the author overrides it for that post.
+   */
+  defaultIncludeTags: boolean;
+  /**
+   * This connector's default content rating for a new post target, on platforms that can represent
+   * one (see {@link ServiceDefinition.supportsRating}). Pre-fills the compose form's per-target
+   * rating picker unless the author overrides it for that post. Null when no default is configured.
+   */
+  defaultRating: ContentRating | null;
 }
 
 export interface UserConnectorUpsertRequest {
@@ -150,6 +161,10 @@ export interface UserConnectorUpsertRequest {
   /** Written to the secret store; omit to leave unchanged. */
   secureConfigJson?: string | null;
   enabled: boolean;
+  /** See {@link UserConnector.defaultIncludeTags}. */
+  defaultIncludeTags: boolean;
+  /** See {@link UserConnector.defaultRating}. */
+  defaultRating: ContentRating | null;
 }
 
 export interface AuthState {
@@ -335,7 +350,6 @@ export interface CreatePostRequest {
   templateId?: string | null;
   variables?: Record<string, string> | null;
   postAt?: string | null;
-  rating?: ContentRating | null;
   /**
    * Per-submission platform choices, keyed by target connector id (see
    * {@link ServiceDefinition.postOptionsSchema}). Validated server-side; anything the platform does
@@ -348,6 +362,15 @@ export interface CreatePostRequest {
    * See {@link ServiceDefinition.requiresTags}.
    */
   targetIncludeTags?: Record<string, boolean> | null;
+  /**
+   * Per-target content rating, keyed by the same target id used in {@link targets}, on platforms
+   * that can represent one ({@link ServiceDefinition.supportsRating}). Unlike
+   * {@link targetIncludeTags} this is stored exactly as sent: the server does not fall back to the
+   * connector's own {@link UserConnector.defaultRating} itself, so the compose form resolves and
+   * sends that default itself when the author hasn't overridden it. An absent entry means "no rating
+   * for this target".
+   */
+  targetRating?: Record<string, ContentRating> | null;
   /**
    * Save this as a draft instead of submitting it: no targets are resolved/validated and nothing is
    * enqueued for delivery. `targets`/`targetOptions` are still stored as-authored so the draft can be
@@ -373,6 +396,8 @@ export interface PostTargetStatus {
   includeTags: boolean;
   /** How many tags were dropped to fit an inline hashtag interpolation under the platform's character limit. */
   tagsOmitted: number;
+  /** The content rating actually stored for this target, on platforms that can represent one. */
+  rating: ContentRating | null;
 }
 
 export interface PostStatus {
@@ -396,11 +421,12 @@ export interface PostContent {
    */
   connectorIds: string[];
   postAt: string | null;
-  rating: ContentRating | null;
   /** The per-submission platform choices it was created with, keyed by connector id. */
   targetOptions: Record<string, Record<string, string>>;
   /** The per-target "include tags" choices it was created with, keyed by connector id. */
   targetIncludeTags: Record<string, boolean>;
+  /** The per-target content ratings it was created with, keyed by connector id. */
+  targetRating: Record<string, ContentRating>;
 }
 
 /** Lightweight row from `GET /api/posts` (list / activity view, no per-target detail). */

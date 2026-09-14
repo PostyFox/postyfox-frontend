@@ -54,6 +54,7 @@
                 <th>Status</th>
                 <th>Attempts</th>
                 <th>Tags</th>
+                <th>Rating</th>
                 <th>Result</th>
               </tr>
             </thead>
@@ -75,6 +76,13 @@
                       </span>
                     } @else {
                       <span class="text-muted-2">Included</span>
+                    }
+                  </td>
+                  <td>
+                    @if (ratingLabel(t.rating); as label) {
+                      {{ label }}
+                    } @else {
+                      <span class="text-muted-2">&mdash;</span>
                     }
                   </td>
                   <td>
