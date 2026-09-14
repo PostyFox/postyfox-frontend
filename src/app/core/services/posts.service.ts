@@ -5,6 +5,7 @@ import { environment } from '../../../environments/environment';
 import {
   CreatePostRequest,
   CreatePostResponse,
+  DeleteHistoryResponse,
   PostContent,
   PostStatus,
   PostSummary,
@@ -55,6 +56,14 @@ export class PostsService {
   /** Permanently deletes a post (and its stored payload). Works for history + stale queued rows. */
   delete(id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  /**
+   * Permanently deletes every terminal (delivered/failed/cancelled) post at once. Drafts and posts
+   * still in flight are left untouched.
+   */
+  deleteAllHistory(): Observable<DeleteHistoryResponse> {
+    return this.http.delete<DeleteHistoryResponse>(`${this.base}/history`);
   }
 
   /**

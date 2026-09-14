@@ -36,6 +36,7 @@ export class PostsComponent implements OnInit, OnDestroy {
   readonly all = signal<PostSummary[]>([]);
   readonly loading = signal(true);
   readonly polling = signal(false);
+  readonly clearingHistory = signal(false);
   /** Post ids with an action in flight, so their row buttons disable/spin. */
   readonly busy = signal<Set<string>>(new Set());
   brand = brandFor;
@@ -113,6 +114,32 @@ export class PostsComponent implements OnInit, OnDestroy {
       error: () => {
         this.setBusy(p.postId, false);
         this.toast.error('Could not delete post');
+        this.reload();
+      },
+    });
+  }
+
+  /** Permanently delete every terminal post at once. Active posts and drafts are untouched. */
+  async clearHistory(): Promise<void> {
+    const count = this.history().length;
+    if (count === 0) return;
+    const ok = await this.confirm.ask({
+      title: 'Clear history',
+      message: `Permanently delete all ${count} post${count === 1 ? '' : 's'} in your history? This removes them and their stored content for good. Drafts and posts still in flight are not affected.`,
+      confirmText: 'Delete all',
+      kind: 'danger',
+    });
+    if (!ok) return;
+    this.clearingHistory.set(true);
+    this.posts.deleteAllHistory().subscribe({
+      next: ({ deletedCount }) => {
+        this.clearingHistory.set(false);
+        this.toast.success(`Deleted ${deletedCount} post${deletedCount === 1 ? '' : 's'}`);
+        this.reload();
+      },
+      error: () => {
+        this.clearingHistory.set(false);
+        this.toast.error('Could not clear history');
         this.reload();
       },
     });
