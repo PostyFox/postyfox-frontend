@@ -67,6 +67,14 @@ export class PostsService {
   }
 
   /**
+   * Cancels a not-yet-executed automation rule (issue #323). 409 if it already ran or was already
+   * cancelled.
+   */
+  cancelAutomation(postId: string, automationId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${postId}/automations/${automationId}`);
+  }
+
+  /**
    * Lists the user's posts (newest first), bounded server-side by the retention window.
    * `filter='active'` returns only posts still being processed.
    */

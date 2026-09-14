@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import {
+  AutomationAction,
+  AutomationRequest,
   CreatePostRequest,
   ConnectorDestinationSummary,
   ContentRating,
@@ -174,6 +176,12 @@ export class ComposeComponent {
    */
   readonly targetRating = signal<Record<string, ContentRating | null>>({});
   readonly ratingOptions = contentRatingOptions;
+  /**
+   * Per-target post-delivery automation choice (issue #323), keyed by selection id: at most one rule
+   * per target in this form. Absent/null means "no automation for this target".
+   */
+  readonly targetAutomation = signal<Record<string, AutomationRequest | null>>({});
+  readonly automationAction = AutomationAction;
 
   readonly enabledConnectors = computed(() => this.connectorList().filter((c) => c.enabled));
   readonly capsByPlatform = computed(() => capabilitiesByPlatform(this.catalogue()));
@@ -290,6 +298,46 @@ export class ComposeComponent {
 
   readonly furAffinitySelected = computed(() =>
     this.selectedConnectors().some((c) => c.platform === 'FurAffinity'),
+  );
+
+  /** The author's current automation choice for a target, or null if they haven't set one. */
+  automationFor(target: SelectableTarget): AutomationRequest | null {
+    return this.targetAutomation()[target.selectionId] ?? null;
+  }
+
+  setAutomationAction(selectionId: string, action: AutomationAction | null): void {
+    this.targetAutomation.update((all) => ({
+      ...all,
+      [selectionId]:
+        action == null ? null : { action, delayHours: all[selectionId]?.delayHours ?? 6 },
+    }));
+  }
+
+  setAutomationDelay(selectionId: string, delayHours: number): void {
+    this.targetAutomation.update((all) => {
+      const current = all[selectionId];
+      return current ? { ...all, [selectionId]: { ...current, delayHours } } : all;
+    });
+  }
+
+  /** One row per selected target whose platform supports at least one automation action. */
+  readonly automationByTarget = computed(() => {
+    const caps = this.capsByPlatform();
+    return this.selectedConnectors()
+      .filter((t) => caps[t.platform]?.supportsRepost || caps[t.platform]?.supportsDelete)
+      .map((target) => ({
+        target,
+        canRepost: caps[target.platform]?.supportsRepost ?? false,
+        canDelete: caps[target.platform]?.supportsDelete ?? false,
+        rule: this.automationFor(target),
+      }));
+  });
+
+  /** Selected targets with an automation chosen but no positive delay set. */
+  readonly automationDelayIssues = computed(() =>
+    this.automationByTarget()
+      .filter((row) => row.rule != null && !(row.rule!.delayHours > 0))
+      .map((row) => row.target.displayName),
   );
 
   /** The author's tags, parsed the same way as {@link buildBody} builds the request. */
@@ -451,6 +499,7 @@ export class ComposeComponent {
       this.ratingRequiredIssues().length === 0 &&
       this.furAffinityIssues().length === 0 &&
       this.tagsRequiredIssues().length === 0 &&
+      this.automationDelayIssues().length === 0 &&
       Object.keys(this.targetOptionErrors()).length === 0 &&
       !this.submitting() &&
       !this.uploading() &&
@@ -556,6 +605,15 @@ export class ComposeComponent {
     this.targetRating.set(
       Object.fromEntries(
         Object.entries(content.targetRating ?? {}).filter(([id]) => available.has(id)),
+      ),
+    );
+    // The compose form offers one automation rule per target; a post created some other way (or in
+    // an earlier release) with several is re-seeded with just its first rule.
+    this.targetAutomation.set(
+      Object.fromEntries(
+        Object.entries(content.targetAutomations ?? {})
+          .filter(([id, rules]) => available.has(id) && rules.length > 0)
+          .map(([id, rules]) => [id, rules[0]]),
       ),
     );
     this.mediaItems.set(
@@ -863,6 +921,11 @@ export class ComposeComponent {
       if (row.rating != null) targetRating[row.target.selectionId] = row.rating;
     }
 
+    const targetAutomations: Record<string, AutomationRequest[]> = {};
+    for (const row of this.automationByTarget()) {
+      if (row.rule != null) targetAutomations[row.target.selectionId] = [row.rule];
+    }
+
     return {
       targets: [...this.selectedTargets()],
       title: this.title().trim() || null,
@@ -876,6 +939,7 @@ export class ComposeComponent {
       targetOptions: Object.keys(targetOptions).length ? targetOptions : null,
       targetIncludeTags: Object.keys(targetIncludeTags).length ? targetIncludeTags : null,
       targetRating: Object.keys(targetRating).length ? targetRating : null,
+      targetAutomations: Object.keys(targetAutomations).length ? targetAutomations : null,
     };
   }
 
@@ -902,6 +966,13 @@ export class ComposeComponent {
     }
     if (Object.keys(this.targetOptionErrors()).length) {
       this.toast.warning('Fix the platform options');
+      return;
+    }
+    if (this.automationDelayIssues().length) {
+      this.toast.warning(
+        'Set an automation delay',
+        `Needs a delay greater than 0 hours: ${this.automationDelayIssues().join(', ')}`,
+      );
       return;
     }
 

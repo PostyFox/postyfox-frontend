@@ -203,7 +203,17 @@
                     }
                   </div>
                 </td>
-                <td><app-status-badge [meta]="rootMeta(p)"></app-status-badge></td>
+                <td>
+                  <app-status-badge [meta]="rootMeta(p)"></app-status-badge>
+                  @if (p.pendingAutomationCount > 0) {
+                    <span
+                      class="badge bg-label-info ms-1"
+                      title="This post has automation still pending (see its status page)"
+                    >
+                      <i class="bi bi-clock-history me-1"></i>{{ p.pendingAutomationCount }}
+                    </span>
+                  }
+                </td>
                 <td>
                   <span [class.text-danger]="p.failedCount > 0">
                     {{ p.deliveredCount }}/{{ p.targetCount }}
