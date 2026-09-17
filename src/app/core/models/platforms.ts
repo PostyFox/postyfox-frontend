@@ -137,6 +137,14 @@ const BRANDS: Record<string, PlatformBrand> = {
       text: 'Sign in to FurAffinity',
     },
   },
+  Instagram: {
+    label: 'Instagram',
+    icon: 'bi-instagram',
+    color: '#E1306C',
+    blurb: 'Publish feed posts to an Instagram Business or Creator account.',
+    setup:
+      'Connect with Instagram to authorize a Business or Creator account. Every post needs at least one image or video — Instagram has no text-only post type.',
+  },
 };
 
 const FALLBACK: PlatformBrand = { label: '', icon: 'bi-plug', color: '#8c57ff' };
@@ -243,6 +251,7 @@ export function capabilitiesByPlatform(defs: ServiceDefinition[]): Record<string
       requiresRating: d.requiresRating,
       supportsTags: d.supportsTags,
       requiresTags: d.requiresTags,
+      requiresMedia: d.requiresMedia,
       supportsMultipleTargets: d.supportsMultipleTargets,
       supportsContentWarning: d.supportsContentWarning,
       supportsRepost: d.supportsRepost,
