@@ -54,6 +54,7 @@ describe('ComposeComponent — default media selection', () => {
     requiresRating: false,
     supportsTags: false,
     requiresTags: false,
+    requiresMedia: false,
     supportsMultipleTargets: false,
     supportsContentWarning: true,
     supportsRepost: true,
@@ -363,6 +364,7 @@ describe('ComposeComponent — client-side upload size cap', () => {
     requiresRating: false,
     supportsTags: false,
     requiresTags: false,
+    requiresMedia: false,
     supportsMultipleTargets: false,
     supportsContentWarning: true,
     supportsRepost: true,
@@ -503,5 +505,140 @@ describe('ComposeComponent — client-side upload size cap', () => {
 
     expect(fixture.componentInstance.uploadTasks()[0].status).toBe('error');
     expect(media.upload).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Covers issue #387 (Instagram): a platform that declares `requiresMedia` (Instagram has no
+ * text-only post type) blocks submission until at least one media item is attached, surfaced the
+ * same way `requiresTags`/`requiresRating` already are for other platforms.
+ */
+describe('ComposeComponent — media-required platforms (Instagram)', () => {
+  const igConnector: UserConnector = {
+    id: 'conn-ig',
+    serviceDefinitionId: 'Instagram',
+    platform: 'Instagram',
+    displayName: 'My Instagram',
+    configJson: '{}',
+    enabled: true,
+    defaultIncludeTags: true,
+    defaultRating: null,
+  };
+
+  const igDefinition: ServiceDefinition = {
+    id: 'Instagram',
+    name: 'Instagram',
+    enabled: true,
+    configSchema: '{}',
+    secureConfigSchema: null,
+    postOptionsSchema: null,
+    platform: 'Instagram',
+    supportsTitle: false,
+    supportsMedia: true,
+    supportsThreads: false,
+    maxContentLength: 2200,
+    supportsOAuth: true,
+    supportsCookiePairing: false,
+    supportsRating: false,
+    requiresRating: false,
+    supportsTags: false,
+    requiresTags: false,
+    requiresMedia: true,
+    supportsMultipleTargets: false,
+    supportsContentWarning: false,
+    supportsRepost: false,
+    supportsDelete: false,
+  };
+
+  function configure(): ComponentFixture<ComposeComponent> {
+    const media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
+    media.getLimits.and.returnValue(of({ maxUploadSizeBytes: null }));
+
+    const connectors = jasmine.createSpyObj<ConnectorsService>('ConnectorsService', [
+      'list',
+      'listAllDestinations',
+      'checkMedia',
+    ]);
+    connectors.list.and.returnValue(of([igConnector]));
+    connectors.listAllDestinations.and.returnValue(of([]));
+    connectors.checkMedia.and.returnValue(of([]));
+
+    const router = jasmine.createSpyObj<Router>('Router', ['getCurrentNavigation', 'navigate']);
+    router.getCurrentNavigation.and.returnValue(null);
+
+    TestBed.configureTestingModule({
+      imports: [ComposeComponent],
+      providers: [
+        { provide: ConnectorsService, useValue: connectors },
+        {
+          provide: TemplatesService,
+          useValue: jasmine.createSpyObj<TemplatesService>('TemplatesService', { list: of([]) }),
+        },
+        {
+          provide: TagPresetsService,
+          useValue: jasmine.createSpyObj<TagPresetsService>('TagPresetsService', { list: of([]) }),
+        },
+        {
+          provide: TextTemplatesService,
+          useValue: jasmine.createSpyObj<TextTemplatesService>('TextTemplatesService', {
+            list: of([]),
+          }),
+        },
+        {
+          provide: ServicesService,
+          useValue: jasmine.createSpyObj<ServicesService>('ServicesService', {
+            list: of([igDefinition]),
+          }),
+        },
+        {
+          provide: PostsService,
+          useValue: jasmine.createSpyObj<PostsService>('PostsService', [
+            'create',
+            'updateDraft',
+            'publish',
+            'list',
+          ]),
+        },
+        { provide: MediaService, useValue: media },
+        {
+          provide: ToastService,
+          useValue: jasmine.createSpyObj<ToastService>('ToastService', [
+            'success',
+            'error',
+            'warning',
+          ]),
+        },
+        { provide: Router, useValue: router },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ComposeComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleTarget(igConnector.id);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('blocks submission when a media-required target has no media attached', () => {
+    const fixture = configure();
+
+    expect(fixture.componentInstance.mediaRequiredIssues()).toEqual(['My Instagram']);
+    expect(fixture.componentInstance.canSubmit()).toBe(false);
+  });
+
+  it('allows submission once media is attached', () => {
+    const fixture = configure();
+    fixture.componentInstance.mediaItems.set([
+      {
+        ref: { container: 'media', key: 'u/a.png', contentType: 'image/png' },
+        name: 'a.png',
+        alt: '',
+        mimeType: 'image/png',
+        isDefault: true,
+      },
+    ]);
+    fixture.detectChanges();
+
+    expect(fixture.componentInstance.mediaRequiredIssues()).toEqual([]);
   });
 });

@@ -391,6 +391,16 @@ export class ComposeComponent {
       .map((row) => row.target.displayName);
   });
 
+  /** Selected targets whose platform requires at least one media attachment but won't be getting one. */
+  readonly mediaRequiredIssues = computed(() => {
+    const caps = this.capsByPlatform();
+    const hasMedia = this.mediaItems().length > 0;
+    if (hasMedia) return [];
+    return this.selectedConnectors()
+      .filter((t) => caps[t.platform]?.requiresMedia)
+      .map((t) => t.displayName);
+  });
+
   /** Requirements FurAffinity enforces at delivery time, surfaced before the post is queued. */
   readonly furAffinityIssues = computed(() => {
     if (!this.furAffinitySelected()) return [];
@@ -499,6 +509,7 @@ export class ComposeComponent {
       this.ratingRequiredIssues().length === 0 &&
       this.furAffinityIssues().length === 0 &&
       this.tagsRequiredIssues().length === 0 &&
+      this.mediaRequiredIssues().length === 0 &&
       this.automationDelayIssues().length === 0 &&
       Object.keys(this.targetOptionErrors()).length === 0 &&
       !this.submitting() &&
@@ -955,6 +966,10 @@ export class ComposeComponent {
     }
     if (this.tagsRequiredIssues().length) {
       this.toast.warning('Add tags', `Required by ${this.tagsRequiredIssues().join(', ')}`);
+      return;
+    }
+    if (this.mediaRequiredIssues().length) {
+      this.toast.warning('Attach media', `Required by ${this.mediaRequiredIssues().join(', ')}`);
       return;
     }
     if (this.ratingRequiredIssues().length) {

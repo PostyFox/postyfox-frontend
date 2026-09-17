@@ -104,6 +104,8 @@ export interface OperationalSecret {
 export interface Capabilities {
   supportsTitle: boolean;
   supportsMedia: boolean;
+  /** True when a delivery to this platform must include at least one media attachment (Instagram: no text-only posts). */
+  requiresMedia: boolean;
   supportsThreads: boolean;
   /** Max characters the platform accepts, or null for effectively unlimited. */
   maxContentLength: number | null;
