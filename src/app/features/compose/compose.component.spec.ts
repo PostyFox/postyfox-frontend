@@ -67,7 +67,7 @@ describe('ComposeComponent — default media selection', () => {
   let uploadedRefs: MediaRef[];
 
   /** Uploads one file synchronously (the mocked services resolve inline) and flushes the fixture. */
-  function upload(fixture: ComponentFixture<ComposeComponent>, name: string): void {
+  function upload(fixture: ComponentFixture<ComposeComponent>, name: string): Promise<void> {
     const file = new File(['x'], name, { type: 'image/png' });
     const ref: MediaRef = { container: 'media', key: `u/${name}`, contentType: 'image/png' };
     uploadedRefs.push(ref);
@@ -77,10 +77,19 @@ describe('ComposeComponent — default media selection', () => {
     fixture.componentInstance.onFilesSelected({
       target: { files: [file], value: '' },
     } as unknown as Event);
-    fixture.detectChanges();
+    // The pre-flight decodes image dimensions asynchronously before the upload starts.
+    return fixture.whenStable().then(() => fixture.detectChanges());
   }
 
   function configure(prefill?: PostContent): ComponentFixture<ComposeComponent> {
+    // Stub the pixel-dimension decode the upload pre-flight runs (the fake files aren't real images),
+    // so it settles inside the zone and fixture.whenStable() can wait for it.
+    spyOn(window, 'createImageBitmap').and.resolveTo({
+      width: 100,
+      height: 100,
+      close: () => undefined,
+    } as ImageBitmap);
+
     uploadedRefs = [];
     media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
     media.getLimits.and.returnValue(of({ maxUploadSizeBytes: null }));
@@ -155,30 +164,30 @@ describe('ComposeComponent — default media selection', () => {
     return fixture;
   }
 
-  it('flags the first uploaded image as the default', () => {
+  it('flags the first uploaded image as the default', async () => {
     const fixture = configure();
-    upload(fixture, 'a.png');
+    await upload(fixture, 'a.png');
 
     const items = fixture.componentInstance.mediaItems();
     expect(items.length).toBe(1);
     expect(items[0].isDefault).toBeTrue();
   });
 
-  it('does not disturb an existing default when later images are uploaded', () => {
+  it('does not disturb an existing default when later images are uploaded', async () => {
     const fixture = configure();
-    upload(fixture, 'a.png');
-    upload(fixture, 'b.png');
-    upload(fixture, 'c.png');
+    await upload(fixture, 'a.png');
+    await upload(fixture, 'b.png');
+    await upload(fixture, 'c.png');
 
     const items = fixture.componentInstance.mediaItems();
     expect(items.map((i) => i.isDefault)).toEqual([true, false, false]);
   });
 
-  it('lets the user change the default to any attached image at any time', () => {
+  it('lets the user change the default to any attached image at any time', async () => {
     const fixture = configure();
-    upload(fixture, 'a.png');
-    upload(fixture, 'b.png');
-    upload(fixture, 'c.png');
+    await upload(fixture, 'a.png');
+    await upload(fixture, 'b.png');
+    await upload(fixture, 'c.png');
 
     fixture.componentInstance.setDefaultMedia(2);
 
@@ -197,11 +206,11 @@ describe('ComposeComponent — default media selection', () => {
     ]);
   });
 
-  it('promotes the next remaining image when the default is deleted', () => {
+  it('promotes the next remaining image when the default is deleted', async () => {
     const fixture = configure();
-    upload(fixture, 'a.png');
-    upload(fixture, 'b.png');
-    upload(fixture, 'c.png');
+    await upload(fixture, 'a.png');
+    await upload(fixture, 'b.png');
+    await upload(fixture, 'c.png');
     fixture.componentInstance.setDefaultMedia(1); // b.png is default
 
     fixture.componentInstance.removeMedia(1); // delete it
@@ -212,11 +221,11 @@ describe('ComposeComponent — default media selection', () => {
     expect(items.map((i) => i.isDefault)).toEqual([true, false]);
   });
 
-  it('leaves the default untouched when a non-default image is deleted', () => {
+  it('leaves the default untouched when a non-default image is deleted', async () => {
     const fixture = configure();
-    upload(fixture, 'a.png');
-    upload(fixture, 'b.png');
-    upload(fixture, 'c.png');
+    await upload(fixture, 'a.png');
+    await upload(fixture, 'b.png');
+    await upload(fixture, 'c.png');
     fixture.componentInstance.setDefaultMedia(2); // c.png is default
 
     fixture.componentInstance.removeMedia(0); // delete a.png, not the default
@@ -227,15 +236,15 @@ describe('ComposeComponent — default media selection', () => {
     expect(items.map((i) => i.isDefault)).toEqual([false, true]);
   });
 
-  it('leaves no default at all once the last image is removed, and re-defaults cleanly on re-upload', () => {
+  it('leaves no default at all once the last image is removed, and re-defaults cleanly on re-upload', async () => {
     const fixture = configure();
-    upload(fixture, 'a.png');
+    await upload(fixture, 'a.png');
     fixture.componentInstance.removeMedia(0);
     fixture.detectChanges();
 
     expect(fixture.componentInstance.mediaItems()).toEqual([]);
 
-    upload(fixture, 'b.png');
+    await upload(fixture, 'b.png');
     expect(fixture.componentInstance.mediaItems()[0].isDefault).toBeTrue();
   });
 
@@ -297,10 +306,10 @@ describe('ComposeComponent — default media selection', () => {
     return card;
   }
 
-  it('renders a "Default" badge on the default item and a "Set as default" button on the others', () => {
+  it('renders a "Default" badge on the default item and a "Set as default" button on the others', async () => {
     const fixture = configure();
-    upload(fixture, 'a.png');
-    upload(fixture, 'b.png');
+    await upload(fixture, 'a.png');
+    await upload(fixture, 'b.png');
 
     const rows = mediaCard(fixture).querySelectorAll('.border.rounded');
     expect(rows.length).toBe(2);
@@ -321,9 +330,9 @@ describe('ComposeComponent — default media selection', () => {
     expect(rows[1].textContent).not.toContain('Set as default');
   });
 
-  it('shows no "Set as default" control at all with only one image attached', () => {
+  it('shows no "Set as default" control at all with only one image attached', async () => {
     const fixture = configure();
-    upload(fixture, 'a.png');
+    await upload(fixture, 'a.png');
 
     expect(mediaCard(fixture).textContent).not.toContain('Set as default');
   });
@@ -374,6 +383,14 @@ describe('ComposeComponent — client-side upload size cap', () => {
   let media: jasmine.SpyObj<MediaService>;
 
   function configure(maxUploadSizeBytes: number | null): ComponentFixture<ComposeComponent> {
+    // Stub the pixel-dimension decode the upload pre-flight runs (the fake files aren't real images),
+    // so it settles inside the zone and fixture.whenStable() can wait for it.
+    spyOn(window, 'createImageBitmap').and.resolveTo({
+      width: 100,
+      height: 100,
+      close: () => undefined,
+    } as ImageBitmap);
+
     media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
     media.getLimits.and.returnValue(of({ maxUploadSizeBytes }));
 
@@ -440,17 +457,22 @@ describe('ComposeComponent — client-side upload size cap', () => {
     return fixture;
   }
 
-  function select(fixture: ComponentFixture<ComposeComponent>, name: string, size: number): void {
+  function select(
+    fixture: ComponentFixture<ComposeComponent>,
+    name: string,
+    size: number,
+  ): Promise<void> {
     const file = new File([new Uint8Array(size)], name, { type: 'image/png' });
     fixture.componentInstance.onFilesSelected({
       target: { files: [file], value: '' },
     } as unknown as Event);
-    fixture.detectChanges();
+    // The pre-flight decodes image dimensions asynchronously before the upload starts.
+    return fixture.whenStable().then(() => fixture.detectChanges());
   }
 
-  it('rejects an oversized file immediately, without ever calling MediaService.upload', () => {
+  it('rejects an oversized file immediately, without ever calling MediaService.upload', async () => {
     const fixture = configure(1_000_000);
-    select(fixture, 'big.png', 2_000_000);
+    await select(fixture, 'big.png', 2_000_000);
 
     const tasks = fixture.componentInstance.uploadTasks();
     expect(tasks.length).toBe(1);
@@ -459,7 +481,7 @@ describe('ComposeComponent — client-side upload size cap', () => {
     expect(media.upload).not.toHaveBeenCalled();
   });
 
-  it('uploads a file within the cap as normal', () => {
+  it('uploads a file within the cap as normal', async () => {
     const fixture = configure(1_000_000);
     media.upload.and.returnValue(
       of(
@@ -471,14 +493,14 @@ describe('ComposeComponent — client-side upload size cap', () => {
       ),
     );
 
-    select(fixture, 'ok.png', 500_000);
+    await select(fixture, 'ok.png', 500_000);
 
     expect(media.upload).toHaveBeenCalled();
     expect(fixture.componentInstance.uploadTasks().length).toBe(0);
     expect(fixture.componentInstance.mediaItems().length).toBe(1);
   });
 
-  it('applies no cap at all when the endpoint reports none configured', () => {
+  it('applies no cap at all when the endpoint reports none configured', async () => {
     const fixture = configure(null);
     media.upload.and.returnValue(
       of(
@@ -490,14 +512,14 @@ describe('ComposeComponent — client-side upload size cap', () => {
       ),
     );
 
-    select(fixture, 'huge.png', 500_000_000);
+    await select(fixture, 'huge.png', 500_000_000);
 
     expect(media.upload).toHaveBeenCalled();
   });
 
-  it('retrying an oversized file re-applies the cap rather than forcing the upload through', () => {
+  it('retrying an oversized file re-applies the cap rather than forcing the upload through', async () => {
     const fixture = configure(1_000_000);
-    select(fixture, 'big.png', 2_000_000);
+    await select(fixture, 'big.png', 2_000_000);
 
     const id = fixture.componentInstance.uploadTasks()[0].id;
     fixture.componentInstance.retryUpload(id);
