@@ -344,19 +344,32 @@ export interface ConnectorLimits {
   imageSizeLimit: number | null;
   /** Max video file size in bytes; null = no reported cap. */
   videoSizeLimit: number | null;
+  /** Max image pixel dimensions; null = no reported cap. A file within imageSizeLimit can still exceed these and get resized regardless. */
+  imageMaxWidth: number | null;
+  imageMaxHeight: number | null;
+  /** Max video pixel dimensions; null = no reported cap. */
+  videoMaxWidth: number | null;
+  videoMaxHeight: number | null;
 }
 
-/** Request body for `POST /api/connectors/media-check`. */
+/**
+ * Request body for `POST /api/connectors/media-check`. `width`/`height` are the file's decoded
+ * pixel dimensions (image only) — omit them for a non-image file, or one the client couldn't decode;
+ * without them, a small but high-resolution image that trips a platform's dimension cap rather than
+ * its byte cap would silently pass this check yet still get resized at delivery.
+ */
 export interface MediaCheckRequest {
   connectorIds: string[];
   fileSize: number;
   mimeType: string;
+  width?: number | null;
+  height?: number | null;
 }
 
 /**
  * Per-connector result from `POST /api/connectors/media-check`.
- * `willResize` is true when the file exceeds the connector's size cap and will be
- * automatically resized/transcoded before delivery. Needs only the file's size and MIME type
+ * `willResize` is true when the file exceeds the connector's size OR dimension cap and will be
+ * automatically resized/transcoded before delivery. Needs only the file's size/type/dimensions
  * (not its bytes), so it's cheap to call the moment a file is selected, ahead of the upload itself.
  */
 export interface MediaCheckResultItem {
@@ -368,6 +381,10 @@ export interface MediaCheckResultItem {
   videoSizeLimit: number | null;
   /** The platform's cap on attachments per post; null means no reported cap. */
   maxMediaAttachments: number | null;
+  imageMaxWidth: number | null;
+  imageMaxHeight: number | null;
+  videoMaxWidth: number | null;
+  videoMaxHeight: number | null;
 }
 
 // ---------------------------------------------------------------------------

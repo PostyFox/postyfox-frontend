@@ -2,7 +2,7 @@ import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { forkJoin, from, of, switchMap, type Observable } from 'rxjs';
 import {
   AutomationAction,
   AutomationRequest,
@@ -735,32 +735,63 @@ export class ComposeComponent {
   }
 
   /**
-   * Checks the file against every enabled connector's size caps before uploading it. This needs
-   * only the file's size and MIME type, not its bytes, so it's a small, fast request that surfaces
-   * resize warnings well ahead of the (potentially slow) upload — instead of after it, as before.
+   * Checks the file against every enabled connector's size AND dimension caps before uploading it.
+   * A small, high-resolution image can sail under a platform's byte cap yet still exceed its max
+   * width/height and get silently resized at delivery, so the file's pixel dimensions (decoded
+   * locally, never uploaded) are read first for image files. This is still a small, fast request —
+   * no bytes are sent to the server beyond the decoded numbers — so it surfaces resize warnings well
+   * ahead of the (potentially slow) upload itself, instead of after it.
    */
   private runPreflightThenUpload(task: UploadTask): void {
     const connectorIds = this.enabledConnectors().map((c) => c.id);
-    const checked$ = connectorIds.length
-      ? this.connectors.checkMedia({
-          connectorIds,
-          fileSize: task.file.size,
-          mimeType: task.file.type,
-        })
-      : of<MediaCheckResultItem[]>([]);
+    if (connectorIds.length === 0) {
+      this.beginTransfer(task, []);
+      return;
+    }
 
-    checked$.subscribe({
-      next: (checks) => {
-        this.mediaLimitsByConnector.update((all) => {
-          const next = { ...all };
-          for (const c of checks) next[c.connectorId] = c;
-          return next;
-        });
-        this.beginTransfer(task, checks);
-      },
-      // Best-effort: a failed pre-flight check shouldn't block the upload itself.
-      error: () => this.beginTransfer(task, []),
-    });
+    this.imageDimensions$(task.file)
+      .pipe(
+        switchMap((dimensions) =>
+          this.connectors.checkMedia({
+            connectorIds,
+            fileSize: task.file.size,
+            mimeType: task.file.type,
+            width: dimensions?.width ?? null,
+            height: dimensions?.height ?? null,
+          }),
+        ),
+      )
+      .subscribe({
+        next: (checks) => {
+          this.mediaLimitsByConnector.update((all) => {
+            const next = { ...all };
+            for (const c of checks) next[c.connectorId] = c;
+            return next;
+          });
+          this.beginTransfer(task, checks);
+        },
+        // Best-effort: a failed pre-flight check shouldn't block the upload itself.
+        error: () => this.beginTransfer(task, []),
+      });
+  }
+
+  /**
+   * Decodes an image file's pixel dimensions client-side (the bytes never leave the browser for
+   * this) so the pre-flight check can catch a platform's dimension cap, not just its byte-size cap.
+   * Resolves to `null` for a non-image file, or one that fails to decode (corrupt file, unsupported
+   * format) — the byte-size check still runs either way.
+   */
+  private imageDimensions$(file: File): Observable<{ width: number; height: number } | null> {
+    if (!file.type.startsWith('image/')) return of(null);
+    return from(
+      createImageBitmap(file)
+        .then((bitmap) => {
+          const dimensions = { width: bitmap.width, height: bitmap.height };
+          bitmap.close();
+          return dimensions;
+        })
+        .catch(() => null),
+    );
   }
 
   private beginTransfer(task: UploadTask, resizeChecks: MediaCheckResultItem[]): void {
