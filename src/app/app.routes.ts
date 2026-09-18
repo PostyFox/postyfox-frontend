@@ -84,6 +84,12 @@ export const routes: Routes = [
           import('./features/admin/admin.component').then((m) => m.AdminComponent),
       },
       {
+        path: 'settings',
+        title: 'Settings · PostyFox',
+        loadComponent: () =>
+          import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+      },
+      {
         // NB: kept off the `/api` prefix so it doesn't collide with the API path routed by the edge.
         path: 'keys',
         title: 'API keys · PostyFox',

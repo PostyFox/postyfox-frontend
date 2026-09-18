@@ -1,0 +1,24 @@
+<app-page-header title="Settings" subtitle="Preferences that apply to your account">
+</app-page-header>
+
+<div class="card">
+  <div class="card-body">
+    <div class="form-check form-switch">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        role="switch"
+        id="includeAdvertisingLine"
+        [ngModel]="includeAdvertisingLine()"
+        (ngModelChange)="setIncludeAdvertisingLine($event)"
+        [disabled]="loading() || saving()"
+      />
+      <label class="form-check-label" for="includeAdvertisingLine">
+        Include advertising line
+      </label>
+    </div>
+    <p class="text-muted-2 small mb-0 mt-2">
+      Adds a “Sent using PostyFox” link to postyfox.com at the end of every post you send.
+    </p>
+  </div>
+</div>

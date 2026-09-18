@@ -65,6 +65,10 @@ export enum AutomationStatus {
 // Profile / API keys
 // ---------------------------------------------------------------------------
 
+export interface UserSettings {
+  includeAdvertisingLine: boolean;
+}
+
 export interface ApiKey {
   id: string;
   prefix: string;
