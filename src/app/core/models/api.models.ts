@@ -104,6 +104,13 @@ export interface OperationalSecret {
 // Services catalogue + connectors
 // ---------------------------------------------------------------------------
 
+/** A risk to show the user before they connect a platform; the link is shown only when both `href` and `linkText` are set. */
+export interface ConnectorWarning {
+  text: string;
+  href: string | null;
+  linkText: string | null;
+}
+
 /** Capabilities a platform supports (surfaced by the connector's Describe() in core). */
 export interface Capabilities {
   supportsTitle: boolean;
@@ -112,6 +119,8 @@ export interface Capabilities {
   requiresMedia: boolean;
   /** True when a post with no media is delivered as text-only (FurAffinity journals), exempt from required tags and rating. */
   supportsTextOnly: boolean;
+  /** Risk to show before connecting (e.g. the site's terms may not allow automated posting), or null. */
+  warning: ConnectorWarning | null;
   supportsThreads: boolean;
   /** Max characters the platform accepts, or null for effectively unlimited. */
   maxContentLength: number | null;
