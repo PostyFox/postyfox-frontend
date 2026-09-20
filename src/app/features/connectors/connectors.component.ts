@@ -9,6 +9,7 @@ import {
   ContentRating,
   ServiceDefinition,
   TelegramLoginStep,
+  ConnectorWarning,
   UserConnector,
 } from '../../core/models/api.models';
 import {
@@ -153,6 +154,10 @@ export class ConnectorsComponent {
 
   supportsOAuth(platform: string): boolean {
     return this.capsByPlatform()[platform]?.supportsOAuth ?? false;
+  }
+
+  warning(platform: string): ConnectorWarning | null {
+    return this.capsByPlatform()[platform]?.warning ?? null;
   }
 
   supportsCookiePairing(platform: string): boolean {

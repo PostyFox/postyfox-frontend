@@ -137,6 +137,14 @@ const BRANDS: Record<string, PlatformBrand> = {
       text: 'Sign in to FurAffinity',
     },
   },
+  X: {
+    label: 'X',
+    icon: 'bi-twitter-x',
+    color: '#14171a',
+    blurb: 'Publish text and image posts to your X (Twitter) account.',
+    setup:
+      'Sign in through PostyFox Connect so your X password never passes through this page. Posts are limited to 280 characters and up to four images.',
+  },
   Instagram: {
     label: 'Instagram',
     icon: 'bi-instagram',
@@ -253,6 +261,7 @@ export function capabilitiesByPlatform(defs: ServiceDefinition[]): Record<string
       requiresTags: d.requiresTags,
       requiresMedia: d.requiresMedia,
       supportsTextOnly: d.supportsTextOnly,
+      warning: d.warning ?? null,
       supportsMultipleTargets: d.supportsMultipleTargets,
       supportsContentWarning: d.supportsContentWarning,
       supportsRepost: d.supportsRepost,
