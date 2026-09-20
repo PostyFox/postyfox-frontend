@@ -1,5 +1,5 @@
 import { ServiceDefinition } from './api.models';
-import { capabilitiesByPlatform } from './platforms';
+import { brandFor, capabilitiesByPlatform } from './platforms';
 
 describe('capabilitiesByPlatform', () => {
   const definition = (platform: string, warning: ServiceDefinition['warning']): ServiceDefinition =>
@@ -22,5 +22,22 @@ describe('capabilitiesByPlatform', () => {
     const caps = capabilitiesByPlatform([definition('Tumblr', undefined as never)]);
 
     expect(caps['Tumblr'].warning).toBeNull();
+  });
+});
+
+describe('brandFor', () => {
+  it('brands the cookie-paired platforms with their display names', () => {
+    expect(brandFor('Kofi').label).toBe('Ko-fi');
+    expect(brandFor('Toyhouse').label).toBe('Toyhouse');
+  });
+
+  it('points cookie-paired platforms at PostyFox Connect', () => {
+    expect(brandFor('Kofi').setup).toContain('PostyFox Connect');
+    expect(brandFor('Toyhouse').setup).toContain('PostyFox Connect');
+  });
+
+  it('falls back to the platform id for unknown platforms', () => {
+    expect(brandFor('Nope').label).toBe('Nope');
+    expect(brandFor(null).label).toBe('Connector');
   });
 });
