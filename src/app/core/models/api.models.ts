@@ -110,6 +110,8 @@ export interface Capabilities {
   supportsMedia: boolean;
   /** True when a delivery to this platform must include at least one media attachment (Instagram: no text-only posts). */
   requiresMedia: boolean;
+  /** True when a post with no media is delivered as text-only (FurAffinity journals), exempt from required tags and rating. */
+  supportsTextOnly: boolean;
   supportsThreads: boolean;
   /** Max characters the platform accepts, or null for effectively unlimited. */
   maxContentLength: number | null;
