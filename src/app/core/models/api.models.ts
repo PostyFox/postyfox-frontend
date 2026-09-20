@@ -100,6 +100,12 @@ export interface OperationalSecret {
   configured: boolean;
 }
 
+export interface PairedUserAgentSetting {
+  platform: string;
+  name: string;
+  usePairedUserAgent: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Services catalogue + connectors
 // ---------------------------------------------------------------------------

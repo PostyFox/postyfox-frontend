@@ -85,3 +85,31 @@
     }
   </div>
 }
+
+@if (userAgents().length) {
+  <div class="card mt-4">
+    <div class="card-body">
+      <h5 class="card-title mb-1">Connector User-Agent</h5>
+      <div class="small text-muted-2 mb-3">
+        Sites paired with PostyFox Connect. "Browser" replays the User-Agent of the browser that
+        paired the session, which sites that bind a Cloudflare clearance to it need. "PostyFox
+        default" always sends PostyFox's own. Applies to existing sessions immediately.
+      </div>
+      @for (setting of userAgents(); track setting.platform) {
+        <div class="d-flex align-items-center justify-content-between gap-3 border-top py-3">
+          <label class="form-label mb-0" [for]="'ua-' + setting.platform">{{ setting.name }}</label>
+          <select
+            class="form-select w-auto"
+            [id]="'ua-' + setting.platform"
+            [ngModel]="setting.usePairedUserAgent"
+            (ngModelChange)="setUserAgent(setting, $event)"
+            [disabled]="saving() === setting.platform"
+          >
+            <option [ngValue]="true">Browser that paired</option>
+            <option [ngValue]="false">PostyFox default</option>
+          </select>
+        </div>
+      }
+    </div>
+  </div>
+}
