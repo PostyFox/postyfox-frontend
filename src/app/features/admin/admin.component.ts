@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { OperationalSecret } from '../../core/models/api.models';
+import { OperationalSecret, PairedUserAgentSetting } from '../../core/models/api.models';
 import { AdminService } from '../../core/services/admin.service';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -22,6 +22,7 @@ export class AdminComponent {
   private confirm = inject(ConfirmService);
 
   readonly secrets = signal<OperationalSecret[]>([]);
+  readonly userAgents = signal<PairedUserAgentSetting[]>([]);
   readonly values = signal<Record<string, string>>({});
   readonly loading = signal(true);
   readonly saving = signal<string | null>(null);
@@ -35,6 +36,7 @@ export class AdminComponent {
 
   constructor() {
     this.load();
+    this.loadUserAgents();
   }
 
   load(): void {
@@ -47,6 +49,30 @@ export class AdminComponent {
       error: () => {
         this.toast.error('Could not load operational secrets');
         this.loading.set(false);
+      },
+    });
+  }
+
+  loadUserAgents(): void {
+    this.admin.listPairedUserAgents().subscribe({
+      next: (settings) => this.userAgents.set(settings),
+      error: () => this.toast.error('Could not load User-Agent settings'),
+    });
+  }
+
+  setUserAgent(setting: PairedUserAgentSetting, usePairedUserAgent: boolean): void {
+    this.saving.set(setting.platform);
+    this.admin.setPairedUserAgent(setting.platform, usePairedUserAgent).subscribe({
+      next: (updated) => {
+        this.userAgents.update((all) =>
+          all.map((s) => (s.platform === updated.platform ? updated : s)),
+        );
+        this.saving.set(null);
+        this.toast.success(`${updated.name} saved`);
+      },
+      error: () => {
+        this.saving.set(null);
+        this.toast.error(`Could not save ${setting.name}`);
       },
     });
   }
