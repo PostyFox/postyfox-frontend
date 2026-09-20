@@ -129,7 +129,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     label: 'FurAffinity',
     icon: 'bi-palette-fill',
     color: '#2e3b4f',
-    blurb: 'Publish gallery submissions to your FurAffinity account.',
+    blurb: 'Publish gallery submissions and journals to your FurAffinity account.',
     setup:
       'Sign in through PostyFox Connect so your FurAffinity password and session cookies never pass through this page.',
     docs: {
@@ -252,6 +252,7 @@ export function capabilitiesByPlatform(defs: ServiceDefinition[]): Record<string
       supportsTags: d.supportsTags,
       requiresTags: d.requiresTags,
       requiresMedia: d.requiresMedia,
+      supportsTextOnly: d.supportsTextOnly,
       supportsMultipleTargets: d.supportsMultipleTargets,
       supportsContentWarning: d.supportsContentWarning,
       supportsRepost: d.supportsRepost,

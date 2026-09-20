@@ -6,6 +6,7 @@ import { forkJoin, from, of, switchMap, type Observable } from 'rxjs';
 import {
   AutomationAction,
   AutomationRequest,
+  Capabilities,
   CreatePostRequest,
   ConnectorDestinationSummary,
   ContentRating,
@@ -284,10 +285,19 @@ export class ComposeComponent {
       .filter((t) => caps[t.platform]?.supportsRating)
       .map((target) => ({
         target,
-        required: caps[target.platform]?.requiresRating ?? false,
+        required: this.requires(caps[target.platform], 'requiresRating'),
         rating: this.ratingFor(target),
       }));
   });
+
+  /** A required tags/rating flag, waived for a text-only post on a platform that supports one. */
+  private requires(
+    caps: Capabilities | undefined,
+    flag: 'requiresRating' | 'requiresTags',
+  ): boolean {
+    if (!caps?.[flag]) return false;
+    return this.mediaItems().length > 0 || !caps.supportsTextOnly;
+  }
 
   /** Selected targets whose platform requires a rating but won't be getting one. */
   readonly ratingRequiredIssues = computed(() =>
@@ -370,7 +380,7 @@ export class ComposeComponent {
     return this.selectedConnectors().map((target) => {
       const c = caps[target.platform];
       const supportsTags = c?.supportsTags ?? true;
-      const requiresTags = c?.requiresTags ?? false;
+      const requiresTags = this.requires(c, 'requiresTags');
       const includeTags = requiresTags || this.includeTagsFor(target);
       let preview: { included: string[]; omitted: number } | null = null;
       if (!supportsTags && includeTags && tags.length > 0) {
@@ -412,9 +422,8 @@ export class ComposeComponent {
     // FurAffinity target, so it isn't duplicated here.
 
     const media = this.mediaItems();
-    if (media.length === 0) {
-      issues.push('Attach an image.');
-    } else {
+    // With no image FurAffinity posts a journal, which takes only a title and text.
+    if (media.length > 0) {
       // FurAffinity's gallery form takes exactly one file. When several are attached (for platforms
       // that support multiple images), it uses the author's chosen default image and drops the rest.
       const item = media.find((m) => m.isDefault) ?? media[0];
@@ -429,13 +438,13 @@ export class ComposeComponent {
       ) {
         issues.push('Keep the default animated GIF at or below 10 MiB.');
       }
-    }
 
-    const validTags = this.tags()
-      .split(',')
-      .map((tag) => tag.trim().replace(/\s+/g, '_'))
-      .filter((tag) => tag.length >= 3);
-    if (validTags.length < 3) issues.push('Add at least three tags of three or more characters.');
+      const validTags = this.tags()
+        .split(',')
+        .map((tag) => tag.trim().replace(/\s+/g, '_'))
+        .filter((tag) => tag.length >= 3);
+      if (validTags.length < 3) issues.push('Add at least three tags of three or more characters.');
+    }
     return issues;
   });
 

@@ -55,6 +55,7 @@ describe('ComposeComponent — default media selection', () => {
     supportsTags: false,
     requiresTags: false,
     requiresMedia: false,
+    supportsTextOnly: false,
     supportsMultipleTargets: false,
     supportsContentWarning: true,
     supportsRepost: true,
@@ -374,6 +375,7 @@ describe('ComposeComponent — client-side upload size cap', () => {
     supportsTags: false,
     requiresTags: false,
     requiresMedia: false,
+    supportsTextOnly: false,
     supportsMultipleTargets: false,
     supportsContentWarning: true,
     supportsRepost: true,
@@ -566,6 +568,7 @@ describe('ComposeComponent — media-required platforms (Instagram)', () => {
     supportsTags: false,
     requiresTags: false,
     requiresMedia: true,
+    supportsTextOnly: false,
     supportsMultipleTargets: false,
     supportsContentWarning: false,
     supportsRepost: false,
@@ -662,5 +665,144 @@ describe('ComposeComponent — media-required platforms (Instagram)', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.mediaRequiredIssues()).toEqual([]);
+  });
+});
+
+/** FurAffinity posts a journal when no image is attached: no tags, rating or image required. */
+describe('ComposeComponent — text-only posts (FurAffinity journals)', () => {
+  const faConnector: UserConnector = {
+    id: 'conn-fa',
+    serviceDefinitionId: 'FurAffinity',
+    platform: 'FurAffinity',
+    displayName: 'My FA',
+    configJson: '{}',
+    enabled: true,
+    defaultIncludeTags: true,
+    defaultRating: null,
+  };
+
+  const faDefinition: ServiceDefinition = {
+    id: 'FurAffinity',
+    name: 'FurAffinity',
+    enabled: true,
+    configSchema: '{}',
+    secureConfigSchema: null,
+    postOptionsSchema: null,
+    platform: 'FurAffinity',
+    supportsTitle: true,
+    supportsMedia: true,
+    supportsThreads: false,
+    maxContentLength: null,
+    supportsOAuth: false,
+    supportsCookiePairing: true,
+    supportsRating: true,
+    requiresRating: true,
+    supportsTags: true,
+    requiresTags: true,
+    requiresMedia: false,
+    supportsTextOnly: true,
+    supportsMultipleTargets: false,
+    supportsContentWarning: false,
+    supportsRepost: false,
+    supportsDelete: false,
+  };
+
+  function configure(): ComponentFixture<ComposeComponent> {
+    const media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
+    media.getLimits.and.returnValue(of({ maxUploadSizeBytes: null }));
+    const connectors = jasmine.createSpyObj<ConnectorsService>('ConnectorsService', [
+      'list',
+      'listAllDestinations',
+      'checkMedia',
+    ]);
+    connectors.list.and.returnValue(of([faConnector]));
+    connectors.listAllDestinations.and.returnValue(of([]));
+    connectors.checkMedia.and.returnValue(of([]));
+    const router = jasmine.createSpyObj<Router>('Router', ['getCurrentNavigation', 'navigate']);
+    router.getCurrentNavigation.and.returnValue(null);
+
+    TestBed.configureTestingModule({
+      imports: [ComposeComponent],
+      providers: [
+        { provide: ConnectorsService, useValue: connectors },
+        {
+          provide: TemplatesService,
+          useValue: jasmine.createSpyObj<TemplatesService>('TemplatesService', { list: of([]) }),
+        },
+        {
+          provide: TagPresetsService,
+          useValue: jasmine.createSpyObj<TagPresetsService>('TagPresetsService', { list: of([]) }),
+        },
+        {
+          provide: TextTemplatesService,
+          useValue: jasmine.createSpyObj<TextTemplatesService>('TextTemplatesService', {
+            list: of([]),
+          }),
+        },
+        {
+          provide: ServicesService,
+          useValue: jasmine.createSpyObj<ServicesService>('ServicesService', {
+            list: of([faDefinition]),
+          }),
+        },
+        {
+          provide: PostsService,
+          useValue: jasmine.createSpyObj<PostsService>('PostsService', [
+            'create',
+            'updateDraft',
+            'publish',
+            'list',
+          ]),
+        },
+        { provide: MediaService, useValue: media },
+        {
+          provide: ToastService,
+          useValue: jasmine.createSpyObj<ToastService>('ToastService', [
+            'success',
+            'error',
+            'warning',
+          ]),
+        },
+        { provide: Router, useValue: router },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ComposeComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleTarget(faConnector.id);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('waives tags, rating and image for a post with no media, keeping the title check', () => {
+    const cmp = configure().componentInstance;
+
+    expect(cmp.tagsRequiredIssues()).toEqual([]);
+    expect(cmp.ratingRequiredIssues()).toEqual([]);
+    expect(cmp.furAffinityIssues()).toEqual(['Add a title.']);
+
+    cmp.title.set('News');
+    expect(cmp.furAffinityIssues()).toEqual([]);
+  });
+
+  it('requires tags, rating and the image checks once media is attached', () => {
+    const cmp = configure().componentInstance;
+    cmp.title.set('Art');
+    cmp.mediaItems.set([
+      {
+        ref: { container: 'media', key: 'u/a.webp', contentType: 'image/webp' },
+        name: 'a.webp',
+        alt: '',
+        mimeType: 'image/webp',
+        isDefault: true,
+      },
+    ]);
+
+    expect(cmp.tagsRequiredIssues()).toEqual(['My FA']);
+    expect(cmp.ratingRequiredIssues()).toEqual(['My FA']);
+    expect(cmp.furAffinityIssues()).toEqual([
+      'Use a JPEG, PNG, or GIF image for the default image.',
+      'Add at least three tags of three or more characters.',
+    ]);
   });
 });
