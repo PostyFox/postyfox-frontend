@@ -145,6 +145,30 @@ const BRANDS: Record<string, PlatformBrand> = {
     setup:
       'Sign in through PostyFox Connect so your X password never passes through this page. Posts are limited to 280 characters and up to four images.',
   },
+  Toyhouse: {
+    label: 'Toyhouse',
+    icon: 'bi-house-heart-fill',
+    color: '#5b8def',
+    blurb: 'Upload images to your Toyhouse characters.',
+    setup:
+      'Sign in through PostyFox Connect so your Toyhouse password and session cookies never pass through this page.',
+    docs: {
+      href: 'https://toyhou.se/~account/login',
+      text: 'Sign in to Toyhouse',
+    },
+  },
+  Kofi: {
+    label: 'Ko-fi',
+    icon: 'bi-cup-hot-fill',
+    color: '#FF5E5B',
+    blurb: 'Publish text posts and image gallery posts to your Ko-fi page.',
+    setup:
+      'Sign in through PostyFox Connect so your Ko-fi password and session cookies never pass through this page. Every post needs a title.',
+    docs: {
+      href: 'https://ko-fi.com/account/login',
+      text: 'Sign in to Ko-fi',
+    },
+  },
   Instagram: {
     label: 'Instagram',
     icon: 'bi-instagram',
