@@ -61,6 +61,13 @@ export enum AutomationStatus {
   Cancelled = 3,
 }
 
+/** Lifecycle of an account-delegation invite (issue #409). */
+export enum InviteStatus {
+  Pending = 0,
+  Accepted = 1,
+  Revoked = 2,
+}
+
 // ---------------------------------------------------------------------------
 // Profile / API keys
 // ---------------------------------------------------------------------------
@@ -86,6 +93,44 @@ export interface ApiKeyCreated {
 
 export interface CreateKeyRequest {
   name?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Account delegation (issue #409: invite other users to manage your account)
+// ---------------------------------------------------------------------------
+
+/** An invite the current user sent, or one addressed to them awaiting acceptance. */
+export interface AccountInvite {
+  id: string;
+  ownerEmail: string;
+  inviteeEmail: string;
+  status: InviteStatus;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt: string | null;
+  isExpired: boolean;
+}
+
+/** An account the current user can act as: themselves, or an owner who's granted them access. */
+export interface AccountAccess {
+  userId: string;
+  email: string | null;
+  isSelf: boolean;
+}
+
+/** A member with delegated access to the current user's (owner's) account. */
+export interface AccountMember {
+  memberUserId: string;
+  memberEmail: string;
+  createdAt: string;
+}
+
+export interface CreateInviteRequest {
+  email: string;
+}
+
+export interface AcceptInviteRequest {
+  token: string;
 }
 
 export interface AdminAccess {
