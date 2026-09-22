@@ -96,6 +96,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/api-keys/api-keys.component').then((m) => m.ApiKeysComponent),
       },
+      {
+        // Also the emailed invite link's landing page (?token=...), see AccessComponent.
+        path: 'access',
+        title: 'Manage access · PostyFox',
+        loadComponent: () =>
+          import('./features/access/access.component').then((m) => m.AccessComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
