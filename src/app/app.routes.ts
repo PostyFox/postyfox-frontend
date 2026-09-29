@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { adminGuard } from './core/guards/admin.guard';
+import { termsGuard } from './core/guards/terms.guard';
 import { MainLayoutComponent } from './layout/main-layout/main-layout.component';
 
 export const routes: Routes = [
@@ -14,9 +15,16 @@ export const routes: Routes = [
       ),
   },
   {
+    // Outside the layout so it stays reachable while the API refuses everything else (issue #417).
+    path: 'terms',
+    title: 'Terms of Service · PostyFox',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/terms/terms.component').then((m) => m.TermsComponent),
+  },
+  {
     path: '',
     component: MainLayoutComponent,
-    canActivate: [authGuard],
+    canActivate: [authGuard, termsGuard],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {

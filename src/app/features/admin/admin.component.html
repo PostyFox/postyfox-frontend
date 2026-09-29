@@ -113,3 +113,80 @@
     </div>
   </div>
 }
+
+<div class="card mt-4">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-1">
+      <h5 class="card-title mb-0">Terms of service</h5>
+      @if (termsPublished()) {
+        <span class="badge bg-label-success">In force</span>
+      } @else {
+        <span class="badge bg-label-secondary">Off</span>
+      }
+    </div>
+    <div class="small text-muted-2 mb-3">
+      Markdown. Users must accept the terms before using PostyFox, through the site or the API.
+      Publishing any change asks every user to accept again.
+    </div>
+    <ul class="nav nav-tabs mb-2">
+      <li class="nav-item">
+        <button
+          type="button"
+          class="nav-link"
+          [class.active]="!termsPreview()"
+          (click)="termsPreview.set(false)"
+        >
+          Edit
+        </button>
+      </li>
+      <li class="nav-item">
+        <button
+          type="button"
+          class="nav-link"
+          [class.active]="termsPreview()"
+          (click)="termsPreview.set(true)"
+        >
+          Preview
+        </button>
+      </li>
+    </ul>
+    @if (termsPreview()) {
+      <div class="border rounded p-3 mb-3">
+        <markdown [data]="termsContent()"></markdown>
+      </div>
+    } @else {
+      <textarea
+        class="form-control font-monospace mb-3"
+        rows="14"
+        aria-label="Terms of service"
+        [ngModel]="termsContent()"
+        (ngModelChange)="termsContent.set($event)"
+        [disabled]="saving() === 'terms'"
+      ></textarea>
+    }
+    <div class="d-flex gap-2">
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="publishTerms()"
+        [disabled]="!termsContent().trim() || saving() === 'terms'"
+      >
+        @if (saving() === 'terms') {
+          <span class="spinner-border spinner-border-sm"></span>
+        } @else {
+          Publish
+        }
+      </button>
+      @if (termsPublished()) {
+        <button
+          type="button"
+          class="btn btn-outline-danger"
+          (click)="publishTerms(true)"
+          [disabled]="saving() === 'terms'"
+        >
+          Turn off
+        </button>
+      }
+    </div>
+  </div>
+</div>

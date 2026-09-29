@@ -151,6 +151,22 @@ export interface PairedUserAgentSetting {
   usePairedUserAgent: boolean;
 }
 
+/** One published terms of service version (issue #417). */
+export interface TermsOfService {
+  version: number;
+  /** Markdown. */
+  content: string;
+  publishedAt: string;
+}
+
+export interface TermsStatus {
+  /** null when no terms are in force. */
+  current: TermsOfService | null;
+  accepted: boolean;
+  /** Acceptance by the account being acted as; equals `accepted` when acting as yourself. */
+  ownerAccepted: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Services catalogue + connectors
 // ---------------------------------------------------------------------------
