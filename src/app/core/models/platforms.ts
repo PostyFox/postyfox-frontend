@@ -1,4 +1,5 @@
 import { Capabilities, ContentRating, ServiceDefinition, UserConnector } from './api.models';
+import { darkThemeActive } from './theme';
 
 /** Human labels for {@link ContentRating}, shared by the connector settings and compose forms. */
 export const contentRatingOptions: { value: ContentRating; label: string }[] = [
@@ -85,8 +86,10 @@ export interface PlatformBrand {
   label: string;
   /** bootstrap-icon class. */
   icon: string;
-  /** Brand colour (hex). */
+  /** Brand colour (hex); `brandFor` resolves it for the active theme. */
   color: string;
+  /** Lighter stand-in for dark mode, for brands too dark to read on a dark surface (issue #422). */
+  darkColor?: string;
   blurb?: string;
   /** Extra setup guidance shown in the connector editor. */
   setup?: string;
@@ -122,6 +125,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     label: 'Tumblr',
     icon: 'bi-postcard-fill',
     color: '#36465D',
+    darkColor: '#8a9bb8',
     blurb: 'Post to a Tumblr blog.',
     setup: 'Provide OAuth tokens obtained from authorising the Tumblr application.',
   },
@@ -129,6 +133,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     label: 'FurAffinity',
     icon: 'bi-palette-fill',
     color: '#2e3b4f',
+    darkColor: '#8fa3c2',
     blurb: 'Publish gallery submissions and journals to your FurAffinity account.',
     setup:
       'Sign in through PostyFox Connect so your FurAffinity password and session cookies never pass through this page.',
@@ -141,6 +146,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     label: 'X',
     icon: 'bi-twitter-x',
     color: '#14171a',
+    darkColor: '#e7e9ea',
     blurb: 'Publish text and image posts to your X (Twitter) account.',
     setup:
       'Sign in through PostyFox Connect so your X password never passes through this page. Posts are limited to 280 characters and up to four images.',
@@ -182,8 +188,11 @@ const BRANDS: Record<string, PlatformBrand> = {
 const FALLBACK: PlatformBrand = { label: '', icon: 'bi-plug', color: '#8c57ff' };
 
 export function brandFor(platform: string | null | undefined): PlatformBrand {
-  if (platform && BRANDS[platform]) return BRANDS[platform];
-  return { ...FALLBACK, label: platform || 'Connector' };
+  const brand =
+    platform && BRANDS[platform]
+      ? BRANDS[platform]
+      : { ...FALLBACK, label: platform || 'Connector' };
+  return darkThemeActive() && brand.darkColor ? { ...brand, color: brand.darkColor } : brand;
 }
 
 /**

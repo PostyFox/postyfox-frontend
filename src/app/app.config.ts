@@ -14,6 +14,7 @@ import { AccountService } from './core/services/account.service';
 import { AuthService } from './core/services/auth.service';
 import { DeploymentConfigService } from './core/services/deployment-config.service';
 import { TermsService } from './core/services/terms.service';
+import { ThemeService } from './core/services/theme.service';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -38,5 +39,9 @@ export const appConfig: ApplicationConfig = {
     ),
     // Terms of service status (issue #417), so termsGuard can redirect before first render.
     provideAppInitializer(() => firstValueFrom(inject(TermsService).load()).catch(() => undefined)),
+    // Colour theme (issue #422): start tracking the user's choice / OS preference on every page.
+    provideAppInitializer(() => {
+      inject(ThemeService);
+    }),
   ],
 };

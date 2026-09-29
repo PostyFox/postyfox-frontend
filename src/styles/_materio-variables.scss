@@ -66,7 +66,8 @@ $card-border-radius: 0.625rem;
 $card-spacer-y: 1.5rem;
 $card-spacer-x: 1.5rem;
 $card-cap-bg: transparent;
-$card-bg: $white;
+// Theme-aware surface (white / Materio dark paper), defined in _materio-theme.scss.
+$card-bg: var(--pf-surface);
 
 // Components
 $border-color: #e6e6e8;
@@ -84,6 +85,20 @@ $btn-box-shadow: none;
 // Tables
 $table-cell-padding-y: 0.75rem;
 $table-cell-padding-x: 1.25rem;
+
+// Dark mode (issue #422): Materio's dark palette, applied via Bootstrap 5.3 colour modes
+// (`data-bs-theme="dark"` on <html>, set by ThemeService).
+$pf-dark-text: #e7e3fc;
+$body-bg-dark: #28243d;
+$body-color-dark: #d5d1ea;
+$body-emphasis-color-dark: $pf-dark-text;
+$body-secondary-color-dark: rgba($pf-dark-text, 0.7);
+$body-secondary-bg-dark: #3b3656;
+$body-tertiary-color-dark: rgba($pf-dark-text, 0.5);
+$body-tertiary-bg-dark: #2e2a45;
+$headings-color-dark: $pf-dark-text;
+$border-color-dark: #474360;
+$border-color-translucent-dark: rgba($pf-dark-text, 0.12);
 
 // Enable niceties
 $enable-shadows: true;

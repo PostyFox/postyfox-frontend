@@ -2,7 +2,11 @@
   <!-- Sidebar -->
   <aside class="app-sidebar" [class.show]="sidebarOpen()">
     <a class="app-sidebar__brand" routerLink="/dashboard" (click)="closeSidebar()">
-      <img class="brand-logo" src="logo-wordmark.svg" alt="PostyFox" />
+      <img
+        class="brand-logo"
+        [src]="isDark() ? 'logo-wordmark-dark.svg' : 'logo-wordmark.svg'"
+        alt="PostyFox"
+      />
     </a>
     <ul class="app-menu">
       <li class="menu-header">Menu</li>
@@ -48,12 +52,51 @@
 
       <div class="ms-auto dropdown">
         <button
+          class="btn btn-icon btn-sm border-0 text-body"
+          type="button"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+          [attr.aria-label]="'Colour theme: ' + themeMode()"
+          title="Colour theme"
+        >
+          <i class="bi fs-5" [class]="themeIcon()"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+          @for (t of themes; track t.mode) {
+            <li>
+              <button
+                class="dropdown-item d-flex align-items-center gap-2"
+                type="button"
+                [class.active]="themeMode() === t.mode"
+                (click)="setTheme(t.mode)"
+              >
+                <i class="bi" [class]="t.icon"></i>{{ t.label }}
+              </button>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div class="dropdown">
+        <button
           class="btn btn-link text-decoration-none d-flex align-items-center gap-2 p-1"
           type="button"
           data-bs-toggle="dropdown"
           aria-expanded="false"
         >
-          <span class="avatar avatar-sm">{{ initials() }}</span>
+          <span class="avatar avatar-sm">
+            @if (!activeAccount()) {
+              <img
+                [src]="avatarUrl()"
+                [hidden]="!avatarLoaded()"
+                alt=""
+                (load)="onAvatarLoad(avatarUrl())"
+              />
+            }
+            @if (!avatarLoaded()) {
+              {{ initials() }}
+            }
+          </span>
           <span class="d-none d-md-flex flex-column text-start lh-1">
             <span class="fw-medium text-body">{{ displayName() }}</span>
             @if (email()) {

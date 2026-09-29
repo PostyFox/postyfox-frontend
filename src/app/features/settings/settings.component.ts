@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { UserSettings } from '../../core/models/api.models';
 import { ProfileService } from '../../core/services/profile.service';
 import { ToastService } from '../../core/services/toast.service';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
@@ -15,12 +16,12 @@ export class SettingsComponent {
 
   readonly loading = signal(true);
   readonly saving = signal(false);
-  readonly includeAdvertisingLine = signal(false);
+  readonly settings = signal<UserSettings>({ includeAdvertisingLine: false, useGravatar: false });
 
   constructor() {
     this.profile.getSettings().subscribe({
       next: (s) => {
-        this.includeAdvertisingLine.set(s.includeAdvertisingLine);
+        this.settings.set(s);
         this.loading.set(false);
       },
       error: () => {
@@ -30,18 +31,18 @@ export class SettingsComponent {
     });
   }
 
-  setIncludeAdvertisingLine(value: boolean): void {
-    const previous = this.includeAdvertisingLine();
-    this.includeAdvertisingLine.set(value);
+  set<K extends keyof UserSettings>(key: K, value: UserSettings[K]): void {
+    const previous = this.settings();
+    this.settings.set({ ...previous, [key]: value });
     this.saving.set(true);
-    this.profile.updateSettings({ includeAdvertisingLine: value }).subscribe({
+    this.profile.updateSettings(this.settings()).subscribe({
       next: (s) => {
-        this.includeAdvertisingLine.set(s.includeAdvertisingLine);
+        this.settings.set(s);
         this.saving.set(false);
         this.toast.success('Settings saved');
       },
       error: () => {
-        this.includeAdvertisingLine.set(previous);
+        this.settings.set(previous);
         this.saving.set(false);
         this.toast.error('Could not save settings');
       },
