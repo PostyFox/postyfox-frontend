@@ -13,6 +13,7 @@ import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { AccountService } from './core/services/account.service';
 import { AuthService } from './core/services/auth.service';
 import { DeploymentConfigService } from './core/services/deployment-config.service';
+import { TermsService } from './core/services/terms.service';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -35,5 +36,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() =>
       firstValueFrom(inject(AccountService).loadAccounts()).catch(() => undefined),
     ),
+    // Terms of service status (issue #417), so termsGuard can redirect before first render.
+    provideAppInitializer(() => firstValueFrom(inject(TermsService).load()).catch(() => undefined)),
   ],
 };
