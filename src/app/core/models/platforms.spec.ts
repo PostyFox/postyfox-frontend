@@ -1,5 +1,6 @@
 import { ServiceDefinition } from './api.models';
 import { brandFor, capabilitiesByPlatform } from './platforms';
+import { darkThemeActive } from './theme';
 
 describe('capabilitiesByPlatform', () => {
   const definition = (platform: string, warning: ServiceDefinition['warning']): ServiceDefinition =>
@@ -39,5 +40,18 @@ describe('brandFor', () => {
   it('falls back to the platform id for unknown platforms', () => {
     expect(brandFor('Nope').label).toBe('Nope');
     expect(brandFor(null).label).toBe('Connector');
+  });
+});
+
+describe('brandFor in dark mode', () => {
+  afterEach(() => darkThemeActive.set(false));
+
+  it('swaps near-black brand colours for a readable variant, leaving others alone', () => {
+    expect(brandFor('X').color).toBe('#14171a');
+
+    darkThemeActive.set(true);
+
+    expect(brandFor('X').color).toBe('#e7e9ea');
+    expect(brandFor('DiscordWH').color).toBe('#5865F2');
   });
 });

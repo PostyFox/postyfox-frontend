@@ -74,6 +74,8 @@ export enum InviteStatus {
 
 export interface UserSettings {
   includeAdvertisingLine: boolean;
+  /** Opt-in (issue #420): show the user's Gravatar, proxied through `/api/profile/avatar`. */
+  useGravatar: boolean;
 }
 
 export interface ApiKey {

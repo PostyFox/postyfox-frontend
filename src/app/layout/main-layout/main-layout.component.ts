@@ -2,6 +2,9 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AccountService } from '../../core/services/account.service';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeMode } from '../../core/models/theme';
+import { ProfileService } from '../../core/services/profile.service';
+import { ThemeService } from '../../core/services/theme.service';
 import { VersionService } from '../../core/services/version.service';
 
 interface NavItem {
@@ -19,6 +22,8 @@ export class MainLayoutComponent {
   private auth = inject(AuthService);
   private version = inject(VersionService);
   private account = inject(AccountService);
+  private profile = inject(ProfileService);
+  private theme = inject(ThemeService);
 
   readonly sidebarOpen = signal(false);
   readonly year = new Date().getFullYear();
@@ -43,6 +48,29 @@ export class MainLayoutComponent {
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase() || 'U';
   });
 
+  /**
+   * The signed-in user's Gravatar (issue #420). Only shown when acting as yourself: the avatar is
+   * always the caller's own, so it would mislabel another account being managed. Initials show until
+   * the image has actually loaded, and stay if it 404s (opted out, or no Gravatar registered).
+   */
+  readonly avatarUrl = this.profile.avatarUrl;
+  private readonly loadedAvatarUrl = signal<string | null>(null);
+  readonly avatarLoaded = computed(
+    () => !this.activeAccount() && this.loadedAvatarUrl() === this.avatarUrl(),
+  );
+
+  /** Colour theme (issue #422). */
+  readonly themes: { mode: ThemeMode; label: string; icon: string }[] = [
+    { mode: 'light', label: 'Light', icon: 'bi-sun' },
+    { mode: 'dark', label: 'Dark', icon: 'bi-moon-stars' },
+    { mode: 'system', label: 'System', icon: 'bi-circle-half' },
+  ];
+  readonly themeMode = this.theme.mode;
+  readonly isDark = this.theme.isDark;
+  readonly themeIcon = computed(
+    () => this.themes.find((t) => t.mode === this.themeMode())?.icon ?? 'bi-circle-half',
+  );
+
   readonly nav: NavItem[] = [
     { label: 'Dashboard', icon: 'bi-grid-1x2', link: '/dashboard' },
     { label: 'Compose', icon: 'bi-pencil-square', link: '/compose' },
@@ -62,6 +90,14 @@ export class MainLayoutComponent {
 
   closeSidebar(): void {
     this.sidebarOpen.set(false);
+  }
+
+  setTheme(mode: ThemeMode): void {
+    this.theme.setMode(mode);
+  }
+
+  onAvatarLoad(url: string): void {
+    this.loadedAvatarUrl.set(url);
   }
 
   signOut(): void {

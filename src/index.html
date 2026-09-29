@@ -9,6 +9,19 @@
       name="description"
       content="PostyFox — cross-platform post scheduling and distribution."
     />
+    <script>
+      // Issue #422: apply the stored (or OS) colour scheme before first paint; ThemeService takes over after boot.
+      (function () {
+        var mode = null;
+        try {
+          mode = localStorage.getItem('postyfox.theme');
+        } catch (e) {}
+        var dark =
+          mode === 'dark' ||
+          (mode !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.setAttribute('data-bs-theme', dark ? 'dark' : 'light');
+      })();
+    </script>
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="icon" type="image/png" sizes="256x256" href="logo.png" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
