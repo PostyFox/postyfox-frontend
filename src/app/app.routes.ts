@@ -15,6 +15,12 @@ export const routes: Routes = [
       ),
   },
   {
+    // Public read-only view of the terms, reachable without a session like /privacy.
+    path: 'tos',
+    title: 'Terms of Service · PostyFox',
+    loadComponent: () => import('./features/tos/tos.component').then((m) => m.TosComponent),
+  },
+  {
     // Outside the layout so it stays reachable while the API refuses everything else (issue #417).
     path: 'terms',
     title: 'Terms of Service · PostyFox',
