@@ -27,6 +27,11 @@ export class TermsService {
     return this.http.get<TermsStatus>(this.base).pipe(tap((s) => this.status.set(s)));
   }
 
+  /** Public: the terms in force, or null when there are none (the API answers 204). */
+  getCurrent(): Observable<TermsOfService | null> {
+    return this.http.get<TermsOfService | null>(`${this.base}/current`);
+  }
+
   accept(version: number): Observable<void> {
     return this.http.post<void>(`${this.base}/accept`, { version });
   }
