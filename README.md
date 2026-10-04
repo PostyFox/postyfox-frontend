@@ -31,7 +31,7 @@ Sign in once at http://localhost:4180 (see [`docs/DEPLOYMENT.md`](./docs/DEPLOYM
 npm run build        # production build → dist/spa/browser
 npm run build-dev    # dev configuration
 npm run lint         # eslint (ts + templates)
-npm test             # karma/jasmine unit tests
+npm test             # Vitest unit tests (jsdom, no browser needed)
 ```
 
 ## Run the whole stack (SPA + APIs + auth)

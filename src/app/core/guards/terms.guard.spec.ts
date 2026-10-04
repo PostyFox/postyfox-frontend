@@ -32,9 +32,9 @@ describe('terms of service gate', () => {
   }
 
   it('allows navigation when no terms are in force or they are accepted', () => {
-    expect(guardWith(null)).toBeTrue();
-    expect(guardWith({ current: null, accepted: true, ownerAccepted: true })).toBeTrue();
-    expect(guardWith({ current, accepted: true, ownerAccepted: true })).toBeTrue();
+    expect(guardWith(null)).toBe(true);
+    expect(guardWith({ current: null, accepted: true, ownerAccepted: true })).toBe(true);
+    expect(guardWith({ current, accepted: true, ownerAccepted: true })).toBe(true);
   });
 
   it('redirects to /terms until the user and the account owner have accepted', () => {
@@ -44,7 +44,7 @@ describe('terms of service gate', () => {
       { current, accepted: true, ownerAccepted: false },
     ]) {
       const result = guardWith(status);
-      expect(result instanceof UrlTree).toBeTrue();
+      expect(result instanceof UrlTree).toBe(true);
       expect(router.serializeUrl(result as UrlTree)).toBe('/terms');
     }
   });
@@ -53,7 +53,7 @@ describe('terms of service gate', () => {
     const http = TestBed.inject(HttpClient);
     const httpMock = TestBed.inject(HttpTestingController);
     const router = TestBed.inject(Router);
-    const navigate = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
 
     http.get(`${environment.apiBaseUrl}/templates`).subscribe({ error: () => undefined });
     httpMock
@@ -64,14 +64,14 @@ describe('terms of service gate', () => {
       .flush({ current, accepted: false, ownerAccepted: true });
 
     expect(navigate).toHaveBeenCalledWith('/terms');
-    expect(TestBed.inject(TermsService).blocked()).toBeTrue();
+    expect(TestBed.inject(TermsService).blocked()).toBe(true);
     httpMock.verify();
   });
 
   it('leaves other 403s alone', () => {
     const http = TestBed.inject(HttpClient);
     const httpMock = TestBed.inject(HttpTestingController);
-    const navigate = spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
     http.get(`${environment.apiBaseUrl}/admin/access`).subscribe({ error: () => undefined });
     httpMock

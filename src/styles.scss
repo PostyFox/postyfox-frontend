@@ -1,5 +1,12 @@
 // PostyFox global styles: Materio-inspired Bootstrap 5 theme.
-@import './styles/materio-variables';
-@import 'bootstrap/scss/bootstrap';
-@import 'bootstrap-icons/font/bootstrap-icons';
-@import './styles/materio-theme';
+@use 'sass:map';
+@use 'sass:meta';
+@use './styles/materio-variables' as vars;
+
+// Bootstrap 5.3 is not a Sass module yet, so it is loaded with meta.load-css and the Materio
+// overrides passed as configuration. Variables Bootstrap does not declare are PostyFox's own.
+$bootstrap-config: map.remove(meta.module-variables('vars'), 'gray-25', 'gray-50', 'pf-dark-text');
+@include meta.load-css('bootstrap/scss/bootstrap', $with: $bootstrap-config);
+@include meta.load-css('bootstrap-icons/font/bootstrap-icons');
+// After Bootstrap so its rules override the defaults.
+@include meta.load-css('./styles/materio-theme');

@@ -1,3 +1,4 @@
+import type { MockedObject } from 'vitest';
 import { HttpResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
@@ -25,6 +26,8 @@ import { ComposeComponent } from './compose.component';
  * image, and exactly one item is ever flagged default whenever media is attached.
  */
 describe('ComposeComponent — default media selection', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   const mastodonConnector: UserConnector = {
     id: 'conn-1',
     serviceDefinitionId: 'Mastodon',
@@ -63,9 +66,12 @@ describe('ComposeComponent — default media selection', () => {
     supportsDelete: true,
   };
 
-  let media: jasmine.SpyObj<MediaService>;
-  let connectors: jasmine.SpyObj<ConnectorsService>;
-  let router: jasmine.SpyObj<Router>;
+  let media: Pick<MockedObject<MediaService>, 'upload' | 'getLimits'>;
+  let connectors: Pick<
+    MockedObject<ConnectorsService>,
+    'list' | 'listAllDestinations' | 'checkMedia'
+  >;
+  let router: Pick<MockedObject<Router>, 'getCurrentNavigation' | 'navigate'>;
   let uploadedRefs: MediaRef[];
 
   /** Uploads one file synchronously (the mocked services resolve inline) and flushes the fixture. */
@@ -73,7 +79,7 @@ describe('ComposeComponent — default media selection', () => {
     const file = new File(['x'], name, { type: 'image/png' });
     const ref: MediaRef = { container: 'media', key: `u/${name}`, contentType: 'image/png' };
     uploadedRefs.push(ref);
-    media.upload.and.returnValue(
+    media.upload.mockReturnValue(
       of(new HttpResponse({ body: ref, status: 200, statusText: 'OK' })),
     );
     fixture.componentInstance.onFilesSelected({
@@ -85,27 +91,33 @@ describe('ComposeComponent — default media selection', () => {
 
   function configure(prefill?: PostContent): ComponentFixture<ComposeComponent> {
     // Stub the pixel-dimension decode the upload pre-flight runs (the fake files aren't real images),
-    // so it settles inside the zone and fixture.whenStable() can wait for it.
-    spyOn(window, 'createImageBitmap').and.resolveTo({
-      width: 100,
-      height: 100,
-      close: () => undefined,
-    } as ImageBitmap);
+    // so it settles as a pending task and fixture.whenStable() can wait for it.
+    // jsdom has no createImageBitmap, so stub the global rather than spying on it.
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn().mockResolvedValue({ width: 100, height: 100, close: () => undefined } as ImageBitmap),
+    );
 
     uploadedRefs = [];
-    media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
-    media.getLimits.and.returnValue(of({ maxUploadSizeBytes: null }));
-    connectors = jasmine.createSpyObj<ConnectorsService>('ConnectorsService', [
-      'list',
-      'listAllDestinations',
-      'checkMedia',
-    ]);
-    connectors.list.and.returnValue(of([mastodonConnector]));
-    connectors.listAllDestinations.and.returnValue(of([]));
-    connectors.checkMedia.and.returnValue(of([]));
+    media = {
+      upload: vi.fn().mockName('MediaService.upload'),
+      getLimits: vi.fn().mockName('MediaService.getLimits'),
+    };
+    media.getLimits.mockReturnValue(of({ maxUploadSizeBytes: null }));
+    connectors = {
+      list: vi.fn().mockName('ConnectorsService.list'),
+      listAllDestinations: vi.fn().mockName('ConnectorsService.listAllDestinations'),
+      checkMedia: vi.fn().mockName('ConnectorsService.checkMedia'),
+    };
+    connectors.list.mockReturnValue(of([mastodonConnector]));
+    connectors.listAllDestinations.mockReturnValue(of([]));
+    connectors.checkMedia.mockReturnValue(of([]));
 
-    router = jasmine.createSpyObj<Router>('Router', ['getCurrentNavigation', 'navigate']);
-    router.getCurrentNavigation.and.returnValue(
+    router = {
+      getCurrentNavigation: vi.fn().mockName('Router.getCurrentNavigation'),
+      navigate: vi.fn().mockName('Router.navigate'),
+    };
+    router.getCurrentNavigation.mockReturnValue(
       prefill
         ? ({ extras: { state: { prefill } } } as unknown as ReturnType<
             Router['getCurrentNavigation']
@@ -119,43 +131,48 @@ describe('ComposeComponent — default media selection', () => {
         { provide: ConnectorsService, useValue: connectors },
         {
           provide: TemplatesService,
-          useValue: jasmine.createSpyObj<TemplatesService>('TemplatesService', {
-            list: of([]),
-          }),
+          useValue: {
+            list: vi.fn().mockName('TemplatesService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: TagPresetsService,
-          useValue: jasmine.createSpyObj<TagPresetsService>('TagPresetsService', { list: of([]) }),
+          useValue: {
+            list: vi.fn().mockName('TagPresetsService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: TextTemplatesService,
-          useValue: jasmine.createSpyObj<TextTemplatesService>('TextTemplatesService', {
-            list: of([]),
-          }),
+          useValue: {
+            list: vi.fn().mockName('TextTemplatesService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: ServicesService,
-          useValue: jasmine.createSpyObj<ServicesService>('ServicesService', {
-            list: of([mastodonDefinition]),
-          }),
+          useValue: {
+            list: vi
+              .fn()
+              .mockName('ServicesService.list')
+              .mockReturnValue(of([mastodonDefinition])),
+          },
         },
         {
           provide: PostsService,
-          useValue: jasmine.createSpyObj<PostsService>('PostsService', [
-            'create',
-            'updateDraft',
-            'publish',
-            'list',
-          ]),
+          useValue: {
+            create: vi.fn().mockName('PostsService.create'),
+            updateDraft: vi.fn().mockName('PostsService.updateDraft'),
+            publish: vi.fn().mockName('PostsService.publish'),
+            list: vi.fn().mockName('PostsService.list'),
+          },
         },
         { provide: MediaService, useValue: media },
         {
           provide: ToastService,
-          useValue: jasmine.createSpyObj<ToastService>('ToastService', [
-            'success',
-            'error',
-            'warning',
-          ]),
+          useValue: {
+            success: vi.fn().mockName('ToastService.success'),
+            error: vi.fn().mockName('ToastService.error'),
+            warning: vi.fn().mockName('ToastService.warning'),
+          },
         },
         { provide: Router, useValue: router },
       ],
@@ -172,7 +189,7 @@ describe('ComposeComponent — default media selection', () => {
 
     const items = fixture.componentInstance.mediaItems();
     expect(items.length).toBe(1);
-    expect(items[0].isDefault).toBeTrue();
+    expect(items[0].isDefault).toBe(true);
   });
 
   it('does not disturb an existing default when later images are uploaded', async () => {
@@ -247,7 +264,7 @@ describe('ComposeComponent — default media selection', () => {
     expect(fixture.componentInstance.mediaItems()).toEqual([]);
 
     await upload(fixture, 'b.png');
-    expect(fixture.componentInstance.mediaItems()[0].isDefault).toBeTrue();
+    expect(fixture.componentInstance.mediaItems()[0].isDefault).toBe(true);
   });
 
   it('restores the default flagged in prefilled content (edit draft / post again)', () => {
@@ -346,6 +363,8 @@ describe('ComposeComponent — default media selection', () => {
  * reaches `MediaService.upload` — instead of only failing after a full, possibly slow, transfer.
  */
 describe('ComposeComponent — client-side upload size cap', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   const connector: UserConnector = {
     id: 'conn-1',
     serviceDefinitionId: 'Mastodon',
@@ -384,31 +403,37 @@ describe('ComposeComponent — client-side upload size cap', () => {
     supportsDelete: true,
   };
 
-  let media: jasmine.SpyObj<MediaService>;
+  let media: Pick<MockedObject<MediaService>, 'upload' | 'getLimits'>;
 
   function configure(maxUploadSizeBytes: number | null): ComponentFixture<ComposeComponent> {
     // Stub the pixel-dimension decode the upload pre-flight runs (the fake files aren't real images),
-    // so it settles inside the zone and fixture.whenStable() can wait for it.
-    spyOn(window, 'createImageBitmap').and.resolveTo({
-      width: 100,
-      height: 100,
-      close: () => undefined,
-    } as ImageBitmap);
+    // so it settles as a pending task and fixture.whenStable() can wait for it.
+    // jsdom has no createImageBitmap, so stub the global rather than spying on it.
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn().mockResolvedValue({ width: 100, height: 100, close: () => undefined } as ImageBitmap),
+    );
 
-    media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
-    media.getLimits.and.returnValue(of({ maxUploadSizeBytes }));
+    media = {
+      upload: vi.fn().mockName('MediaService.upload'),
+      getLimits: vi.fn().mockName('MediaService.getLimits'),
+    };
+    media.getLimits.mockReturnValue(of({ maxUploadSizeBytes }));
 
-    const connectors = jasmine.createSpyObj<ConnectorsService>('ConnectorsService', [
-      'list',
-      'listAllDestinations',
-      'checkMedia',
-    ]);
-    connectors.list.and.returnValue(of([connector]));
-    connectors.listAllDestinations.and.returnValue(of([]));
-    connectors.checkMedia.and.returnValue(of([]));
+    const connectors = {
+      list: vi.fn().mockName('ConnectorsService.list'),
+      listAllDestinations: vi.fn().mockName('ConnectorsService.listAllDestinations'),
+      checkMedia: vi.fn().mockName('ConnectorsService.checkMedia'),
+    };
+    connectors.list.mockReturnValue(of([connector]));
+    connectors.listAllDestinations.mockReturnValue(of([]));
+    connectors.checkMedia.mockReturnValue(of([]));
 
-    const router = jasmine.createSpyObj<Router>('Router', ['getCurrentNavigation', 'navigate']);
-    router.getCurrentNavigation.and.returnValue(null);
+    const router = {
+      getCurrentNavigation: vi.fn().mockName('Router.getCurrentNavigation'),
+      navigate: vi.fn().mockName('Router.navigate'),
+    };
+    router.getCurrentNavigation.mockReturnValue(null);
 
     TestBed.configureTestingModule({
       imports: [ComposeComponent],
@@ -416,41 +441,48 @@ describe('ComposeComponent — client-side upload size cap', () => {
         { provide: ConnectorsService, useValue: connectors },
         {
           provide: TemplatesService,
-          useValue: jasmine.createSpyObj<TemplatesService>('TemplatesService', { list: of([]) }),
+          useValue: {
+            list: vi.fn().mockName('TemplatesService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: TagPresetsService,
-          useValue: jasmine.createSpyObj<TagPresetsService>('TagPresetsService', { list: of([]) }),
+          useValue: {
+            list: vi.fn().mockName('TagPresetsService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: TextTemplatesService,
-          useValue: jasmine.createSpyObj<TextTemplatesService>('TextTemplatesService', {
-            list: of([]),
-          }),
+          useValue: {
+            list: vi.fn().mockName('TextTemplatesService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: ServicesService,
-          useValue: jasmine.createSpyObj<ServicesService>('ServicesService', {
-            list: of([definition]),
-          }),
+          useValue: {
+            list: vi
+              .fn()
+              .mockName('ServicesService.list')
+              .mockReturnValue(of([definition])),
+          },
         },
         {
           provide: PostsService,
-          useValue: jasmine.createSpyObj<PostsService>('PostsService', [
-            'create',
-            'updateDraft',
-            'publish',
-            'list',
-          ]),
+          useValue: {
+            create: vi.fn().mockName('PostsService.create'),
+            updateDraft: vi.fn().mockName('PostsService.updateDraft'),
+            publish: vi.fn().mockName('PostsService.publish'),
+            list: vi.fn().mockName('PostsService.list'),
+          },
         },
         { provide: MediaService, useValue: media },
         {
           provide: ToastService,
-          useValue: jasmine.createSpyObj<ToastService>('ToastService', [
-            'success',
-            'error',
-            'warning',
-          ]),
+          useValue: {
+            success: vi.fn().mockName('ToastService.success'),
+            error: vi.fn().mockName('ToastService.error'),
+            warning: vi.fn().mockName('ToastService.warning'),
+          },
         },
         { provide: Router, useValue: router },
       ],
@@ -475,8 +507,8 @@ describe('ComposeComponent — client-side upload size cap', () => {
   }
 
   it('rejects an oversized file immediately, without ever calling MediaService.upload', async () => {
-    const fixture = configure(1_000_000);
-    await select(fixture, 'big.png', 2_000_000);
+    const fixture = configure(1000000);
+    await select(fixture, 'big.png', 2000000);
 
     const tasks = fixture.componentInstance.uploadTasks();
     expect(tasks.length).toBe(1);
@@ -486,8 +518,8 @@ describe('ComposeComponent — client-side upload size cap', () => {
   });
 
   it('uploads a file within the cap as normal', async () => {
-    const fixture = configure(1_000_000);
-    media.upload.and.returnValue(
+    const fixture = configure(1000000);
+    media.upload.mockReturnValue(
       of(
         new HttpResponse({
           body: { container: 'media', key: 'u/ok.png', contentType: 'image/png' },
@@ -497,7 +529,7 @@ describe('ComposeComponent — client-side upload size cap', () => {
       ),
     );
 
-    await select(fixture, 'ok.png', 500_000);
+    await select(fixture, 'ok.png', 500000);
 
     expect(media.upload).toHaveBeenCalled();
     expect(fixture.componentInstance.uploadTasks().length).toBe(0);
@@ -506,7 +538,7 @@ describe('ComposeComponent — client-side upload size cap', () => {
 
   it('applies no cap at all when the endpoint reports none configured', async () => {
     const fixture = configure(null);
-    media.upload.and.returnValue(
+    media.upload.mockReturnValue(
       of(
         new HttpResponse({
           body: { container: 'media', key: 'u/huge.png', contentType: 'image/png' },
@@ -516,14 +548,14 @@ describe('ComposeComponent — client-side upload size cap', () => {
       ),
     );
 
-    await select(fixture, 'huge.png', 500_000_000);
+    await select(fixture, 'huge.png', 500000000);
 
     expect(media.upload).toHaveBeenCalled();
   });
 
   it('retrying an oversized file re-applies the cap rather than forcing the upload through', async () => {
-    const fixture = configure(1_000_000);
-    await select(fixture, 'big.png', 2_000_000);
+    const fixture = configure(1000000);
+    await select(fixture, 'big.png', 2000000);
 
     const id = fixture.componentInstance.uploadTasks()[0].id;
     fixture.componentInstance.retryUpload(id);
@@ -579,20 +611,26 @@ describe('ComposeComponent — media-required platforms (Instagram)', () => {
   };
 
   function configure(): ComponentFixture<ComposeComponent> {
-    const media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
-    media.getLimits.and.returnValue(of({ maxUploadSizeBytes: null }));
+    const media = {
+      upload: vi.fn().mockName('MediaService.upload'),
+      getLimits: vi.fn().mockName('MediaService.getLimits'),
+    };
+    media.getLimits.mockReturnValue(of({ maxUploadSizeBytes: null }));
 
-    const connectors = jasmine.createSpyObj<ConnectorsService>('ConnectorsService', [
-      'list',
-      'listAllDestinations',
-      'checkMedia',
-    ]);
-    connectors.list.and.returnValue(of([igConnector]));
-    connectors.listAllDestinations.and.returnValue(of([]));
-    connectors.checkMedia.and.returnValue(of([]));
+    const connectors = {
+      list: vi.fn().mockName('ConnectorsService.list'),
+      listAllDestinations: vi.fn().mockName('ConnectorsService.listAllDestinations'),
+      checkMedia: vi.fn().mockName('ConnectorsService.checkMedia'),
+    };
+    connectors.list.mockReturnValue(of([igConnector]));
+    connectors.listAllDestinations.mockReturnValue(of([]));
+    connectors.checkMedia.mockReturnValue(of([]));
 
-    const router = jasmine.createSpyObj<Router>('Router', ['getCurrentNavigation', 'navigate']);
-    router.getCurrentNavigation.and.returnValue(null);
+    const router = {
+      getCurrentNavigation: vi.fn().mockName('Router.getCurrentNavigation'),
+      navigate: vi.fn().mockName('Router.navigate'),
+    };
+    router.getCurrentNavigation.mockReturnValue(null);
 
     TestBed.configureTestingModule({
       imports: [ComposeComponent],
@@ -600,41 +638,48 @@ describe('ComposeComponent — media-required platforms (Instagram)', () => {
         { provide: ConnectorsService, useValue: connectors },
         {
           provide: TemplatesService,
-          useValue: jasmine.createSpyObj<TemplatesService>('TemplatesService', { list: of([]) }),
+          useValue: {
+            list: vi.fn().mockName('TemplatesService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: TagPresetsService,
-          useValue: jasmine.createSpyObj<TagPresetsService>('TagPresetsService', { list: of([]) }),
+          useValue: {
+            list: vi.fn().mockName('TagPresetsService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: TextTemplatesService,
-          useValue: jasmine.createSpyObj<TextTemplatesService>('TextTemplatesService', {
-            list: of([]),
-          }),
+          useValue: {
+            list: vi.fn().mockName('TextTemplatesService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: ServicesService,
-          useValue: jasmine.createSpyObj<ServicesService>('ServicesService', {
-            list: of([igDefinition]),
-          }),
+          useValue: {
+            list: vi
+              .fn()
+              .mockName('ServicesService.list')
+              .mockReturnValue(of([igDefinition])),
+          },
         },
         {
           provide: PostsService,
-          useValue: jasmine.createSpyObj<PostsService>('PostsService', [
-            'create',
-            'updateDraft',
-            'publish',
-            'list',
-          ]),
+          useValue: {
+            create: vi.fn().mockName('PostsService.create'),
+            updateDraft: vi.fn().mockName('PostsService.updateDraft'),
+            publish: vi.fn().mockName('PostsService.publish'),
+            list: vi.fn().mockName('PostsService.list'),
+          },
         },
         { provide: MediaService, useValue: media },
         {
           provide: ToastService,
-          useValue: jasmine.createSpyObj<ToastService>('ToastService', [
-            'success',
-            'error',
-            'warning',
-          ]),
+          useValue: {
+            success: vi.fn().mockName('ToastService.success'),
+            error: vi.fn().mockName('ToastService.error'),
+            warning: vi.fn().mockName('ToastService.warning'),
+          },
         },
         { provide: Router, useValue: router },
       ],
@@ -712,18 +757,24 @@ describe('ComposeComponent — text-only posts (FurAffinity journals)', () => {
   };
 
   function configure(): ComponentFixture<ComposeComponent> {
-    const media = jasmine.createSpyObj<MediaService>('MediaService', ['upload', 'getLimits']);
-    media.getLimits.and.returnValue(of({ maxUploadSizeBytes: null }));
-    const connectors = jasmine.createSpyObj<ConnectorsService>('ConnectorsService', [
-      'list',
-      'listAllDestinations',
-      'checkMedia',
-    ]);
-    connectors.list.and.returnValue(of([faConnector]));
-    connectors.listAllDestinations.and.returnValue(of([]));
-    connectors.checkMedia.and.returnValue(of([]));
-    const router = jasmine.createSpyObj<Router>('Router', ['getCurrentNavigation', 'navigate']);
-    router.getCurrentNavigation.and.returnValue(null);
+    const media = {
+      upload: vi.fn().mockName('MediaService.upload'),
+      getLimits: vi.fn().mockName('MediaService.getLimits'),
+    };
+    media.getLimits.mockReturnValue(of({ maxUploadSizeBytes: null }));
+    const connectors = {
+      list: vi.fn().mockName('ConnectorsService.list'),
+      listAllDestinations: vi.fn().mockName('ConnectorsService.listAllDestinations'),
+      checkMedia: vi.fn().mockName('ConnectorsService.checkMedia'),
+    };
+    connectors.list.mockReturnValue(of([faConnector]));
+    connectors.listAllDestinations.mockReturnValue(of([]));
+    connectors.checkMedia.mockReturnValue(of([]));
+    const router = {
+      getCurrentNavigation: vi.fn().mockName('Router.getCurrentNavigation'),
+      navigate: vi.fn().mockName('Router.navigate'),
+    };
+    router.getCurrentNavigation.mockReturnValue(null);
 
     TestBed.configureTestingModule({
       imports: [ComposeComponent],
@@ -731,41 +782,48 @@ describe('ComposeComponent — text-only posts (FurAffinity journals)', () => {
         { provide: ConnectorsService, useValue: connectors },
         {
           provide: TemplatesService,
-          useValue: jasmine.createSpyObj<TemplatesService>('TemplatesService', { list: of([]) }),
+          useValue: {
+            list: vi.fn().mockName('TemplatesService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: TagPresetsService,
-          useValue: jasmine.createSpyObj<TagPresetsService>('TagPresetsService', { list: of([]) }),
+          useValue: {
+            list: vi.fn().mockName('TagPresetsService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: TextTemplatesService,
-          useValue: jasmine.createSpyObj<TextTemplatesService>('TextTemplatesService', {
-            list: of([]),
-          }),
+          useValue: {
+            list: vi.fn().mockName('TextTemplatesService.list').mockReturnValue(of([])),
+          },
         },
         {
           provide: ServicesService,
-          useValue: jasmine.createSpyObj<ServicesService>('ServicesService', {
-            list: of([faDefinition]),
-          }),
+          useValue: {
+            list: vi
+              .fn()
+              .mockName('ServicesService.list')
+              .mockReturnValue(of([faDefinition])),
+          },
         },
         {
           provide: PostsService,
-          useValue: jasmine.createSpyObj<PostsService>('PostsService', [
-            'create',
-            'updateDraft',
-            'publish',
-            'list',
-          ]),
+          useValue: {
+            create: vi.fn().mockName('PostsService.create'),
+            updateDraft: vi.fn().mockName('PostsService.updateDraft'),
+            publish: vi.fn().mockName('PostsService.publish'),
+            list: vi.fn().mockName('PostsService.list'),
+          },
         },
         { provide: MediaService, useValue: media },
         {
           provide: ToastService,
-          useValue: jasmine.createSpyObj<ToastService>('ToastService', [
-            'success',
-            'error',
-            'warning',
-          ]),
+          useValue: {
+            success: vi.fn().mockName('ToastService.success'),
+            error: vi.fn().mockName('ToastService.error'),
+            warning: vi.fn().mockName('ToastService.warning'),
+          },
         },
         { provide: Router, useValue: router },
       ],

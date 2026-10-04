@@ -51,7 +51,7 @@ jobs:
       - name: Compute next version (Conventional Commits)
         id: semver
         if: inputs.version == ''
-        uses: paulhatch/semantic-version@v5.4.0
+        uses: paulhatch/semantic-version@v6.0.4
         with:
           tag_prefix: "v"
           # Conventional Commits: `type!:` or BREAKING CHANGE → major; `feat:` → minor; else patch.
@@ -130,7 +130,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
@@ -241,7 +241,7 @@ jobs:
           echo "🏷️ Tagged and released v${VERSION}"
 
       - name: Set up Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
           version: v3.16.4
 

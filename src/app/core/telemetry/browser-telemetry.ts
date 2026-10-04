@@ -1,4 +1,3 @@
-import { ZoneContextManager } from '@opentelemetry/context-zone';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { registerInstrumentations } from '@opentelemetry/instrumentation';
 import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch';
@@ -39,8 +38,9 @@ export function initBrowserTelemetry(cfg: OtelConfig): void {
     spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter({ url: cfg.collectorUrl }))],
   });
 
-  // ZoneContextManager keeps the active span across Angular's zone.js async boundaries.
-  provider.register({ contextManager: new ZoneContextManager() });
+  // The app is zoneless, so the default stack context manager applies. Only XHR/fetch are
+  // auto-instrumented and each request span is a root span, so no async context is needed.
+  provider.register();
 
   // Don't trace the telemetry export itself (POSTs to /otlp, would recurse into more spans).
   // Same-origin /api requests get the traceparent header automatically, so no

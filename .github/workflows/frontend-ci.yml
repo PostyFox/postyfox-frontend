@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -45,10 +45,10 @@ jobs:
       - name: Build
         run: npm run build -- --configuration production
       - name: Test
-        # Karma unit tests, headless. No-op until the first *.spec.ts lands (avoids a flaky empty run).
+        # Vitest unit tests on jsdom (no browser needed). No-op until the first *.spec.ts lands (avoids a flaky empty run).
         run: |
           if find src -name '*.spec.ts' | grep -q .; then
-            npm test -- --watch=false --browsers=ChromeHeadless
+            npm test -- --watch=false
           else
             echo "No spec files yet — skipping unit tests."
           fi
@@ -81,7 +81,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile

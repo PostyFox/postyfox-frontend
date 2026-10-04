@@ -2,6 +2,8 @@
 // Materio-inspired layout & component styling (applied on top of Bootstrap).
 // ---------------------------------------------------------------------------
 
+@use 'materio-variables' as *;
+
 $sidebar-width: 260px;
 $navbar-height: 4rem;
 
