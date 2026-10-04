@@ -7,6 +7,7 @@ describe('ThemeService', () => {
 
   beforeEach(() => localStorage.removeItem(THEME_STORAGE_KEY));
   afterEach(() => {
+    vi.unstubAllGlobals();
     localStorage.removeItem(THEME_STORAGE_KEY);
     html.removeAttribute('data-bs-theme');
     darkThemeActive.set(false);
@@ -19,12 +20,18 @@ describe('ThemeService', () => {
   }
 
   it('defaults to following the system preference', () => {
+    // jsdom has no matchMedia; report a dark OS preference so the assertion is deterministic.
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(prefers-color-scheme: dark)',
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    }));
     const service = create();
 
     expect(service.mode()).toBe('system');
-    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    expect(service.isDark()).toBe(systemDark);
-    expect(html.getAttribute('data-bs-theme')).toBe(systemDark ? 'dark' : 'light');
+    expect(service.isDark()).toBe(true);
+    expect(html.getAttribute('data-bs-theme')).toBe('dark');
   });
 
   it('applies and persists an explicit choice', () => {
@@ -33,13 +40,13 @@ describe('ThemeService', () => {
     service.setMode('dark');
     TestBed.tick();
     expect(html.getAttribute('data-bs-theme')).toBe('dark');
-    expect(darkThemeActive()).toBeTrue();
+    expect(darkThemeActive()).toBe(true);
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
 
     service.setMode('light');
     TestBed.tick();
     expect(html.getAttribute('data-bs-theme')).toBe('light');
-    expect(darkThemeActive()).toBeFalse();
+    expect(darkThemeActive()).toBe(false);
   });
 
   it('restores the stored choice, and forgets it when set back to system', () => {
