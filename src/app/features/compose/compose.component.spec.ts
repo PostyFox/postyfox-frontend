@@ -57,6 +57,7 @@ describe('ComposeComponent — default media selection', () => {
     requiresRating: false,
     supportsTags: false,
     requiresTags: false,
+    minTags: 0,
     requiresMedia: false,
     supportsTextOnly: false,
     warning: null,
@@ -394,6 +395,7 @@ describe('ComposeComponent — client-side upload size cap', () => {
     requiresRating: false,
     supportsTags: false,
     requiresTags: false,
+    minTags: 0,
     requiresMedia: false,
     supportsTextOnly: false,
     warning: null,
@@ -601,6 +603,7 @@ describe('ComposeComponent — media-required platforms (Instagram)', () => {
     requiresRating: false,
     supportsTags: false,
     requiresTags: false,
+    minTags: 0,
     requiresMedia: true,
     supportsTextOnly: false,
     warning: null,
@@ -747,6 +750,7 @@ describe('ComposeComponent — text-only posts (FurAffinity journals)', () => {
     requiresRating: true,
     supportsTags: true,
     requiresTags: true,
+    minTags: 1,
     requiresMedia: false,
     supportsTextOnly: true,
     warning: null,
@@ -866,5 +870,183 @@ describe('ComposeComponent — text-only posts (FurAffinity journals)', () => {
       'Use a JPEG, PNG, or GIF image for the default image.',
       'Add at least three tags of three or more characters.',
     ]);
+  });
+});
+
+/** Artconomy needs five distinct tags and one image for a submission; text-only posts become journals. */
+describe('ComposeComponent — Artconomy', () => {
+  const acConnector: UserConnector = {
+    id: 'conn-ac',
+    serviceDefinitionId: 'Artconomy',
+    platform: 'Artconomy',
+    displayName: 'My AC',
+    configJson: '{}',
+    enabled: true,
+    defaultIncludeTags: true,
+    defaultRating: null,
+  };
+
+  const acDefinition: ServiceDefinition = {
+    id: 'Artconomy',
+    name: 'Artconomy',
+    enabled: true,
+    configSchema: '{}',
+    secureConfigSchema: null,
+    postOptionsSchema: null,
+    platform: 'Artconomy',
+    supportsTitle: true,
+    supportsMedia: true,
+    supportsThreads: false,
+    maxContentLength: 2000,
+    supportsOAuth: false,
+    supportsCookiePairing: true,
+    supportsRating: true,
+    requiresRating: true,
+    supportsTags: true,
+    requiresTags: true,
+    minTags: 5,
+    requiresMedia: false,
+    supportsTextOnly: true,
+    warning: null,
+    supportsMultipleTargets: false,
+    supportsContentWarning: false,
+    supportsRepost: false,
+    supportsDelete: false,
+  };
+
+  function image(name: string, mimeType = 'image/png') {
+    return {
+      ref: { container: 'media', key: `u/${name}`, contentType: mimeType },
+      name,
+      alt: '',
+      mimeType,
+    } as ReturnType<ComposeComponent['mediaItems']>[number];
+  }
+
+  function configure(): ComponentFixture<ComposeComponent> {
+    const media = {
+      upload: vi.fn().mockName('MediaService.upload'),
+      getLimits: vi
+        .fn()
+        .mockName('MediaService.getLimits')
+        .mockReturnValue(of({ maxUploadSizeBytes: null })),
+    };
+    const connectors = {
+      list: vi
+        .fn()
+        .mockName('ConnectorsService.list')
+        .mockReturnValue(of([acConnector])),
+      listAllDestinations: vi
+        .fn()
+        .mockName('ConnectorsService.listAllDestinations')
+        .mockReturnValue(of([])),
+      checkMedia: vi.fn().mockName('ConnectorsService.checkMedia').mockReturnValue(of([])),
+    };
+    const router = {
+      getCurrentNavigation: vi.fn().mockName('Router.getCurrentNavigation').mockReturnValue(null),
+      navigate: vi.fn().mockName('Router.navigate'),
+    };
+
+    TestBed.configureTestingModule({
+      imports: [ComposeComponent],
+      providers: [
+        { provide: ConnectorsService, useValue: connectors },
+        {
+          provide: TemplatesService,
+          useValue: {
+            list: vi.fn().mockName('TemplatesService.list').mockReturnValue(of([])),
+          },
+        },
+        {
+          provide: TagPresetsService,
+          useValue: {
+            list: vi.fn().mockName('TagPresetsService.list').mockReturnValue(of([])),
+          },
+        },
+        {
+          provide: TextTemplatesService,
+          useValue: {
+            list: vi.fn().mockName('TextTemplatesService.list').mockReturnValue(of([])),
+          },
+        },
+        {
+          provide: ServicesService,
+          useValue: {
+            list: vi
+              .fn()
+              .mockName('ServicesService.list')
+              .mockReturnValue(of([acDefinition])),
+          },
+        },
+        {
+          provide: PostsService,
+          useValue: {
+            create: vi.fn().mockName('PostsService.create'),
+            updateDraft: vi.fn().mockName('PostsService.updateDraft'),
+            publish: vi.fn().mockName('PostsService.publish'),
+            list: vi.fn().mockName('PostsService.list'),
+          },
+        },
+        { provide: MediaService, useValue: media },
+        {
+          provide: ToastService,
+          useValue: {
+            success: vi.fn().mockName('ToastService.success'),
+            error: vi.fn().mockName('ToastService.error'),
+            warning: vi.fn().mockName('ToastService.warning'),
+          },
+        },
+        { provide: Router, useValue: router },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ComposeComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleTarget(acConnector.id);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('waives the tag minimum for a journal, but needs a title', () => {
+    const cmp = configure().componentInstance;
+
+    expect(cmp.tagsRequiredIssues()).toEqual([]);
+    expect(cmp.artconomyIssues()).toEqual([
+      'Add a title: a post with no image becomes a journal, which needs one.',
+    ]);
+
+    cmp.title.set('News');
+    expect(cmp.artconomyIssues()).toEqual([]);
+    expect(cmp.canSubmit()).toBe(true);
+  });
+
+  it('needs five distinct tags once an image is attached', () => {
+    const cmp = configure().componentInstance;
+    cmp.mediaItems.set([image('a.png')]);
+
+    cmp.tags.set('fox, art, Fox, sketch, ');
+    expect(cmp.distinctTagCount()).toBe(3);
+    expect(cmp.tagsRequiredIssues()).toEqual(['My AC']);
+
+    cmp.tags.set('fox, art, sketch, digital, commission');
+    expect(cmp.tagsRequiredIssues()).toEqual([]);
+  });
+
+  it('rejects more than one image and over-long titles before posting', () => {
+    const cmp = configure().componentInstance;
+    cmp.title.set('x'.repeat(101));
+    cmp.mediaItems.set([image('a.png'), image('b.png')]);
+
+    expect(cmp.artconomyIssues()).toEqual([
+      'Keep the title to 100 characters or fewer.',
+      'Attach only one image: an Artconomy submission is a single file.',
+    ]);
+    expect(cmp.canSubmit()).toBe(false);
+  });
+
+  it('accepts a WebP image', () => {
+    const cmp = configure().componentInstance;
+    cmp.mediaItems.set([image('a.webp', 'image/webp')]);
+    expect(cmp.artconomyIssues()).toEqual([]);
   });
 });

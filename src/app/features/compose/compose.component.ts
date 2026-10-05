@@ -310,6 +310,10 @@ export class ComposeComponent {
     this.selectedConnectors().some((c) => c.platform === 'FurAffinity'),
   );
 
+  readonly artconomySelected = computed(() =>
+    this.selectedConnectors().some((c) => c.platform === 'Artconomy'),
+  );
+
   /** The author's current automation choice for a target, or null if they haven't set one. */
   automationFor(target: SelectableTarget): AutomationRequest | null {
     return this.targetAutomation()[target.selectionId] ?? null;
@@ -358,6 +362,11 @@ export class ComposeComponent {
       .filter(Boolean),
   );
 
+  /** How many distinct tags count toward a platform's minimum: intake ignores case-only duplicates. */
+  readonly distinctTagCount = computed(
+    () => new Set(this.parsedTags().map((t) => t.toLowerCase())).size,
+  );
+
   /** Whether tags are currently switched on for a target (defaults to its connector's own setting when unset). */
   includeTagsFor(target: SelectableTarget): boolean {
     return this.targetIncludeTags()[target.selectionId] ?? target.defaultIncludeTags;
@@ -381,6 +390,7 @@ export class ComposeComponent {
       const c = caps[target.platform];
       const supportsTags = c?.supportsTags ?? true;
       const requiresTags = this.requires(c, 'requiresTags');
+      const minTags = requiresTags ? Math.max(c?.minTags ?? 1, 1) : 0;
       const includeTags = requiresTags || this.includeTagsFor(target);
       let preview: { included: string[]; omitted: number } | null = null;
       if (!supportsTags && includeTags && tags.length > 0) {
@@ -389,15 +399,15 @@ export class ComposeComponent {
           : description.length + 2; // "\n\n" separator when appended rather than interpolated
         preview = previewInlineTags(tags, Math.max(0, baseLength), c?.maxContentLength ?? null);
       }
-      return { target, supportsTags, requiresTags, includeTags, preview };
+      return { target, supportsTags, requiresTags, minTags, includeTags, preview };
     });
   });
 
-  /** Selected targets whose platform requires at least one tag but won't be getting any. */
+  /** Selected targets whose platform requires more tags than the post has. */
   readonly tagsRequiredIssues = computed(() => {
-    const hasTags = this.parsedTags().length > 0;
+    const count = this.distinctTagCount();
     return this.tagsByTarget()
-      .filter((row) => row.requiresTags && !hasTags)
+      .filter((row) => count < row.minTags)
       .map((row) => row.target.displayName);
   });
 
@@ -444,6 +454,33 @@ export class ComposeComponent {
         .map((tag) => tag.trim().replace(/\s+/g, '_'))
         .filter((tag) => tag.length >= 3);
       if (validTags.length < 3) issues.push('Add at least three tags of three or more characters.');
+    }
+    return issues;
+  });
+
+  /**
+   * Requirements Artconomy enforces at delivery time, surfaced before the post is queued. The tag
+   * minimum and rating are covered by the generic checks (minTags, ratingRequiredIssues).
+   */
+  readonly artconomyIssues = computed(() => {
+    if (!this.artconomySelected()) return [];
+    const issues: string[] = [];
+    const title = this.title().trim();
+    const media = this.mediaItems();
+    // With no image Artconomy posts a journal, whose subject allows more characters.
+    const maxTitle = media.length > 0 ? 100 : 150;
+    if (!title && media.length === 0)
+      issues.push('Add a title: a post with no image becomes a journal, which needs one.');
+    else if (title.length > maxTitle)
+      issues.push(`Keep the title to ${maxTitle} characters or fewer.`);
+    if (media.length > 1)
+      issues.push('Attach only one image: an Artconomy submission is a single file.');
+    if (media.length === 1) {
+      const contentType = (media[0].mimeType || media[0].ref.contentType).toLowerCase();
+      if (
+        !['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'].includes(contentType)
+      )
+        issues.push('Use a JPEG, PNG, GIF, or WebP image.');
     }
     return issues;
   });
@@ -517,6 +554,7 @@ export class ComposeComponent {
       this.selectedTargets().size > 0 &&
       this.ratingRequiredIssues().length === 0 &&
       this.furAffinityIssues().length === 0 &&
+      this.artconomyIssues().length === 0 &&
       this.tagsRequiredIssues().length === 0 &&
       this.mediaRequiredIssues().length === 0 &&
       this.automationDelayIssues().length === 0 &&
@@ -1002,6 +1040,10 @@ export class ComposeComponent {
     }
     if (this.furAffinityIssues().length) {
       this.toast.warning('Complete the FurAffinity requirements');
+      return;
+    }
+    if (this.artconomyIssues().length) {
+      this.toast.warning('Complete the Artconomy requirements');
       return;
     }
     if (this.tagsRequiredIssues().length) {
