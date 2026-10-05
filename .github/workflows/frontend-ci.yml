@@ -30,6 +30,9 @@ on:
       - "deploy/**"
       - ".github/workflows/frontend-ci.yml"
 
+permissions:
+  contents: read
+
 jobs:
   node:
     runs-on: ubuntu-latest
