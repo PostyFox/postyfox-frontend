@@ -320,7 +320,7 @@ export class ConnectorsComponent {
   }
 
   // ----- OAuth connect flow -------------------------------------------------
-  /** Saves the connector (to obtain an id + persist config) then opens the provider authorize popup. */
+  /** Saves the connector (to obtain an id + persist config) then opens the provider authorise popup. */
   async connect(): Promise<void> {
     const e = this.editor();
     if (!e || !e.displayName.trim() || this.hasConfigErrors()) return;

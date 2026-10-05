@@ -206,6 +206,11 @@ export interface Capabilities {
   /** True when a delivery to this platform must include at least one tag. */
   requiresTags: boolean;
   /**
+   * The fewest distinct tags a delivery needs when {@link requiresTags} applies (Artconomy: 5); 0
+   * when tags aren't required. Waived along with {@link requiresTags} for a text-only post.
+   */
+  minTags: number;
+  /**
    * True when a single login can post to several distinct chats/channels (e.g. Telegram). The
    * connector itself is not a selectable target for these platforms: the compose form offers each
    * exposed {@link ConnectorDestinationSummary} instead. See connectors.component for how the user

@@ -181,7 +181,28 @@ const BRANDS: Record<string, PlatformBrand> = {
     color: '#E1306C',
     blurb: 'Publish feed posts to an Instagram Business or Creator account.',
     setup:
-      'Connect with Instagram to authorize a Business or Creator account. Every post needs at least one image or video — Instagram has no text-only post type.',
+      'Connect with Instagram to authorise a Business or Creator account. Every post needs at least one image or video — Instagram has no text-only post type.',
+  },
+  Artconomy: {
+    label: 'Artconomy',
+    icon: 'bi-brush-fill',
+    color: '#1976D2',
+    darkColor: '#64a8f0',
+    blurb: 'Publish gallery submissions and journals to your Artconomy account.',
+    setup:
+      'Sign in through PostyFox Connect so your Artconomy password and session cookies never pass through this page. Image posts need a rating and at least five tags.',
+    docs: {
+      href: 'https://artconomy.com/auth/login/',
+      text: 'Sign in to Artconomy',
+    },
+  },
+  SoFurry: {
+    label: 'SoFurry',
+    icon: 'bi-stars',
+    color: '#e8820c',
+    blurb: 'Publish image submissions to your SoFurry account.',
+    setup:
+      'Connect with SoFurry to authorise your account. Every post needs a title, a rating and at least one image.',
   },
 };
 
@@ -292,6 +313,8 @@ export function capabilitiesByPlatform(defs: ServiceDefinition[]): Record<string
       requiresRating: d.requiresRating,
       supportsTags: d.supportsTags,
       requiresTags: d.requiresTags,
+      // Older servers don't send minTags: a required-tags platform then needs one.
+      minTags: d.minTags ?? (d.requiresTags ? 1 : 0),
       requiresMedia: d.requiresMedia,
       supportsTextOnly: d.supportsTextOnly,
       warning: d.warning ?? null,
