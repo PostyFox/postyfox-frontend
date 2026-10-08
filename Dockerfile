@@ -1,5 +1,5 @@
 # Stage 1: build the Angular application (Angular 21 requires Node >= 22.12 / 24)
-FROM node:22-alpine AS build
+FROM node:24.21.0-alpine AS build
 
 # production | dev: selects the Angular build configuration
 ARG BUILD_ENV=production
@@ -23,8 +23,9 @@ RUN if [ "$BUILD_ENV" = "dev" ]; then \
       npm run build -- --configuration production; \
     fi
 
-# Stage 2: serve the static assets with nginx
-FROM nginx:alpine
+# Stage 2: serve the static assets with nginx. Keep in step with the gateway nginx tag in
+# postyfox-core (deploy/helm/postyfox/values.yaml + docker-compose*.yml).
+FROM nginx:1.31.6-alpine
 
 # SPA-aware server config (client-side routing fallback + asset caching).
 COPY nginx.conf /etc/nginx/conf.d/default.conf
