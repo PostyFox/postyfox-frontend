@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { Subscription, switchMap, timer } from 'rxjs';
@@ -16,6 +16,17 @@ import { EmptyStateComponent } from '../../shared/components/empty-state.compone
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
 import { StatusBadgeComponent } from '../../shared/components/status-badge.component';
 
+const SCHEDULED_VIEW_STORAGE_KEY = 'postyfox.scheduledView';
+
+type ScheduledView = 'list' | 'calendar';
+
+export interface CalendarDay {
+  date: Date;
+  inMonth: boolean;
+  today: boolean;
+  posts: PostSummary[];
+}
+
 /**
  * Posts / activity view. Shows what's being processed *right now* (auto-refreshing while anything is
  * in flight) plus the recent history the backend retains, so a user who navigated away from the
@@ -23,7 +34,14 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge.compo
  */
 @Component({
   selector: 'app-posts',
-  imports: [RouterLink, DatePipe, PageHeaderComponent, StatusBadgeComponent, EmptyStateComponent],
+  imports: [
+    RouterLink,
+    DatePipe,
+    NgTemplateOutlet,
+    PageHeaderComponent,
+    StatusBadgeComponent,
+    EmptyStateComponent,
+  ],
   templateUrl: './posts.component.html',
 })
 export class PostsComponent implements OnInit, OnDestroy {
@@ -41,13 +59,55 @@ export class PostsComponent implements OnInit, OnDestroy {
   readonly busy = signal<Set<string>>(new Set());
   brand = brandFor;
 
-  readonly active = computed(() => this.all().filter((p) => isRootStatusPending(p.rootStatus)));
+  readonly scheduledView = signal<ScheduledView>(readStoredView());
+  /** First day of the month the calendar is showing. */
+  readonly calendarMonth = signal(startOfMonth(new Date()));
+
+  /** Submitted posts waiting for a future `postAt`, soonest first. */
+  readonly scheduled = computed(() =>
+    this.all()
+      .filter((p) => this.isScheduled(p))
+      .sort((a, b) => Date.parse(a.postAt!) - Date.parse(b.postAt!)),
+  );
+  readonly active = computed(() =>
+    this.all().filter((p) => isRootStatusPending(p.rootStatus) && !this.isScheduled(p)),
+  );
+  /** The calendar only earns its place once there's more than one scheduled post. */
+  readonly showCalendar = computed(
+    () => this.scheduled().length > 1 && this.scheduledView() === 'calendar',
+  );
+  readonly calendarWeeks = computed(() =>
+    buildCalendar(this.calendarMonth(), this.scheduled(), new Date()),
+  );
   readonly drafts = computed(() => this.all().filter((p) => isRootStatusDraft(p.rootStatus)));
   readonly history = computed(() =>
     this.all().filter(
       (p) => !isRootStatusPending(p.rootStatus) && !isRootStatusDraft(p.rootStatus),
     ),
   );
+
+  isScheduled(p: PostSummary): boolean {
+    return (
+      isRootStatusPending(p.rootStatus) && p.postAt !== null && Date.parse(p.postAt) > Date.now()
+    );
+  }
+
+  setScheduledView(view: ScheduledView): void {
+    this.scheduledView.set(view);
+    try {
+      localStorage.setItem(SCHEDULED_VIEW_STORAGE_KEY, view);
+    } catch {
+      // Storage unavailable (private mode): the choice just won't survive a reload.
+    }
+  }
+
+  /** Move the calendar by `delta` months; 0 returns to the current month. */
+  shiftMonth(delta: number): void {
+    const m = this.calendarMonth();
+    this.calendarMonth.set(
+      delta === 0 ? startOfMonth(new Date()) : new Date(m.getFullYear(), m.getMonth() + delta, 1),
+    );
+  }
 
   rootMeta(p: PostSummary) {
     return ROOT_STATUS_META[p.rootStatus];
@@ -191,7 +251,8 @@ export class PostsComponent implements OnInit, OnDestroy {
         next: (rows) => {
           this.all.set(rows);
           this.loading.set(false);
-          this.polling.set(rows.some((p) => isRootStatusPending(p.rootStatus)));
+          // Scheduled posts are pending too, but nothing is happening to them yet.
+          this.polling.set(this.active().length > 0);
         },
         error: () => {
           this.loading.set(false);
@@ -204,4 +265,53 @@ export class PostsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
   }
+}
+
+function readStoredView(): ScheduledView {
+  try {
+    return localStorage.getItem(SCHEDULED_VIEW_STORAGE_KEY) === 'calendar' ? 'calendar' : 'list';
+  } catch {
+    return 'list';
+  }
+}
+
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function dayKey(d: Date): string {
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+/**
+ * Monday-first weeks covering `month`, padded with the neighbouring months' days. Posts land on
+ * the local day of their `postAt`; `posts` is assumed already sorted by time.
+ */
+export function buildCalendar(month: Date, posts: PostSummary[], today: Date): CalendarDay[][] {
+  const byDay = new Map<string, PostSummary[]>();
+  for (const p of posts) {
+    const key = dayKey(new Date(p.postAt!));
+    byDay.set(key, [...(byDay.get(key) ?? []), p]);
+  }
+
+  const first = startOfMonth(month);
+  const cursor = new Date(first);
+  cursor.setDate(1 - ((first.getDay() + 6) % 7));
+
+  const weeks: CalendarDay[][] = [];
+  do {
+    const week: CalendarDay[] = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(cursor);
+      week.push({
+        date,
+        inMonth: date.getMonth() === first.getMonth(),
+        today: dayKey(date) === dayKey(today),
+        posts: byDay.get(dayKey(date)) ?? [],
+      });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    weeks.push(week);
+  } while (cursor.getMonth() === first.getMonth());
+  return weeks;
 }
