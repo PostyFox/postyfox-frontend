@@ -658,7 +658,9 @@
     "colourThemeLabel": "Colour theme: {{ mode }}",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "themeSystem": "System"
+    "themeSystem": "System",
+    "language": "Language",
+    "languageLabel": "Language: {{ name }}"
   },
   "nav": {
     "privacyPolicy": "Privacy Policy",
