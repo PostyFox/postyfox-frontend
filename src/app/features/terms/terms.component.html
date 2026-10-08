@@ -1,81 +1,84 @@
-<div class="container py-5" style="max-width: 860px">
-  <h1 class="h3 mb-1">Terms of Service</h1>
+<ng-container *transloco="let tr">
+  <div class="container py-5" style="max-width: 860px">
+    <h1 class="h3 mb-1">{{ tr('terms.termsService') }}</h1>
 
-  @if (terms.status(); as status) {
-    @if (status.current; as current) {
-      <p class="text-muted-2 mb-4">Published {{ current.publishedAt.substring(0, 10) }}</p>
+    @if (terms.status(); as status) {
+      @if (status.current; as current) {
+        <p class="text-muted-2 mb-4">
+          {{ tr('terms.published', { date: current.publishedAt.substring(0, 10) }) }}
+        </p>
 
-      @if (!status.accepted) {
-        <div class="alert alert-info small mb-4">
-          You need to accept these terms before you can continue using PostyFox.
+        @if (!status.accepted) {
+          <div class="alert alert-info small mb-4">
+            {{ tr('terms.needAcceptTheseTerms') }}
+          </div>
+        } @else if (!status.ownerAccepted) {
+          <div class="alert alert-warning mb-4">
+            <p class="mb-2">
+              {{ tr('terms.ownerAccountManagingHas') }}
+            </p>
+            <button type="button" class="btn btn-sm btn-primary" (click)="account.switchTo(null)">
+              {{ tr('terms.switchOwnAccount') }}
+            </button>
+          </div>
+        }
+
+        <div class="card mb-4">
+          <div class="card-body">
+            <markdown [data]="current.content"></markdown>
+          </div>
         </div>
-      } @else if (!status.ownerAccepted) {
-        <div class="alert alert-warning mb-4">
-          <p class="mb-2">
-            The owner of the account you are managing has not accepted the current terms. Access to
-            their account is paused until they do.
-          </p>
-          <button type="button" class="btn btn-sm btn-primary" (click)="account.switchTo(null)">
-            Switch to your own account
-          </button>
-        </div>
-      }
 
-      <div class="card mb-4">
-        <div class="card-body">
-          <markdown [data]="current.content"></markdown>
-        </div>
-      </div>
-
-      @if (!status.accepted) {
-        <div class="d-flex gap-2">
-          <button
-            type="button"
-            class="btn btn-primary"
-            (click)="accept(current.version)"
-            [disabled]="accepting()"
-          >
-            @if (accepting()) {
-              <span class="spinner-border spinner-border-sm"></span>
-            } @else {
-              I accept
-            }
-          </button>
-          <button type="button" class="btn btn-outline-secondary" (click)="auth.signOut()">
-            Sign out
-          </button>
-          @if (auth.isAdmin()) {
+        @if (!status.accepted) {
+          <div class="d-flex gap-2">
             <button
               type="button"
-              class="btn btn-outline-danger ms-auto"
-              (click)="turnOff()"
+              class="btn btn-primary"
+              (click)="accept(current.version)"
               [disabled]="accepting()"
             >
-              Turn off these terms
+              @if (accepting()) {
+                <span class="spinner-border spinner-border-sm"></span>
+              } @else {
+                {{ tr('terms.iAccept') }}
+              }
             </button>
-          }
-        </div>
-      } @else if (status.ownerAccepted) {
+            <button type="button" class="btn btn-outline-secondary" (click)="auth.signOut()">
+              {{ tr('terms.signOut') }}
+            </button>
+            @if (auth.isAdmin()) {
+              <button
+                type="button"
+                class="btn btn-outline-danger ms-auto"
+                (click)="turnOff()"
+                [disabled]="accepting()"
+              >
+                {{ tr('terms.turnOffTheseTerms') }}
+              </button>
+            }
+          </div>
+        } @else if (status.ownerAccepted) {
+          <a
+            routerLink="/dashboard"
+            class="d-inline-flex align-items-center gap-1 text-decoration-none"
+          >
+            <i class="bi bi-arrow-left"></i> {{ tr('terms.backPostyfox') }}
+          </a>
+        }
+      } @else {
+        <p class="text-muted-2">{{ tr('terms.noTermsServiceApply') }}</p>
         <a
           routerLink="/dashboard"
           class="d-inline-flex align-items-center gap-1 text-decoration-none"
         >
-          <i class="bi bi-arrow-left"></i> Back to PostyFox
+          <i class="bi bi-arrow-left"></i> {{ tr('terms.backPostyfox') }}
         </a>
       }
     } @else {
-      <p class="text-muted-2">No terms of service apply to this instance.</p>
-      <a
-        routerLink="/dashboard"
-        class="d-inline-flex align-items-center gap-1 text-decoration-none"
-      >
-        <i class="bi bi-arrow-left"></i> Back to PostyFox
-      </a>
+      <div class="placeholder-glow">
+        <span class="placeholder col-12 mb-3"></span>
+        <span class="placeholder col-8"></span>
+      </div>
     }
-  } @else {
-    <div class="placeholder-glow">
-      <span class="placeholder col-12 mb-3"></span>
-      <span class="placeholder col-8"></span>
-    </div>
-  }
-</div>
+  </div>
+</ng-container>

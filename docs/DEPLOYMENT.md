@@ -177,7 +177,7 @@ The following table lists the configurable parameters for this chart and their d
 | `autoscaling.enabled` | Enable horizontal pod autoscaler | `false` |
 | `autoscaling.minReplicas` | Minimum number of replicas | `1` |
 | `autoscaling.maxReplicas` | Maximum number of replicas | `100` |
-| `autoscaling.targetCPUUtilizationPercentage` | Target CPU utilization | `80` |
+| `autoscaling.targetCPUUtilizationPercentage` | Target CPU utilisation | `80` |
 
 ### Values
 

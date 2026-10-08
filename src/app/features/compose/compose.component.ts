@@ -2,6 +2,7 @@ import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { forkJoin, from, of, switchMap, type Observable } from 'rxjs';
 import {
   AutomationAction,
@@ -112,6 +113,7 @@ interface TargetOptionsGroup {
 @Component({
   selector: 'app-compose',
   imports: [
+    TranslocoDirective,
     FormsModule,
     RouterLink,
     PageHeaderComponent,
@@ -425,9 +427,9 @@ export class ComposeComponent {
   readonly furAffinityIssues = computed(() => {
     if (!this.furAffinitySelected()) return [];
     const issues: string[] = [];
-    if (!this.title().trim()) issues.push('Add a title.');
+    if (!this.title().trim()) issues.push(translate('compose.issueAddTitle'));
     else if (this.title().trim().length > 60)
-      issues.push('Keep the title to 60 characters or fewer.');
+      issues.push(translate('compose.issueTitleMax', { max: 60 }));
     // The generic "requires a rating" check (ratingRequiredIssues) covers this for every selected
     // FurAffinity target, so it isn't duplicated here.
 
@@ -439,21 +441,21 @@ export class ComposeComponent {
       const item = media.find((m) => m.isDefault) ?? media[0];
       const contentType = (item.mimeType || item.ref.contentType).toLowerCase();
       if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(contentType)) {
-        issues.push('Use a JPEG, PNG, or GIF image for the default image.');
+        issues.push(translate('compose.issueFaImageType'));
       }
       if (
         contentType === 'image/gif' &&
         item.fileSize != null &&
         item.fileSize > 10 * 1024 * 1024
       ) {
-        issues.push('Keep the default animated GIF at or below 10 MiB.');
+        issues.push(translate('compose.issueFaGifSize'));
       }
 
       const validTags = this.tags()
         .split(',')
         .map((tag) => tag.trim().replace(/\s+/g, '_'))
         .filter((tag) => tag.length >= 3);
-      if (validTags.length < 3) issues.push('Add at least three tags of three or more characters.');
+      if (validTags.length < 3) issues.push(translate('compose.issueFaTags'));
     }
     return issues;
   });
@@ -469,18 +471,16 @@ export class ComposeComponent {
     const media = this.mediaItems();
     // With no image Artconomy posts a journal, whose subject allows more characters.
     const maxTitle = media.length > 0 ? 100 : 150;
-    if (!title && media.length === 0)
-      issues.push('Add a title: a post with no image becomes a journal, which needs one.');
+    if (!title && media.length === 0) issues.push(translate('compose.issueJournalTitle'));
     else if (title.length > maxTitle)
-      issues.push(`Keep the title to ${maxTitle} characters or fewer.`);
-    if (media.length > 1)
-      issues.push('Attach only one image: an Artconomy submission is a single file.');
+      issues.push(translate('compose.issueTitleMax', { max: maxTitle }));
+    if (media.length > 1) issues.push(translate('compose.issueArtconomySingleImage'));
     if (media.length === 1) {
       const contentType = (media[0].mimeType || media[0].ref.contentType).toLowerCase();
       if (
         !['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'].includes(contentType)
       )
-        issues.push('Use a JPEG, PNG, GIF, or WebP image.');
+        issues.push(translate('compose.issueArtconomyImageType'));
     }
     return issues;
   });
@@ -599,7 +599,7 @@ export class ComposeComponent {
         if (prefill) this.applyPrefill(prefill);
       },
       error: () => {
-        this.toast.error('Could not load compose data');
+        this.toast.error(translate('compose.couldNotLoadCompose'));
         this.loading.set(false);
       },
     });
@@ -774,7 +774,7 @@ export class ComposeComponent {
     if (cap != null && task.file.size > cap) {
       this.patchUploadTask(task.id, {
         status: 'error',
-        error: `File exceeds the ${this.humanFileSize(cap)} upload limit`,
+        error: translate('compose.fileExceedsLimit', { limit: this.humanFileSize(cap) }),
       });
       return;
     }
@@ -885,9 +885,9 @@ export class ComposeComponent {
   }
 
   private uploadErrorMessage(err: HttpErrorResponse): string {
-    if (err.status === 413) return 'File is too large to upload';
-    if (err.status === 0) return 'Network error — check your connection';
-    return (err.error as { error?: string } | null)?.error || 'Upload failed';
+    if (err.status === 413) return translate('compose.fileTooLarge');
+    if (err.status === 0) return translate('compose.networkError');
+    return (err.error as { error?: string } | null)?.error || translate('compose.uploadFailed');
   }
 
   /** Drops a failed upload from the tray without retrying it. */
@@ -1035,40 +1035,48 @@ export class ComposeComponent {
   submit(): void {
     const targets = [...this.selectedTargets()];
     if (targets.length === 0) {
-      this.toast.warning('Pick at least one target');
+      this.toast.warning(translate('compose.pickLeastOneTarget'));
       return;
     }
     if (this.furAffinityIssues().length) {
-      this.toast.warning('Complete the FurAffinity requirements');
+      this.toast.warning(translate('compose.completeFuraffinityRequirements'));
       return;
     }
     if (this.artconomyIssues().length) {
-      this.toast.warning('Complete the Artconomy requirements');
+      this.toast.warning(translate('compose.completeArtconomyRequirements'));
       return;
     }
     if (this.tagsRequiredIssues().length) {
-      this.toast.warning('Add tags', `Required by ${this.tagsRequiredIssues().join(', ')}`);
+      this.toast.warning(
+        translate('compose.addTags'),
+        translate('compose.required2', { platforms: this.tagsRequiredIssues().join(', ') }),
+      );
       return;
     }
     if (this.mediaRequiredIssues().length) {
-      this.toast.warning('Attach media', `Required by ${this.mediaRequiredIssues().join(', ')}`);
+      this.toast.warning(
+        translate('compose.attachMedia'),
+        translate('compose.required2', { platforms: this.mediaRequiredIssues().join(', ') }),
+      );
       return;
     }
     if (this.ratingRequiredIssues().length) {
       this.toast.warning(
-        'Choose a content rating',
-        `Required by ${this.ratingRequiredIssues().join(', ')}`,
+        translate('compose.chooseContentRating'),
+        translate('compose.required2', { platforms: this.ratingRequiredIssues().join(', ') }),
       );
       return;
     }
     if (Object.keys(this.targetOptionErrors()).length) {
-      this.toast.warning('Fix the platform options');
+      this.toast.warning(translate('compose.fixPlatformOptions'));
       return;
     }
     if (this.automationDelayIssues().length) {
       this.toast.warning(
-        'Set an automation delay',
-        `Needs a delay greater than 0 hours: ${this.automationDelayIssues().join(', ')}`,
+        translate('compose.setAutomationDelay'),
+        translate('compose.needsDelayGreaterThan', {
+          platforms: this.automationDelayIssues().join(', '),
+        }),
       );
       return;
     }
@@ -1083,16 +1091,18 @@ export class ComposeComponent {
         next: () =>
           this.posts.publish(draftId).subscribe({
             next: () => {
-              this.toast.success(body.postAt ? 'Post scheduled' : 'Post queued');
+              this.toast.success(
+                body.postAt ? translate('compose.postScheduled') : translate('compose.postQueued'),
+              );
               this.router.navigate(['/posts', draftId]);
             },
             error: (err) => {
-              this.toast.error('Could not publish draft', err?.error?.error);
+              this.toast.error(translate('compose.couldNotPublishDraft'), err?.error?.error);
               this.submitting.set(false);
             },
           }),
         error: (err) => {
-          this.toast.error('Could not save draft', err?.error?.error);
+          this.toast.error(translate('compose.couldNotSaveDraft'), err?.error?.error);
           this.submitting.set(false);
         },
       });
@@ -1101,11 +1111,13 @@ export class ComposeComponent {
 
     this.posts.create(body).subscribe({
       next: (res) => {
-        this.toast.success(body.postAt ? 'Post scheduled' : 'Post queued');
+        this.toast.success(
+          body.postAt ? translate('compose.postScheduled') : translate('compose.postQueued'),
+        );
         this.router.navigate(['/posts', res.postId]);
       },
       error: (err) => {
-        this.toast.error('Could not create post', err?.error?.error);
+        this.toast.error(translate('compose.couldNotCreatePost'), err?.error?.error);
         this.submitting.set(false);
       },
     });
@@ -1123,12 +1135,12 @@ export class ComposeComponent {
 
     this.savingDraft.set(true);
     const done = () => {
-      this.toast.success('Draft saved');
+      this.toast.success(translate('compose.draftSaved'));
       this.savingDraft.set(false);
     };
     const fail = (err: unknown) => {
       this.toast.error(
-        'Could not save draft',
+        translate('compose.couldNotSaveDraft'),
         (err as { error?: { error?: string } })?.error?.error,
       );
       this.savingDraft.set(false);

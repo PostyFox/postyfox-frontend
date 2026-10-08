@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { TagPreset } from '../../core/models/api.models';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { TagPresetsService } from '../../core/services/tag-presets.service';
@@ -23,7 +24,7 @@ function parseTags(tagsText: string): string[] {
 
 @Component({
   selector: 'app-tag-presets',
-  imports: [FormsModule, PageHeaderComponent, EmptyStateComponent],
+  imports: [TranslocoDirective, FormsModule, PageHeaderComponent, EmptyStateComponent],
   templateUrl: './tag-presets.component.html',
 })
 export class TagPresetsComponent {
@@ -48,7 +49,7 @@ export class TagPresetsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.toast.error('Could not load tag presets');
+        this.toast.error(translate('tagPresets.couldNotLoadTag'));
         this.loading.set(false);
       },
     });
@@ -78,13 +79,17 @@ export class TagPresetsComponent {
     this.saving.set(true);
     this.tagPresets.upsert({ id: e.id, name: e.name.trim(), tags }).subscribe({
       next: () => {
-        this.toast.success(e.id ? 'Tag preset updated' : 'Tag preset created');
+        this.toast.success(
+          e.id
+            ? translate('tagPresets.tagPresetUpdated')
+            : translate('tagPresets.tagPresetCreated'),
+        );
         this.saving.set(false);
         this.close();
         this.load();
       },
       error: () => {
-        this.toast.error('Could not save tag preset');
+        this.toast.error(translate('tagPresets.couldNotSaveTag'));
         this.saving.set(false);
       },
     });
@@ -92,18 +97,18 @@ export class TagPresetsComponent {
 
   async remove(p: TagPreset): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Delete tag preset',
-      message: `Delete “${p.name}”? This cannot be undone.`,
-      confirmText: 'Delete',
+      title: translate('tagPresets.deleteTagPreset'),
+      message: translate('tagPresets.deleteCannotUndone', { name: p.name }),
+      confirmText: translate('tagPresets.delete'),
       kind: 'danger',
     });
     if (!ok) return;
     this.tagPresets.delete(p.id).subscribe({
       next: () => {
-        this.toast.success('Tag preset deleted');
+        this.toast.success(translate('tagPresets.tagPresetDeleted'));
         this.load();
       },
-      error: () => this.toast.error('Could not delete tag preset'),
+      error: () => this.toast.error(translate('tagPresets.couldNotDeleteTag')),
     });
   }
 }

@@ -1,6 +1,7 @@
 import { Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FieldDescriptor, groupedOptions } from '../../core/models/platforms';
+import { TranslocoPipe } from '@jsverse/transloco';
 
 /**
  * Renders one backend-declared field descriptor: a `<select>` when the descriptor carries a fixed set
@@ -11,7 +12,7 @@ import { FieldDescriptor, groupedOptions } from '../../core/models/platforms';
  */
 @Component({
   selector: 'app-descriptor-field',
-  imports: [FormsModule],
+  imports: [FormsModule, TranslocoPipe],
   template: `
     <div class="mb-3">
       <label class="form-label" [for]="fieldId()">{{ descriptor().label }}</label>
@@ -23,7 +24,7 @@ import { FieldDescriptor, groupedOptions } from '../../core/models/platforms';
           [ngModel]="value()"
           (ngModelChange)="valueChange.emit($event)"
         >
-          <option value="">{{ descriptor().placeholder || 'Not set' }}</option>
+          <option value="">{{ descriptor().placeholder || ('common.notSet' | transloco) }}</option>
           @for (group of optionGroups(); track $index) {
             @if (group.label) {
               <optgroup [label]="group.label">

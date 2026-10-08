@@ -1,12 +1,13 @@
 import { Capabilities, ContentRating, ServiceDefinition, UserConnector } from './api.models';
+import { translate } from '@jsverse/transloco';
 import { darkThemeActive } from './theme';
 
-/** Human labels for {@link ContentRating}, shared by the connector settings and compose forms. */
+/** Label translation keys for {@link ContentRating}, shared by the connector settings and compose forms. */
 export const contentRatingOptions: { value: ContentRating; label: string }[] = [
-  { value: ContentRating.General, label: 'General' },
-  { value: ContentRating.Mature, label: 'Mature' },
-  { value: ContentRating.Adult, label: 'Adult' },
-  { value: ContentRating.Extreme, label: 'Extreme' },
+  { value: ContentRating.General, label: 'rating.general' },
+  { value: ContentRating.Mature, label: 'rating.mature' },
+  { value: ContentRating.Adult, label: 'rating.adult' },
+  { value: ContentRating.Extreme, label: 'rating.extreme' },
 ];
 
 /**
@@ -90,56 +91,55 @@ export interface PlatformBrand {
   color: string;
   /** Lighter stand-in for dark mode, for brands too dark to read on a dark surface (issue #422). */
   darkColor?: string;
+  /** `blurb`, `setup` and `docs.text` are translation keys in BRANDS; `brandFor` returns them translated. */
   blurb?: string;
   /** Extra setup guidance shown in the connector editor. */
   setup?: string;
   docs?: { href: string; text: string };
 }
 
-export const BRANDS: Record<string, PlatformBrand> = {
+const BRANDS: Record<string, PlatformBrand> = {
   DiscordWH: {
     label: 'Discord',
     icon: 'bi-discord',
     color: '#5865F2',
-    blurb: 'Post to a Discord channel via an incoming webhook.',
+    blurb: 'platforms.DiscordWH.blurb',
     docs: {
       href: 'https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks',
-      text: 'How to create a webhook',
+      text: 'platforms.DiscordWH.docs',
     },
   },
   Telegram: {
     label: 'Telegram',
     icon: 'bi-telegram',
     color: '#26A5E4',
-    blurb: 'Post to Telegram chats or channels as you.',
-    setup:
-      'Save the connector first, then use “Log in” on its card to complete the code / 2FA flow.',
+    blurb: 'platforms.Telegram.blurb',
+    setup: 'platforms.Telegram.setup',
   },
   BlueSky: {
     label: 'Bluesky',
     icon: 'bi-bluesky',
     color: '#0085FF',
-    blurb: 'Post to Bluesky via the AT Protocol.',
+    blurb: 'platforms.BlueSky.blurb',
   },
   Tumblr: {
     label: 'Tumblr',
     icon: 'bi-postcard-fill',
     color: '#36465D',
     darkColor: '#8a9bb8',
-    blurb: 'Post to a Tumblr blog.',
-    setup: 'Provide OAuth tokens obtained from authorising the Tumblr application.',
+    blurb: 'platforms.Tumblr.blurb',
+    setup: 'platforms.Tumblr.setup',
   },
   FurAffinity: {
     label: 'FurAffinity',
     icon: 'bi-palette-fill',
     color: '#2e3b4f',
     darkColor: '#8fa3c2',
-    blurb: 'Post submissions and journals to FurAffinity.',
-    setup:
-      'Sign in through PostyFox Connect so your FurAffinity password and session cookies never pass through this page.',
+    blurb: 'platforms.FurAffinity.blurb',
+    setup: 'platforms.FurAffinity.setup',
     docs: {
       href: 'https://www.furaffinity.net/login/',
-      text: 'Sign in to FurAffinity',
+      text: 'platforms.FurAffinity.docs',
     },
   },
   X: {
@@ -147,72 +147,71 @@ export const BRANDS: Record<string, PlatformBrand> = {
     icon: 'bi-twitter-x',
     color: '#14171a',
     darkColor: '#e7e9ea',
-    blurb: 'Post text and images to X (Twitter).',
-    setup:
-      'Sign in through PostyFox Connect so your X password never passes through this page. Posts are limited to 280 characters and up to four images.',
+    blurb: 'platforms.X.blurb',
+    setup: 'platforms.X.setup',
   },
   Toyhouse: {
     label: 'Toyhouse',
     icon: 'bi-house-heart-fill',
     color: '#5b8def',
-    blurb: 'Upload images to your Toyhouse characters.',
-    setup:
-      'Sign in through PostyFox Connect so your Toyhouse password and session cookies never pass through this page.',
+    blurb: 'platforms.Toyhouse.blurb',
+    setup: 'platforms.Toyhouse.setup',
     docs: {
       href: 'https://toyhou.se/~account/login',
-      text: 'Sign in to Toyhouse',
+      text: 'platforms.Toyhouse.docs',
     },
   },
   Kofi: {
     label: 'Ko-fi',
     icon: 'bi-cup-hot-fill',
     color: '#FF5E5B',
-    blurb: 'Post text and gallery posts to your Ko-fi page.',
-    setup:
-      'Sign in through PostyFox Connect so your Ko-fi password and session cookies never pass through this page. Every post needs a title.',
+    blurb: 'platforms.Kofi.blurb',
+    setup: 'platforms.Kofi.setup',
     docs: {
       href: 'https://ko-fi.com/account/login',
-      text: 'Sign in to Ko-fi',
+      text: 'platforms.Kofi.docs',
     },
   },
   Instagram: {
     label: 'Instagram',
     icon: 'bi-instagram',
     color: '#E1306C',
-    blurb: 'Post to an Instagram Business or Creator account.',
-    setup:
-      'Connect with Instagram to authorise a Business or Creator account. Every post needs at least one image or video — Instagram has no text-only post type.',
+    blurb: 'platforms.Instagram.blurb',
+    setup: 'platforms.Instagram.setup',
   },
   Artconomy: {
     label: 'Artconomy',
     icon: 'bi-brush-fill',
     color: '#1976D2',
     darkColor: '#64a8f0',
-    blurb: 'Post submissions and journals to Artconomy.',
-    setup:
-      'Sign in through PostyFox Connect so your Artconomy password and session cookies never pass through this page. Image posts need a rating and at least five tags.',
+    blurb: 'platforms.Artconomy.blurb',
+    setup: 'platforms.Artconomy.setup',
     docs: {
       href: 'https://artconomy.com/auth/login/',
-      text: 'Sign in to Artconomy',
+      text: 'platforms.Artconomy.docs',
     },
   },
   SoFurry: {
     label: 'SoFurry',
     icon: 'bi-stars',
     color: '#e8820c',
-    blurb: 'Publish image submissions to your SoFurry account.',
-    setup:
-      'Connect with SoFurry to authorise your account. Every post needs a title, a rating and at least one image.',
+    blurb: 'platforms.SoFurry.blurb',
+    setup: 'platforms.SoFurry.setup',
   },
 };
 
 const FALLBACK: PlatformBrand = { label: '', icon: 'bi-plug', color: '#8c57ff' };
 
 export function brandFor(platform: string | null | undefined): PlatformBrand {
-  const brand =
-    platform && BRANDS[platform]
-      ? BRANDS[platform]
-      : { ...FALLBACK, label: platform || 'Connector' };
+  const known = platform ? BRANDS[platform] : undefined;
+  const brand: PlatformBrand = known
+    ? {
+        ...known,
+        blurb: known.blurb && translate(known.blurb),
+        setup: known.setup && translate(known.setup),
+        docs: known.docs && { ...known.docs, text: translate(known.docs.text) },
+      }
+    : { ...FALLBACK, label: platform || translate('platforms.fallbackLabel') };
   return darkThemeActive() && brand.darkColor ? { ...brand, color: brand.darkColor } : brand;
 }
 
@@ -257,18 +256,19 @@ export function validateField(
 ): string | null {
   if (!descriptor) return null;
   const trimmed = (value ?? '').trim();
-  if (descriptor.required && !trimmed) return `${descriptor.label} is required.`;
+  const field = descriptor.label;
+  if (descriptor.required && !trimmed) return translate('validation.required', { field });
   if (!trimmed) return null;
   if (descriptor.minLength != null && trimmed.length < descriptor.minLength)
-    return `${descriptor.label} must be at least ${descriptor.minLength} characters.`;
+    return translate('validation.minLength', { field, min: descriptor.minLength });
   if (descriptor.maxLength != null && trimmed.length > descriptor.maxLength)
-    return `${descriptor.label} must be at most ${descriptor.maxLength} characters.`;
+    return translate('validation.maxLength', { field, max: descriptor.maxLength });
   if (descriptor.options?.length && !descriptor.options.some((o) => o.value === trimmed))
-    return descriptor.message ?? `${descriptor.label} is not one of the available choices.`;
+    return descriptor.message ?? translate('validation.notAnOption', { field });
   if (descriptor.pattern) {
     try {
       if (!new RegExp(descriptor.pattern).test(trimmed))
-        return descriptor.message ?? `${descriptor.label} is invalid.`;
+        return descriptor.message ?? translate('validation.invalid', { field });
     } catch {
       /* invalid pattern in schema: don't block the user. */
     }
@@ -286,12 +286,22 @@ export interface CapabilityChip {
 
 export function capabilityChips(c: Capabilities): CapabilityChip[] {
   return [
-    { label: 'Title', icon: 'bi-fonts', on: c.supportsTitle },
-    { label: 'Media', icon: 'bi-images', on: c.supportsMedia },
-    { label: 'Threads', icon: 'bi-chat-square-text', on: c.supportsThreads },
-    { label: 'Content warning', icon: 'bi-eye-slash', on: c.supportsContentWarning },
+    { label: translate('platforms.chips.title'), icon: 'bi-fonts', on: c.supportsTitle },
+    { label: translate('platforms.chips.media'), icon: 'bi-images', on: c.supportsMedia },
     {
-      label: c.maxContentLength ? `${c.maxContentLength} chars` : 'No limit',
+      label: translate('platforms.chips.threads'),
+      icon: 'bi-chat-square-text',
+      on: c.supportsThreads,
+    },
+    {
+      label: translate('platforms.chips.contentWarning'),
+      icon: 'bi-eye-slash',
+      on: c.supportsContentWarning,
+    },
+    {
+      label: c.maxContentLength
+        ? translate('platforms.chips.chars', { count: c.maxContentLength })
+        : translate('platforms.chips.noLimit'),
       icon: 'bi-type',
       on: true,
     },

@@ -1,5 +1,6 @@
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { Subscription, forkJoin, switchMap, timer } from 'rxjs';
 import { PostSummary, UserConnector } from '../../core/models/api.models';
 import { brandFor } from '../../core/models/platforms';
@@ -22,7 +23,7 @@ interface Tile {
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink, PageHeaderComponent, StatusBadgeComponent],
+  imports: [TranslocoDirective, RouterLink, PageHeaderComponent, StatusBadgeComponent],
   templateUrl: './dashboard.component.html',
 })
 export class DashboardComponent implements OnDestroy {
@@ -47,30 +48,31 @@ export class DashboardComponent implements OnDestroy {
 
   readonly enabledConnectors = computed(() => this.connectorList().filter((c) => c.enabled).length);
 
+  /** Tile `label`s are translation keys. */
   readonly tiles = computed<Tile[]>(() => [
     {
-      label: 'Connectors',
+      label: 'nav.connectors',
       value: this.connectorList().length,
       icon: 'bi-plug',
       color: 'primary',
       link: '/connectors',
     },
     {
-      label: 'Templates',
+      label: 'nav.templates',
       value: this.templateCount(),
       icon: 'bi-file-earmark-text',
       color: 'info',
       link: '/templates',
     },
     {
-      label: 'Triggers',
+      label: 'nav.triggers',
       value: this.triggerCount(),
       icon: 'bi-lightning-charge',
       color: 'warning',
       link: '/triggers',
     },
     {
-      label: 'Enabled',
+      label: 'nav.enabled',
       value: this.enabledConnectors(),
       icon: 'bi-check-circle',
       color: 'success',

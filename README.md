@@ -30,9 +30,17 @@ Sign in once at http://localhost:4180 (see [`docs/DEPLOYMENT.md`](./docs/DEPLOYM
 ```bash
 npm run build        # production build → dist/spa/browser
 npm run build-dev    # dev configuration
-npm run lint         # eslint (ts + templates)
+npm run lint         # eslint (ts + templates) + translation key check
 npm test             # Vitest unit tests (jsdom, no browser needed)
 ```
+
+## Localisation
+
+UI text lives in `public/i18n/<lang>.json` and is loaded at runtime by
+[Transloco](https://jsverse.gitbook.io/transloco) (en-GB is the source language). Templates use
+`*transloco="let tr"` and `tr('area.key')`; code uses `translate('area.key')`. To add a language,
+copy `en-GB.json` to `<lang>.json`, translate the values, and add the code to `AVAILABLE_LANGS` in
+`src/app/core/i18n/i18n.ts`. `npm run lint` fails on keys used but not defined, or defined but unused.
 
 ## Run the whole stack (SPA + APIs + auth)
 

@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, Input, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { catchError, forkJoin, of } from 'rxjs';
 import { AccountInvite, AccountMember, InviteStatus } from '../../core/models/api.models';
 import { AccountService } from '../../core/services/account.service';
@@ -17,7 +18,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header.compone
  */
 @Component({
   selector: 'app-access',
-  imports: [FormsModule, DatePipe, PageHeaderComponent, EmptyStateComponent],
+  imports: [TranslocoDirective, FormsModule, DatePipe, PageHeaderComponent, EmptyStateComponent],
   templateUrl: './access.component.html',
 })
 export class AccessComponent implements OnInit {
@@ -63,14 +64,15 @@ export class AccessComponent implements OnInit {
     this.account.acceptInvite(token).subscribe({
       next: () => {
         this.toast.success(
-          'Invite accepted',
-          'You can now switch to that account from the profile menu.',
+          translate('access.inviteAccepted'),
+          translate('access.canNowSwitchAccount'),
         );
         this.account.loadAccounts().subscribe();
         // Drop the token from the URL so a refresh doesn't try to re-accept it.
         this.router.navigate([], { queryParams: {} });
       },
-      error: (err) => this.toast.error('Could not accept invite', err?.error?.error ?? undefined),
+      error: (err) =>
+        this.toast.error(translate('access.couldNotAcceptInvite'), err?.error?.error ?? undefined),
     });
   }
 
@@ -81,15 +83,15 @@ export class AccessComponent implements OnInit {
     this.account.inviteMember(email).subscribe({
       next: () => {
         this.toast.success(
-          'Invite sent',
-          `${email} will get an email with instructions to accept.`,
+          translate('access.inviteSent'),
+          translate('access.willGetEmailInstructions', { email }),
         );
         this.newEmail.set('');
         this.inviting.set(false);
         this.load();
       },
       error: (err) => {
-        this.toast.error('Could not send invite', err?.error?.error ?? undefined);
+        this.toast.error(translate('access.couldNotSendInvite'), err?.error?.error ?? undefined);
         this.inviting.set(false);
       },
     });
@@ -97,18 +99,18 @@ export class AccessComponent implements OnInit {
 
   async revoke(invite: AccountInvite): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Revoke invite',
-      message: `Revoke the invite sent to ${invite.inviteeEmail}?`,
-      confirmText: 'Revoke',
+      title: translate('access.revokeInvite'),
+      message: translate('access.revokeInviteSent', { inviteeEmail: invite.inviteeEmail }),
+      confirmText: translate('access.revoke'),
       kind: 'danger',
     });
     if (!ok) return;
     this.account.revokeInvite(invite.id).subscribe({
       next: () => {
-        this.toast.success('Invite revoked');
+        this.toast.success(translate('access.inviteRevoked'));
         this.load();
       },
-      error: () => this.toast.error('Could not revoke invite'),
+      error: () => this.toast.error(translate('access.couldNotRevokeInvite')),
     });
   }
 
@@ -116,36 +118,37 @@ export class AccessComponent implements OnInit {
     this.account.acceptInviteById(invite.id).subscribe({
       next: () => {
         this.toast.success(
-          'Invite accepted',
-          'You can now switch to that account from the profile menu.',
+          translate('access.inviteAccepted'),
+          translate('access.canNowSwitchAccount'),
         );
         this.account.loadAccounts().subscribe();
         this.load();
       },
-      error: (err) => this.toast.error('Could not accept invite', err?.error?.error ?? undefined),
+      error: (err) =>
+        this.toast.error(translate('access.couldNotAcceptInvite'), err?.error?.error ?? undefined),
     });
   }
 
   async removeMember(member: AccountMember): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Remove access',
-      message: `Remove ${member.memberEmail}'s access to your account?`,
-      confirmText: 'Remove',
+      title: translate('access.removeAccess'),
+      message: translate('access.removeSAccessAccount', { memberEmail: member.memberEmail }),
+      confirmText: translate('access.remove'),
       kind: 'danger',
     });
     if (!ok) return;
     this.account.removeMember(member.memberUserId).subscribe({
       next: () => {
-        this.toast.success('Access removed');
+        this.toast.success(translate('access.accessRemoved'));
         this.load();
       },
-      error: () => this.toast.error('Could not remove access'),
+      error: () => this.toast.error(translate('access.couldNotRemoveAccess')),
     });
   }
 
   statusLabel(invite: AccountInvite): string {
-    if (invite.status === InviteStatus.Accepted) return 'Accepted';
-    if (invite.status === InviteStatus.Revoked) return 'Revoked';
-    return invite.isExpired ? 'Expired' : 'Pending';
+    if (invite.status === InviteStatus.Accepted) return translate('access.accepted');
+    if (invite.status === InviteStatus.Revoked) return translate('access.revoked');
+    return invite.isExpired ? translate('access.expired') : translate('access.pending');
   }
 }

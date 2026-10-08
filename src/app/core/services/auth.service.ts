@@ -3,6 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { catchError, of, switchMap, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AdminAccess, UserInfo } from '../models/api.models';
+import { translate } from '@jsverse/transloco';
 
 /**
  * Identity is owned by the oauth2-proxy edge, not the browser. The SPA is served *through*
@@ -20,7 +21,7 @@ export class AuthService {
 
   readonly displayName = computed(() => {
     const u = this.user();
-    return u?.preferredUsername || u?.user || u?.email || 'Account';
+    return u?.preferredUsername || u?.user || u?.email || translate('common.account');
   });
 
   readonly email = computed(() => this.user()?.email ?? '');

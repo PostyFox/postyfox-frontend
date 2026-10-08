@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { ApiKey, ApiKeyCreated } from '../../core/models/api.models';
 import { ConfirmService } from '../../core/services/confirm.service';
 import { ProfileService } from '../../core/services/profile.service';
@@ -10,7 +11,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header.compone
 
 @Component({
   selector: 'app-api-keys',
-  imports: [FormsModule, DatePipe, PageHeaderComponent, EmptyStateComponent],
+  imports: [TranslocoDirective, FormsModule, DatePipe, PageHeaderComponent, EmptyStateComponent],
   templateUrl: './api-keys.component.html',
 })
 export class ApiKeysComponent {
@@ -37,7 +38,7 @@ export class ApiKeysComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.toast.error('Could not load API keys');
+        this.toast.error(translate('apiKeys.couldNotLoadApi'));
         this.loading.set(false);
       },
     });
@@ -54,7 +55,7 @@ export class ApiKeysComponent {
         this.load();
       },
       error: () => {
-        this.toast.error('Could not create API key');
+        this.toast.error(translate('apiKeys.couldNotCreateApi'));
         this.creating.set(false);
       },
     });
@@ -62,25 +63,29 @@ export class ApiKeysComponent {
 
   async revoke(key: ApiKey): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Revoke API key',
-      message: `Revoke key “${key.name || key.prefix}”? Any integrations using it will stop working.`,
-      confirmText: 'Revoke',
+      title: translate('apiKeys.revokeApiKey'),
+      message: translate('apiKeys.revokeKeyAnyIntegrations', { prefix: key.name || key.prefix }),
+      confirmText: translate('apiKeys.revoke'),
       kind: 'danger',
     });
     if (!ok) return;
     this.profile.revokeKey(key.id).subscribe({
       next: () => {
-        this.toast.success('API key revoked');
+        this.toast.success(translate('apiKeys.apiKeyRevoked'));
         this.load();
       },
-      error: () => this.toast.error('Could not revoke key'),
+      error: () => this.toast.error(translate('apiKeys.couldNotRevokeKey')),
     });
   }
 
   copy(value: string): void {
     navigator.clipboard?.writeText(value).then(
-      () => this.toast.success('Copied to clipboard'),
-      () => this.toast.warning('Copy failed', 'Select and copy manually.'),
+      () => this.toast.success(translate('apiKeys.copiedClipboard')),
+      () =>
+        this.toast.warning(
+          translate('apiKeys.copyFailed'),
+          translate('apiKeys.selectCopyManually'),
+        ),
     );
   }
 

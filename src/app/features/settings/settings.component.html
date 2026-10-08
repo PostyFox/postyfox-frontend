@@ -1,44 +1,53 @@
-<app-page-header title="Settings" subtitle="Preferences that apply to your account">
-</app-page-header>
+<ng-container *transloco="let tr">
+  <app-page-header
+    [title]="tr('settings.settings')"
+    [subtitle]="tr('settings.preferencesApplyAccount')"
+  >
+  </app-page-header>
 
-<div class="card">
-  <div class="card-body">
-    <div class="form-check form-switch">
-      <input
-        class="form-check-input"
-        type="checkbox"
-        role="switch"
-        id="includeAdvertisingLine"
-        [ngModel]="settings().includeAdvertisingLine"
-        (ngModelChange)="set('includeAdvertisingLine', $event)"
-        [disabled]="loading() || saving()"
-      />
-      <label class="form-check-label" for="includeAdvertisingLine">
-        Include advertising line
-      </label>
+  <div class="card">
+    <div class="card-body">
+      <div class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          role="switch"
+          id="includeAdvertisingLine"
+          [ngModel]="settings().includeAdvertisingLine"
+          (ngModelChange)="set('includeAdvertisingLine', $event)"
+          [disabled]="loading() || saving()"
+        />
+        <label class="form-check-label" for="includeAdvertisingLine">
+          {{ tr('settings.includeAdvertisingLine') }}
+        </label>
+      </div>
+      <p class="text-muted-2 small mb-0 mt-2">
+        {{ tr('settings.addsSentUsingPostyfox') }}
+      </p>
+
+      <hr />
+
+      <div class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          role="switch"
+          id="useGravatar"
+          [ngModel]="settings().useGravatar"
+          (ngModelChange)="set('useGravatar', $event)"
+          [disabled]="loading() || saving()"
+        />
+        <label class="form-check-label" for="useGravatar">{{
+          tr('settings.showMyGravatar')
+        }}</label>
+      </div>
+      <p class="text-muted-2 small mb-0 mt-2">
+        {{ tr('settings.uses') }}
+        <a href="https://gravatar.com" target="_blank" rel="noopener">{{
+          tr('settings.gravatar')
+        }}</a>
+        {{ tr('settings.profilePicturePostyfoxLooks') }}
+      </p>
     </div>
-    <p class="text-muted-2 small mb-0 mt-2">
-      Adds a “Sent using PostyFox” link to postyfox.com at the end of every post you send.
-    </p>
-
-    <hr />
-
-    <div class="form-check form-switch">
-      <input
-        class="form-check-input"
-        type="checkbox"
-        role="switch"
-        id="useGravatar"
-        [ngModel]="settings().useGravatar"
-        (ngModelChange)="set('useGravatar', $event)"
-        [disabled]="loading() || saving()"
-      />
-      <label class="form-check-label" for="useGravatar">Show my Gravatar</label>
-    </div>
-    <p class="text-muted-2 small mb-0 mt-2">
-      Uses your <a href="https://gravatar.com" target="_blank" rel="noopener">Gravatar</a> as your
-      profile picture. PostyFox looks it up for you using a one-way hash of your email address, so
-      your browser never contacts Gravatar directly.
-    </p>
   </div>
-</div>
+</ng-container>

@@ -9,7 +9,7 @@
     "set-version": "node scripts/set-version.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint",
+    "lint": "ng lint && node scripts/check-i18n-keys.mjs && node scripts/check-uk-english.mjs",
     "prepare": "husky"
   },
   "private": true,
@@ -20,6 +20,7 @@
     "@angular/forms": "^22.2.1",
     "@angular/platform-browser": "^22.2.1",
     "@angular/router": "^22.2.1",
+    "@jsverse/transloco": "^8.4.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
     "@opentelemetry/instrumentation": "^0.222.0",
     "@opentelemetry/instrumentation-fetch": "^0.222.0",

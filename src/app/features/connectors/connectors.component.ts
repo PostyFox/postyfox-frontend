@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import {
   AuthState,
@@ -74,7 +75,13 @@ function parseObject(json: string | null | undefined): Record<string, string> {
 
 @Component({
   selector: 'app-connectors',
-  imports: [FormsModule, PageHeaderComponent, EmptyStateComponent, DescriptorFieldComponent],
+  imports: [
+    TranslocoDirective,
+    FormsModule,
+    PageHeaderComponent,
+    EmptyStateComponent,
+    DescriptorFieldComponent,
+  ],
   templateUrl: './connectors.component.html',
 })
 export class ConnectorsComponent {
@@ -196,7 +203,7 @@ export class ConnectorsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.toast.error('Could not load connectors');
+        this.toast.error(translate('connectors.couldNotLoadConnectors'));
         this.loading.set(false);
       },
     });
@@ -307,13 +314,17 @@ export class ConnectorsComponent {
       })
       .subscribe({
         next: () => {
-          this.toast.success(e.id ? 'Connector updated' : 'Connector added');
+          this.toast.success(
+            e.id
+              ? translate('connectors.connectorUpdated')
+              : translate('connectors.connectorAdded'),
+          );
           this.saving.set(false);
           this.closeEditor();
           this.load();
         },
         error: (err) => {
-          this.toast.error('Could not save connector', err?.error?.error);
+          this.toast.error(translate('connectors.couldNotSaveConnector'), err?.error?.error);
           this.saving.set(false);
         },
       });
@@ -344,7 +355,7 @@ export class ConnectorsComponent {
       this.openOAuthPopup(authorizeUrl);
     } catch (err: any) {
       this.connecting.set(false);
-      this.toast.error('Could not start connection', err?.error?.error);
+      this.toast.error(translate('connectors.couldNotStartConnection'), err?.error?.error);
     }
   }
 
@@ -364,11 +375,14 @@ export class ConnectorsComponent {
       finish();
       this.connecting.set(false);
       if (ev.data.ok) {
-        this.toast.success('Connected');
+        this.toast.success(translate('connectors.connected'));
         this.closeEditor();
         this.load();
       } else {
-        this.toast.error('Connection failed', 'Authorization was not completed.');
+        this.toast.error(
+          translate('connectors.connectionFailed'),
+          translate('connectors.authorisationWasNotCompleted'),
+        );
       }
     };
     // If the user closes the popup without finishing, stop the spinner.
@@ -406,7 +420,7 @@ export class ConnectorsComponent {
       this.openCookieConnect(saved);
       this.load();
     } catch (err: any) {
-      this.toast.error('Could not save the connector', err?.error?.error);
+      this.toast.error(translate('connectors.couldNotSaveConnector2'), err?.error?.error);
     } finally {
       this.pairingStarting.set(false);
     }
@@ -433,7 +447,7 @@ export class ConnectorsComponent {
       this.cookieConnect.set({ ...current, pairing });
       this.pairingCopied.set(false);
     } catch (err: any) {
-      this.toast.error('Could not create a pairing token', err?.error?.error);
+      this.toast.error(translate('connectors.couldNotCreatePairing'), err?.error?.error);
     } finally {
       this.pairingStarting.set(false);
     }
@@ -445,7 +459,7 @@ export class ConnectorsComponent {
       this.pairingCopied.set(true);
       window.setTimeout(() => this.pairingCopied.set(false), 2000);
     } catch {
-      this.toast.error('Could not copy to clipboard');
+      this.toast.error(translate('connectors.couldNotCopyClipboard'));
     }
   }
 
@@ -466,18 +480,24 @@ export class ConnectorsComponent {
           [connector.id]: { loading: false, state },
         }));
         if (state.isAuthenticated) {
-          this.toast.success(`${connector.displayName} connected`, state.detail ?? undefined);
+          this.toast.success(
+            translate('connectors.connected2', { displayName: connector.displayName }),
+            state.detail ?? undefined,
+          );
           this.closeCookieConnect();
         } else {
           this.toast.warning(
-            `${connector.displayName} is not connected yet`,
+            translate('connectors.notConnectedYet', { displayName: connector.displayName }),
             state.detail ?? undefined,
           );
         }
       },
       error: (err) => {
         this.pairingChecking.set(false);
-        this.toast.error(`Could not check ${connector.displayName}`, err?.error?.error);
+        this.toast.error(
+          translate('connectors.couldNotCheck', { displayName: connector.displayName }),
+          err?.error?.error,
+        );
       },
     });
   }
@@ -489,18 +509,18 @@ export class ConnectorsComponent {
 
   async remove(c: UserConnector): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Delete connector',
-      message: `Delete “${c.displayName}”? Posts will no longer be delivered to it.`,
-      confirmText: 'Delete',
+      title: translate('connectors.deleteConnector'),
+      message: translate('connectors.deletePostsWillNo', { displayName: c.displayName }),
+      confirmText: translate('connectors.delete'),
       kind: 'danger',
     });
     if (!ok) return;
     this.connectors.delete(c.id).subscribe({
       next: () => {
-        this.toast.success('Connector deleted');
+        this.toast.success(translate('connectors.connectorDeleted'));
         this.load();
       },
-      error: () => this.toast.error('Could not delete connector'),
+      error: () => this.toast.error(translate('connectors.couldNotDeleteConnector')),
     });
   }
 
@@ -512,7 +532,10 @@ export class ConnectorsComponent {
       error: () =>
         this.authStates.update((s) => ({
           ...s,
-          [c.id]: { loading: false, state: { isAuthenticated: false, detail: 'Check failed' } },
+          [c.id]: {
+            loading: false,
+            state: { isAuthenticated: false, detail: translate('connectors.checkFailed') },
+          },
         })),
     });
   }
@@ -543,7 +566,7 @@ export class ConnectorsComponent {
         this.targetsLoading.set(false);
       },
       error: () => {
-        this.toast.error('Could not list targets');
+        this.toast.error(translate('connectors.couldNotListTargets'));
         this.targetsLoading.set(false);
         this.targetsFor.set(null);
       },
@@ -580,12 +603,12 @@ export class ConnectorsComponent {
     this.connectors.setDestinations(c.id, destinations).subscribe({
       next: () => {
         this.destinationsSaving.set(false);
-        this.toast.success('Destinations updated');
+        this.toast.success(translate('connectors.destinationsUpdated'));
         this.closeTargets();
       },
       error: (err) => {
         this.destinationsSaving.set(false);
-        this.toast.error('Could not save destinations', err?.error?.error);
+        this.toast.error(translate('connectors.couldNotSaveDestinations'), err?.error?.error);
       },
     });
   }
@@ -612,7 +635,7 @@ export class ConnectorsComponent {
         this.telegramBusy.set(false);
         this.telegramValue.set('');
         if (step.status === 'complete') {
-          this.toast.success('Telegram authenticated');
+          this.toast.success(translate('connectors.telegramAuthenticated'));
           this.closeTelegram();
         } else {
           this.telegramStep.set(step);
@@ -620,7 +643,7 @@ export class ConnectorsComponent {
       },
       error: (err) => {
         this.telegramBusy.set(false);
-        this.toast.error('Telegram login failed', err?.error?.error);
+        this.toast.error(translate('connectors.telegramLoginFailed'), err?.error?.error);
       },
     });
   }

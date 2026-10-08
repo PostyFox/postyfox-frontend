@@ -6,6 +6,7 @@ import { provideRouter } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { PostRootStatus, PostSummary } from '../../core/models/api.models';
 import { PostsComponent, buildCalendar } from './posts.component';
+import { translocoTesting } from '../../../testing/transloco-testing';
 
 const VIEW_KEY = 'postyfox.scheduledView';
 
@@ -63,7 +64,7 @@ describe('PostsComponent', () => {
     vi.useFakeTimers({ now: new Date(2026, 9, 8, 12) });
     localStorage.removeItem(VIEW_KEY);
     TestBed.configureTestingModule({
-      imports: [PostsComponent],
+      imports: [PostsComponent, translocoTesting()],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     });
   });

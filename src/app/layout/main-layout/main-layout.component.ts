@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { AccountService } from '../../core/services/account.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeMode } from '../../core/models/theme';
@@ -15,7 +16,7 @@ interface NavItem {
 
 @Component({
   selector: 'app-main-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [TranslocoDirective, RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './main-layout.component.html',
 })
 export class MainLayoutComponent {
@@ -59,29 +60,29 @@ export class MainLayoutComponent {
     () => !this.activeAccount() && this.loadedAvatarUrl() === this.avatarUrl(),
   );
 
-  /** Colour theme (issue #422). */
+  /** Colour theme (issue #422). Labels are translation keys. */
   readonly themes: { mode: ThemeMode; label: string; icon: string }[] = [
-    { mode: 'light', label: 'Light', icon: 'bi-sun' },
-    { mode: 'dark', label: 'Dark', icon: 'bi-moon-stars' },
-    { mode: 'system', label: 'System', icon: 'bi-circle-half' },
+    { mode: 'light', label: 'mainLayout.themeLight', icon: 'bi-sun' },
+    { mode: 'dark', label: 'mainLayout.themeDark', icon: 'bi-moon-stars' },
+    { mode: 'system', label: 'mainLayout.themeSystem', icon: 'bi-circle-half' },
   ];
   readonly themeMode = this.theme.mode;
   readonly isDark = this.theme.isDark;
-  readonly themeIcon = computed(
-    () => this.themes.find((t) => t.mode === this.themeMode())?.icon ?? 'bi-circle-half',
-  );
+  readonly currentTheme = computed(() => this.themes.find((t) => t.mode === this.themeMode()));
+  readonly themeIcon = computed(() => this.currentTheme()?.icon ?? 'bi-circle-half');
 
+  /** `label`s are translation keys. */
   readonly nav: NavItem[] = [
-    { label: 'Dashboard', icon: 'bi-grid-1x2', link: '/dashboard' },
-    { label: 'Compose', icon: 'bi-pencil-square', link: '/compose' },
-    { label: 'Posts', icon: 'bi-collection', link: '/posts' },
-    { label: 'Connectors', icon: 'bi-plug', link: '/connectors' },
-    { label: 'Templates', icon: 'bi-file-earmark-text', link: '/templates' },
-    { label: 'Tag presets', icon: 'bi-tags', link: '/tag-presets' },
-    { label: 'Text templates', icon: 'bi-braces', link: '/text-templates' },
-    { label: 'Triggers', icon: 'bi-lightning-charge', link: '/triggers' },
-    { label: 'API keys', icon: 'bi-key', link: '/keys' },
-    { label: 'Access', icon: 'bi-people', link: '/access' },
+    { label: 'nav.dashboard', icon: 'bi-grid-1x2', link: '/dashboard' },
+    { label: 'nav.compose', icon: 'bi-pencil-square', link: '/compose' },
+    { label: 'nav.posts', icon: 'bi-collection', link: '/posts' },
+    { label: 'nav.connectors', icon: 'bi-plug', link: '/connectors' },
+    { label: 'nav.templates', icon: 'bi-file-earmark-text', link: '/templates' },
+    { label: 'nav.tagPresets', icon: 'bi-tags', link: '/tag-presets' },
+    { label: 'nav.textTemplates', icon: 'bi-braces', link: '/text-templates' },
+    { label: 'nav.triggers', icon: 'bi-lightning-charge', link: '/triggers' },
+    { label: 'nav.apiKeys', icon: 'bi-key', link: '/keys' },
+    { label: 'nav.access', icon: 'bi-people', link: '/access' },
   ];
 
   toggleSidebar(): void {

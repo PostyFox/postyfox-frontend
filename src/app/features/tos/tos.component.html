@@ -1,30 +1,34 @@
-<div class="container py-5" style="max-width: 860px">
-  <a
-    routerLink="/dashboard"
-    class="d-inline-flex align-items-center gap-1 mb-4 text-decoration-none"
-  >
-    <i class="bi bi-arrow-left"></i> Back to PostyFox
-  </a>
+<ng-container *transloco="let tr">
+  <div class="container py-5" style="max-width: 860px">
+    <a
+      routerLink="/dashboard"
+      class="d-inline-flex align-items-center gap-1 mb-4 text-decoration-none"
+    >
+      <i class="bi bi-arrow-left"></i> {{ tr('tos.backPostyfox') }}
+    </a>
 
-  <h1 class="h3 mb-1">Terms of Service</h1>
+    <h1 class="h3 mb-1">{{ tr('tos.termsService') }}</h1>
 
-  @if (failed()) {
-    <p class="text-muted-2">The terms of service could not be loaded. Please try again later.</p>
-  } @else if (current() === undefined) {
-    <div class="placeholder-glow">
-      <span class="placeholder col-12 mb-3"></span>
-      <span class="placeholder col-8"></span>
-    </div>
-  } @else if (current(); as terms) {
-    <p class="text-muted-2 mb-4">Published {{ terms.publishedAt.substring(0, 10) }}</p>
-    <div class="card">
-      <div class="card-body">
-        <markdown [data]="terms.content"></markdown>
+    @if (failed()) {
+      <p class="text-muted-2">{{ tr('tos.termsServiceCouldNot') }}</p>
+    } @else if (current() === undefined) {
+      <div class="placeholder-glow">
+        <span class="placeholder col-12 mb-3"></span>
+        <span class="placeholder col-8"></span>
       </div>
-    </div>
-  } @else {
-    <p class="text-muted-2">
-      This PostyFox instance has no terms of service right now. Nothing to read or accept here.
-    </p>
-  }
-</div>
+    } @else if (current(); as terms) {
+      <p class="text-muted-2 mb-4">
+        {{ tr('tos.published', { date: terms.publishedAt.substring(0, 10) }) }}
+      </p>
+      <div class="card">
+        <div class="card-body">
+          <markdown [data]="terms.content"></markdown>
+        </div>
+      </div>
+    } @else {
+      <p class="text-muted-2">
+        {{ tr('tos.postyfoxInstanceHasNo') }}
+      </p>
+    }
+  </div>
+</ng-container>

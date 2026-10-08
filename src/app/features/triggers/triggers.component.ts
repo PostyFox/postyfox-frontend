@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { forkJoin } from 'rxjs';
 import { Template, Trigger, UserConnector } from '../../core/models/api.models';
 import { ConfirmService } from '../../core/services/confirm.service';
@@ -28,7 +29,7 @@ const EMPTY_FORM: FormModel = {
 
 @Component({
   selector: 'app-triggers',
-  imports: [FormsModule, PageHeaderComponent, EmptyStateComponent],
+  imports: [TranslocoDirective, FormsModule, PageHeaderComponent, EmptyStateComponent],
   templateUrl: './triggers.component.html',
 })
 export class TriggersComponent {
@@ -55,7 +56,7 @@ export class TriggersComponent {
   }
 
   templateName(id: string | null): string {
-    if (!id) return 'None';
+    if (!id) return translate('triggers.none');
     return this.templateList().find((t) => t.id === id)?.title ?? id;
   }
 
@@ -77,7 +78,7 @@ export class TriggersComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.toast.error('Could not load triggers');
+        this.toast.error(translate('triggers.couldNotLoadTriggers'));
         this.loading.set(false);
       },
     });
@@ -99,7 +100,10 @@ export class TriggersComponent {
   save(): void {
     const f = this.form();
     if (!f.externalAccount.trim() || !f.targetConnectorId) {
-      this.toast.warning('Missing fields', 'Choose a target connector and enter an account.');
+      this.toast.warning(
+        translate('triggers.missingFields'),
+        translate('triggers.chooseTargetConnectorEnter'),
+      );
       return;
     }
     this.saving.set(true);
@@ -113,13 +117,13 @@ export class TriggersComponent {
       })
       .subscribe({
         next: () => {
-          this.toast.success('Trigger registered');
+          this.toast.success(translate('triggers.triggerRegistered'));
           this.saving.set(false);
           this.closeForm();
           this.load();
         },
         error: (err) => {
-          this.toast.error('Could not register trigger', err?.error?.error);
+          this.toast.error(translate('triggers.couldNotRegisterTrigger'), err?.error?.error);
           this.saving.set(false);
         },
       });
@@ -127,18 +131,21 @@ export class TriggersComponent {
 
   async remove(t: Trigger): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Delete trigger',
-      message: `Delete the ${t.sourceType} trigger for “${t.externalAccount}”?`,
-      confirmText: 'Delete',
+      title: translate('triggers.deleteTrigger'),
+      message: translate('triggers.deleteTrigger2', {
+        sourceType: t.sourceType,
+        externalAccount: t.externalAccount,
+      }),
+      confirmText: translate('triggers.delete'),
       kind: 'danger',
     });
     if (!ok) return;
     this.triggers.delete(t.id).subscribe({
       next: () => {
-        this.toast.success('Trigger deleted');
+        this.toast.success(translate('triggers.triggerDeleted'));
         this.load();
       },
-      error: () => this.toast.error('Could not delete trigger'),
+      error: () => this.toast.error(translate('triggers.couldNotDeleteTrigger')),
     });
   }
 }
