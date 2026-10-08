@@ -19,6 +19,7 @@ import { TemplatesService } from '../../core/services/templates.service';
 import { TextTemplatesService } from '../../core/services/text-templates.service';
 import { ToastService } from '../../core/services/toast.service';
 import { ComposeComponent } from './compose.component';
+import { translocoTesting } from '../../../testing/transloco-testing';
 
 /**
  * Covers issue #335 (default image selection for multi-image posts): the default must be
@@ -127,7 +128,7 @@ describe('ComposeComponent — default media selection', () => {
     );
 
     TestBed.configureTestingModule({
-      imports: [ComposeComponent],
+      imports: [ComposeComponent, translocoTesting()],
       providers: [
         { provide: ConnectorsService, useValue: connectors },
         {
@@ -438,7 +439,7 @@ describe('ComposeComponent — client-side upload size cap', () => {
     router.getCurrentNavigation.mockReturnValue(null);
 
     TestBed.configureTestingModule({
-      imports: [ComposeComponent],
+      imports: [ComposeComponent, translocoTesting()],
       providers: [
         { provide: ConnectorsService, useValue: connectors },
         {
@@ -636,7 +637,7 @@ describe('ComposeComponent — media-required platforms (Instagram)', () => {
     router.getCurrentNavigation.mockReturnValue(null);
 
     TestBed.configureTestingModule({
-      imports: [ComposeComponent],
+      imports: [ComposeComponent, translocoTesting()],
       providers: [
         { provide: ConnectorsService, useValue: connectors },
         {
@@ -781,7 +782,7 @@ describe('ComposeComponent — text-only posts (FurAffinity journals)', () => {
     router.getCurrentNavigation.mockReturnValue(null);
 
     TestBed.configureTestingModule({
-      imports: [ComposeComponent],
+      imports: [ComposeComponent, translocoTesting()],
       providers: [
         { provide: ConnectorsService, useValue: connectors },
         {
@@ -948,7 +949,7 @@ describe('ComposeComponent — Artconomy', () => {
     };
 
     TestBed.configureTestingModule({
-      imports: [ComposeComponent],
+      imports: [ComposeComponent, translocoTesting()],
       providers: [
         { provide: ConnectorsService, useValue: connectors },
         {

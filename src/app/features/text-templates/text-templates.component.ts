@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { TextTemplate, UserConnector } from '../../core/models/api.models';
 import { brandFor } from '../../core/models/platforms';
 import { ConfirmService } from '../../core/services/confirm.service';
@@ -19,7 +20,7 @@ interface EditModel {
 
 @Component({
   selector: 'app-text-templates',
-  imports: [FormsModule, PageHeaderComponent, EmptyStateComponent],
+  imports: [TranslocoDirective, FormsModule, PageHeaderComponent, EmptyStateComponent],
   templateUrl: './text-templates.component.html',
 })
 export class TextTemplatesComponent {
@@ -50,7 +51,7 @@ export class TextTemplatesComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.toast.error('Could not load text templates');
+        this.toast.error(translate('textTemplates.couldNotLoadText'));
         this.loading.set(false);
       },
     });
@@ -110,13 +111,17 @@ export class TextTemplatesComponent {
       .upsert({ id: e.id, name: e.name.trim(), defaultValue: e.defaultValue, connectorValues })
       .subscribe({
         next: () => {
-          this.toast.success(e.id ? 'Text template updated' : 'Text template created');
+          this.toast.success(
+            e.id
+              ? translate('textTemplates.textTemplateUpdated')
+              : translate('textTemplates.textTemplateCreated'),
+          );
           this.saving.set(false);
           this.close();
           this.load();
         },
         error: (err) => {
-          this.toast.error('Could not save text template', err?.error?.error);
+          this.toast.error(translate('textTemplates.couldNotSaveText'), err?.error?.error);
           this.saving.set(false);
         },
       });
@@ -124,18 +129,21 @@ export class TextTemplatesComponent {
 
   async remove(t: TextTemplate): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Delete text template',
-      message: `Delete “${t.name}”? Any {{tt:${t.name}}} references left in posts will resolve to blank. This cannot be undone.`,
-      confirmText: 'Delete',
+      title: translate('textTemplates.deleteTextTemplate'),
+      message: translate('textTemplates.deleteAnyReferencesLeft', {
+        name: t.name,
+        token: `{{tt:${t.name}}}`,
+      }),
+      confirmText: translate('textTemplates.delete'),
       kind: 'danger',
     });
     if (!ok) return;
     this.textTemplates.delete(t.id).subscribe({
       next: () => {
-        this.toast.success('Text template deleted');
+        this.toast.success(translate('textTemplates.textTemplateDeleted'));
         this.load();
       },
-      error: () => this.toast.error('Could not delete text template'),
+      error: () => this.toast.error(translate('textTemplates.couldNotDeleteText')),
     });
   }
 }

@@ -1,7 +1,7 @@
 /**
  * TypeScript mirrors of the PostyFox core-api / post-api DTOs.
  *
- * The APIs serialize with `JsonSerializerDefaults.Web` (camelCase property names,
+ * The APIs serialise with `JsonSerializerDefaults.Web` (camelCase property names,
  * enums as **numbers**), so enum members below carry their integer values.
  */
 

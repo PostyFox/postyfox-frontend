@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { MarkdownComponent } from 'ngx-markdown';
 import { AccountService } from '../../core/services/account.service';
 import { AuthService } from '../../core/services/auth.service';
@@ -13,7 +14,7 @@ import { ToastService } from '../../core/services/toast.service';
  */
 @Component({
   selector: 'app-terms',
-  imports: [MarkdownComponent, RouterLink],
+  imports: [TranslocoDirective, MarkdownComponent, RouterLink],
   templateUrl: './terms.component.html',
 })
 export class TermsComponent {
@@ -27,16 +28,16 @@ export class TermsComponent {
 
   constructor() {
     this.terms.load().subscribe({
-      error: () => this.toast.error('Could not load the terms of service'),
+      error: () => this.toast.error(translate('terms.couldNotLoadTerms')),
     });
   }
 
   /** Lets an admin back out of a bad publish without accepting it (the API exempts this call). */
   async turnOff(): Promise<void> {
     const confirmed = await this.confirm.ask({
-      title: 'Turn off terms of service',
-      message: 'Users will no longer need to accept terms to use PostyFox.',
-      confirmText: 'Turn off',
+      title: translate('terms.turnOffTermsService'),
+      message: translate('terms.usersWillNoLonger'),
+      confirmText: translate('terms.turnOff'),
       kind: 'danger',
     });
     if (!confirmed) return;
@@ -46,7 +47,7 @@ export class TermsComponent {
       next: () => window.location.assign('/admin'),
       error: () => {
         this.accepting.set(false);
-        this.toast.error('Could not turn off the terms of service');
+        this.toast.error(translate('terms.couldNotTurnOff'));
       },
     });
   }
@@ -60,12 +61,12 @@ export class TermsComponent {
         this.accepting.set(false);
         if (err.status === 409) {
           this.toast.warning(
-            'The terms have just been updated',
-            'Please review the latest version.',
+            translate('terms.termsHaveJustBeen'),
+            translate('terms.pleaseReviewLatestVersion'),
           );
           this.terms.load().subscribe();
         } else {
-          this.toast.error('Could not record your acceptance');
+          this.toast.error(translate('terms.couldNotRecordAcceptance'));
         }
       },
     });

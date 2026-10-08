@@ -1,648 +1,716 @@
-<app-page-header title="Compose" subtitle="Write once, deliver everywhere"></app-page-header>
+<ng-container *transloco="let tr">
+  <app-page-header
+    [title]="tr('compose.compose')"
+    [subtitle]="tr('compose.writeOnceDeliverEverywhere')"
+  ></app-page-header>
 
-@if (loading()) {
-  <div class="card">
-    <div class="card-body placeholder-glow">
-      <span class="placeholder col-4 mb-2"></span><span class="placeholder col-12"></span>
+  @if (loading()) {
+    <div class="card">
+      <div class="card-body placeholder-glow">
+        <span class="placeholder col-4 mb-2"></span><span class="placeholder col-12"></span>
+      </div>
     </div>
-  </div>
-} @else if (enabledConnectors().length === 0) {
-  <div class="card">
-    <div class="card-body">
-      <app-empty-state
-        icon="bi-plug"
-        title="No enabled connectors"
-        text="Add and enable a connector before you can post."
-      >
-        <a class="btn btn-primary" routerLink="/connectors">Manage connectors</a>
-      </app-empty-state>
+  } @else if (enabledConnectors().length === 0) {
+    <div class="card">
+      <div class="card-body">
+        <app-empty-state
+          icon="bi-plug"
+          [title]="tr('compose.noEnabledConnectors')"
+          [text]="tr('compose.addEnableConnectorBefore')"
+        >
+          <a class="btn btn-primary" routerLink="/connectors">{{
+            tr('compose.manageConnectors')
+          }}</a>
+        </app-empty-state>
+      </div>
     </div>
-  </div>
-} @else {
-  <div class="row g-4">
-    <!-- Left: content -->
-    <div class="col-lg-8">
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title mb-3">Content</h5>
-          <div class="mb-3">
-            <label class="form-label" for="title">Title</label>
-            <input
-              id="title"
-              class="form-control"
-              placeholder="Optional title"
-              [attr.maxlength]="furAffinitySelected() ? 60 : null"
-              [ngModel]="title()"
-              (ngModelChange)="title.set($event)"
-            />
-            @if (titleIgnoredTargets().length) {
-              <div class="form-text text-warning-emphasis">
-                <i class="bi bi-info-circle me-1"></i>Ignored by
-                {{ names(titleIgnoredTargets()) }} (no title support).
-              </div>
-            }
-            @if (furAffinitySelected()) {
-              <div class="form-text">Required by FurAffinity; maximum 60 characters.</div>
-            }
-          </div>
-          <div class="mb-3">
-            <label class="form-label" for="desc">Description</label>
-            <textarea
-              id="desc"
-              class="form-control"
-              rows="6"
-              placeholder="What do you want to say?"
-              [ngModel]="description()"
-              (ngModelChange)="description.set($event)"
-            ></textarea>
-            <div
-              class="text-end small mt-1"
-              [class.text-danger]="overLimit()"
-              [class.text-muted-2]="!overLimit()"
-            >
-              {{ descriptionLength()
-              }}{{ effectiveMaxLength() !== null ? ' / ' + effectiveMaxLength() : '' }}
-            </div>
-            @if (overLimit()) {
-              <div class="form-text text-danger">
-                <i class="bi bi-exclamation-triangle me-1"></i>Over the
-                {{ effectiveMaxLength() }}-character limit of the tightest selected platform — it
-                may be truncated or rejected.
-              </div>
-            }
-            @if (textTemplateList().length) {
-              <div class="d-flex flex-wrap align-items-center gap-1 mt-2">
-                <span class="text-muted-2 small me-1">Insert:</span>
-                @for (t of textTemplateList(); track t.id) {
-                  <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary py-0"
-                    title="Resolved per connector at delivery — see Text templates"
-                    (click)="insertTextTemplate(t.name)"
-                  >
-                    {{ '{{tt:' + t.name + '}}' }}
-                  </button>
-                }
-              </div>
-            }
-            @if (tagsByTarget().some((r) => !r.supportsTags)) {
-              <div class="form-text">
-                <i class="bi bi-info-circle me-1"></i>Platforms with no native tags field have none
-                — add <code>&#123;tags&#125;</code> anywhere in the text to place them there, or
-                leave it out and they'll be appended to the end.
-              </div>
-            }
-          </div>
-          <div class="mb-0">
-            <div class="d-flex justify-content-between align-items-end gap-2 mb-1">
-              <label class="form-label mb-0" for="tags">Tags</label>
-              @if (tagPresetList().length) {
-                <div class="input-group input-group-sm" style="width: auto">
-                  <label class="input-group-text" for="tagPreset">Preset</label>
-                  <select
-                    id="tagPreset"
-                    class="form-select form-select-sm"
-                    [ngModel]="tagPresetId()"
-                    (ngModelChange)="applyTagPreset($event)"
-                  >
-                    <option value="">Load a preset…</option>
-                    @for (p of tagPresetList(); track p.id) {
-                      <option [value]="p.id">{{ p.name }}</option>
-                    }
-                  </select>
+  } @else {
+    <div class="row g-4">
+      <!-- Left: content -->
+      <div class="col-lg-8">
+        <div class="card mb-4">
+          <div class="card-body">
+            <h5 class="card-title mb-3">{{ tr('compose.content') }}</h5>
+            <div class="mb-3">
+              <label class="form-label" for="title">{{ tr('compose.title') }}</label>
+              <input
+                id="title"
+                class="form-control"
+                [placeholder]="tr('compose.optionalTitle')"
+                [attr.maxlength]="furAffinitySelected() ? 60 : null"
+                [ngModel]="title()"
+                (ngModelChange)="title.set($event)"
+              />
+              @if (titleIgnoredTargets().length) {
+                <div class="form-text text-warning-emphasis">
+                  <i class="bi bi-info-circle me-1"></i
+                  >{{
+                    tr('compose.ignoredNoTitleSupport', {
+                      platforms: names(titleIgnoredTargets()),
+                    })
+                  }}
                 </div>
               }
+              @if (furAffinitySelected()) {
+                <div class="form-text">{{ tr('compose.requiredFuraffinityMaximum60') }}</div>
+              }
             </div>
-            <input
-              id="tags"
-              class="form-control"
-              placeholder="comma, separated, tags"
-              [ngModel]="tags()"
-              (ngModelChange)="tags.set($event)"
-            />
-            @if (furAffinitySelected()) {
-              <div class="form-text">
-                FurAffinity requires at least three comma-separated tags of three or more characters
-                for image posts. A post with no image becomes a journal, which takes no tags.
+            <div class="mb-3">
+              <label class="form-label" for="desc">{{ tr('compose.description') }}</label>
+              <textarea
+                id="desc"
+                class="form-control"
+                rows="6"
+                [placeholder]="tr('compose.whatDoWantSay')"
+                [ngModel]="description()"
+                (ngModelChange)="description.set($event)"
+              ></textarea>
+              <div
+                class="text-end small mt-1"
+                [class.text-danger]="overLimit()"
+                [class.text-muted-2]="!overLimit()"
+              >
+                {{ descriptionLength()
+                }}{{ effectiveMaxLength() !== null ? ' / ' + effectiveMaxLength() : '' }}
               </div>
-            }
-            @if (artconomySelected()) {
-              <div class="form-text">
-                Artconomy requires at least five different tags for image posts. A post with no
-                image becomes a journal, which takes no tags.
-              </div>
-            }
-            @if (tagsByTarget().length) {
-              <div class="mt-2 d-flex flex-column gap-2">
-                @for (row of tagsByTarget(); track row.target.selectionId) {
-                  <div class="form-check">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      [id]="'include-tags-' + row.target.selectionId"
-                      [ngModel]="row.includeTags"
-                      [disabled]="row.requiresTags"
-                      (ngModelChange)="setIncludeTags(row.target.selectionId, $event)"
-                    />
-                    <label
-                      class="form-check-label small"
-                      [for]="'include-tags-' + row.target.selectionId"
+              @if (overLimit()) {
+                <div class="form-text text-danger">
+                  <i class="bi bi-exclamation-triangle me-1"></i
+                  >{{
+                    tr('compose.overCharacterLimitTightest', {
+                      effectiveMaxLength: effectiveMaxLength(),
+                    })
+                  }}
+                </div>
+              }
+              @if (textTemplateList().length) {
+                <div class="d-flex flex-wrap align-items-center gap-1 mt-2">
+                  <span class="text-muted-2 small me-1">{{ tr('compose.insert') }}</span>
+                  @for (t of textTemplateList(); track t.id) {
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary py-0"
+                      [title]="tr('compose.resolvedPerConnectorDelivery')"
+                      (click)="insertTextTemplate(t.name)"
                     >
-                      Include tags for {{ row.target.displayName }}
-                      @if (row.requiresTags) {
-                        <span class="text-danger">(required)</span>
-                      } @else if (!row.supportsTags) {
-                        <span class="text-muted-2">(no tags field — woven into the text)</span>
-                      }
-                    </label>
-                    @if (distinctTagCount() < row.minTags) {
-                      <div class="form-text text-danger">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        @if (row.minTags === 1) {
-                          {{ row.target.displayName }} requires at least one tag.
-                        } @else {
-                          {{ row.target.displayName }} requires at least {{ row.minTags }} different
-                          tags ({{ distinctTagCount() }} so far).
-                        }
-                      </div>
-                    }
-                    @if (row.preview) {
-                      <div class="form-text">
-                        @if (row.preview.omitted > 0) {
-                          <span class="text-warning-emphasis">
-                            <i class="bi bi-exclamation-triangle me-1"></i>
-                            {{ row.preview.omitted }} tag{{
-                              row.preview.omitted === 1 ? '' : 's'
-                            }}
-                            dropped to fit {{ row.target.displayName }}'s character limit —
-                          </span>
-                        }
-                        will be added as
-                        <code>{{ row.preview.included.join(' ') || '(none — no room left)' }}</code>
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-          </div>
-          @if (ratingByTarget().length) {
-            <div class="mt-3 d-flex flex-column gap-2">
-              @for (row of ratingByTarget(); track row.target.selectionId) {
-                <div>
-                  <label class="form-label mb-1" [for]="'rating-' + row.target.selectionId">
-                    Content rating for {{ row.target.displayName }}
-                    @if (row.required) {
-                      <span class="text-danger">*</span>
-                    }
-                  </label>
-                  <select
-                    [id]="'rating-' + row.target.selectionId"
-                    class="form-select"
-                    [ngModel]="row.rating"
-                    (ngModelChange)="setRating(row.target.selectionId, $event)"
-                  >
-                    <option [ngValue]="null" [disabled]="row.required">
-                      {{ row.required ? 'Choose a rating' : 'No rating' }}
-                    </option>
-                    @for (option of ratingOptions; track option.value) {
-                      <option [ngValue]="option.value">{{ option.label }}</option>
-                    }
-                  </select>
-                  @if (row.required && row.rating === null) {
-                    <div class="form-text text-danger">
-                      <i class="bi bi-exclamation-triangle me-1"></i>
-                      {{ row.target.displayName }} requires an explicit audience rating.
-                    </div>
-                  } @else if (row.target.platform === 'BlueSky') {
-                    <div class="form-text">
-                      Optional. Mature, Adult, and Extreme are published as Bluesky content
-                      self-labels.
-                    </div>
+                      {{ '{{tt:' + t.name + '}}' }}
+                    </button>
                   }
                 </div>
               }
+              @if (tagsByTarget().some((r) => !r.supportsTags)) {
+                <div class="form-text">
+                  <i class="bi bi-info-circle me-1"></i
+                  ><span [innerHTML]="tr('compose.tagsPlaceholderHint')"></span>
+                </div>
+              }
             </div>
-          }
-          @if (automationByTarget().length) {
-            <div class="mt-3 d-flex flex-column gap-2">
-              @for (row of automationByTarget(); track row.target.selectionId) {
-                <div>
-                  <label class="form-label mb-1">Automation for {{ row.target.displayName }}</label>
-                  <div class="d-flex gap-2 flex-wrap">
+            <div class="mb-0">
+              <div class="d-flex justify-content-between align-items-end gap-2 mb-1">
+                <label class="form-label mb-0" for="tags">{{ tr('compose.tags') }}</label>
+                @if (tagPresetList().length) {
+                  <div class="input-group input-group-sm" style="width: auto">
+                    <label class="input-group-text" for="tagPreset">{{
+                      tr('compose.preset')
+                    }}</label>
                     <select
-                      class="form-select"
-                      style="max-width: 14rem"
-                      [ngModel]="row.rule?.action ?? null"
-                      (ngModelChange)="setAutomationAction(row.target.selectionId, $event)"
+                      id="tagPreset"
+                      class="form-select form-select-sm"
+                      [ngModel]="tagPresetId()"
+                      (ngModelChange)="applyTagPreset($event)"
                     >
-                      <option [ngValue]="null">None</option>
-                      @if (row.canRepost) {
-                        <option [ngValue]="automationAction.Repost">Repost after a delay</option>
-                      }
-                      @if (row.canDelete) {
-                        <option [ngValue]="automationAction.Delete">Delete after a delay</option>
+                      <option value="">{{ tr('compose.loadPreset') }}</option>
+                      @for (p of tagPresetList(); track p.id) {
+                        <option [value]="p.id">{{ p.name }}</option>
                       }
                     </select>
-                    @if (row.rule) {
-                      <div class="input-group" style="max-width: 12rem">
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          class="form-control"
-                          [ngModel]="row.rule.delayHours"
-                          (ngModelChange)="setAutomationDelay(row.target.selectionId, $event)"
-                        />
-                        <span class="input-group-text">hours</span>
-                      </div>
-                    }
                   </div>
-                  @if (row.rule && !(row.rule.delayHours > 0)) {
-                    <div class="form-text text-danger">
-                      <i class="bi bi-exclamation-triangle me-1"></i>
-                      Delay must be greater than 0 hours.
+                }
+              </div>
+              <input
+                id="tags"
+                class="form-control"
+                [placeholder]="tr('compose.commaSeparatedTags')"
+                [ngModel]="tags()"
+                (ngModelChange)="tags.set($event)"
+              />
+              @if (furAffinitySelected()) {
+                <div class="form-text">
+                  {{ tr('compose.furaffinityRequiresLeastThree') }}
+                </div>
+              }
+              @if (artconomySelected()) {
+                <div class="form-text">
+                  {{ tr('compose.artconomyRequiresLeastFive') }}
+                </div>
+              }
+              @if (tagsByTarget().length) {
+                <div class="mt-2 d-flex flex-column gap-2">
+                  @for (row of tagsByTarget(); track row.target.selectionId) {
+                    <div class="form-check">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        [id]="'include-tags-' + row.target.selectionId"
+                        [ngModel]="row.includeTags"
+                        [disabled]="row.requiresTags"
+                        (ngModelChange)="setIncludeTags(row.target.selectionId, $event)"
+                      />
+                      <label
+                        class="form-check-label small"
+                        [for]="'include-tags-' + row.target.selectionId"
+                      >
+                        {{ tr('compose.includeTags', { displayName: row.target.displayName }) }}
+                        @if (row.requiresTags) {
+                          <span class="text-danger">{{ tr('compose.required') }}</span>
+                        } @else if (!row.supportsTags) {
+                          <span class="text-muted-2">{{ tr('compose.noTagsFieldWoven') }}</span>
+                        }
+                      </label>
+                      @if (distinctTagCount() < row.minTags) {
+                        <div class="form-text text-danger">
+                          <i class="bi bi-exclamation-triangle me-1"></i>
+                          @if (row.minTags === 1) {
+                            {{
+                              tr('compose.requiresLeastOneTag', {
+                                displayName: row.target.displayName,
+                              })
+                            }}
+                          } @else {
+                            {{
+                              tr('compose.requiresLeastDifferentTags', {
+                                displayName: row.target.displayName,
+                                minTags: row.minTags,
+                                distinctTagCount: distinctTagCount(),
+                              })
+                            }}
+                          }
+                        </div>
+                      }
+                      @if (row.preview) {
+                        <div class="form-text">
+                          @if (row.preview.omitted > 0) {
+                            <span class="text-warning-emphasis">
+                              <i class="bi bi-exclamation-triangle me-1"></i>
+                              {{
+                                row.preview.omitted === 1
+                                  ? tr('compose.tagsDroppedOne', {
+                                      platform: row.target.displayName,
+                                    })
+                                  : tr('compose.tagsDroppedOther', {
+                                      count: row.preview.omitted,
+                                      platform: row.target.displayName,
+                                    })
+                              }}
+                            </span>
+                          }
+                          {{ tr('compose.willBeAddedAs') }}
+                          <code>{{
+                            row.preview.included.join(' ') || tr('compose.noneNoRoomLeft')
+                          }}</code>
+                        </div>
+                      }
                     </div>
                   }
                 </div>
               }
             </div>
-          }
-        </div>
-      </div>
-
-      <!-- Media -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title mb-0">Media</h5>
-            <label class="btn btn-sm btn-outline-primary mb-0">
-              @if (uploading()) {
-                <span class="spinner-border spinner-border-sm me-1"></span>
-              } @else {
-                <i class="bi bi-upload me-1"></i>
-              }
-              Upload
-              <input type="file" multiple hidden (change)="onFilesSelected($event)" />
-            </label>
-          </div>
-          @if (mediaUnsupportedTargets().length) {
-            <div class="alert alert-warning py-2 small d-flex align-items-start gap-2">
-              <i class="bi bi-exclamation-triangle-fill mt-1"></i>
-              <span
-                >{{ names(mediaUnsupportedTargets()) }} will post text only (no media
-                support).</span
-              >
-            </div>
-          }
-          @if (mediaResizeTargets().length) {
-            <div class="alert alert-info py-2 small d-flex align-items-start gap-2">
-              <i class="bi bi-arrows-angle-contract mt-1"></i>
-              <span>
-                {{ names(mediaResizeTargets()) }}
-                {{ mediaResizeTargets().length === 1 ? 'has' : 'have' }} a smaller size or dimension
-                limit — media will be automatically resized before delivery.
-              </span>
-            </div>
-          }
-          @if (mediaAttachmentLimitTargets().length) {
-            <div class="alert alert-warning py-2 small d-flex align-items-start gap-2">
-              <i class="bi bi-exclamation-triangle-fill mt-1"></i>
-              <div>
-                @for (t of mediaAttachmentLimitTargets(); track t.selectionId) {
+            @if (ratingByTarget().length) {
+              <div class="mt-3 d-flex flex-column gap-2">
+                @for (row of ratingByTarget(); track row.target.selectionId) {
                   <div>
-                    {{ t.displayName }} only accepts {{ maxAttachmentsFor(t) }} attachment{{
-                      maxAttachmentsFor(t) === 1 ? '' : 's'
-                    }}
-                    per post — only the first {{ maxAttachmentsFor(t) }} will be sent, the rest
-                    dropped.
-                  </div>
-                }
-              </div>
-            </div>
-          }
-          @if (mediaItems().length === 0 && uploadTasks().length === 0) {
-            <p class="text-muted-2 mb-0">No media attached.</p>
-          } @else {
-            @if (uploadTasks().length) {
-              <div class="d-flex flex-column gap-2 mb-2">
-                @for (t of uploadTasks(); track t.id) {
-                  <div class="border rounded p-2">
-                    <div class="d-flex align-items-center gap-2">
-                      <i class="bi bi-file-earmark-arrow-up fs-4 text-primary"></i>
-                      <div class="flex-grow-1 min-w-0">
-                        <div class="d-flex justify-content-between gap-2">
-                          <div class="text-truncate fw-medium">{{ t.name }}</div>
-                          <div class="text-muted-2 small text-nowrap">
-                            {{ humanFileSize(t.size) }}
-                          </div>
-                        </div>
-                        @if (t.status === 'checking') {
-                          <div class="small text-muted-2 mt-1">
-                            <span class="spinner-border spinner-border-sm me-1"></span>Checking…
-                          </div>
-                        } @else if (t.status === 'uploading') {
-                          <div class="progress mt-1" style="height: 6px">
-                            <div
-                              class="progress-bar"
-                              role="progressbar"
-                              [style.width.%]="t.progress"
-                              [attr.aria-valuenow]="t.progress"
-                              aria-valuemin="0"
-                              aria-valuemax="100"
-                            ></div>
-                          </div>
-                        } @else if (t.status === 'error') {
-                          <div class="small text-danger mt-1 d-flex align-items-center gap-2">
-                            <span>{{ t.error }}</span>
-                            <button
-                              type="button"
-                              class="btn btn-sm btn-link p-0"
-                              (click)="retryUpload(t.id)"
-                            >
-                              Retry
-                            </button>
-                            <button
-                              type="button"
-                              class="btn btn-sm btn-link p-0 text-muted-2"
-                              (click)="dismissUploadTask(t.id)"
-                            >
-                              Dismiss
-                            </button>
-                          </div>
-                        }
+                    <label class="form-label mb-1" [for]="'rating-' + row.target.selectionId">
+                      {{ tr('compose.contentRating', { displayName: row.target.displayName }) }}
+                      @if (row.required) {
+                        <span class="text-danger">*</span>
+                      }
+                    </label>
+                    <select
+                      [id]="'rating-' + row.target.selectionId"
+                      class="form-select"
+                      [ngModel]="row.rating"
+                      (ngModelChange)="setRating(row.target.selectionId, $event)"
+                    >
+                      <option [ngValue]="null" [disabled]="row.required">
+                        {{ row.required ? tr('compose.chooseRating') : tr('compose.noRating') }}
+                      </option>
+                      @for (option of ratingOptions; track option.value) {
+                        <option [ngValue]="option.value">{{ tr(option.label) }}</option>
+                      }
+                    </select>
+                    @if (row.required && row.rating === null) {
+                      <div class="form-text text-danger">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        {{
+                          tr('compose.requiresExplicitAudienceRating', {
+                            displayName: row.target.displayName,
+                          })
+                        }}
                       </div>
-                    </div>
+                    } @else if (row.target.platform === 'BlueSky') {
+                      <div class="form-text">
+                        {{ tr('compose.optionalMatureAdultExtreme') }}
+                      </div>
+                    }
                   </div>
                 }
               </div>
             }
-            @if (mediaItems().length > 1) {
-              <div class="small text-muted-2 mb-2">
-                <i class="bi bi-info-circle me-1"></i>Platforms that support several images post all
-                of them. Platforms limited to one image (e.g. FurAffinity) post the
-                <strong>default</strong> image below instead.
-              </div>
-            }
-            <div class="d-flex flex-column gap-2">
-              @for (m of mediaItems(); track m.ref.key; let i = $index) {
-                <div class="d-flex align-items-center gap-2 border rounded p-2">
-                  <i class="bi bi-file-earmark-image fs-4 text-primary"></i>
-                  <div class="flex-grow-1 min-w-0">
-                    <div class="d-flex align-items-center gap-2">
-                      <div class="text-truncate fw-medium">{{ m.name }}</div>
-                      @if (m.isDefault) {
-                        <span class="badge text-bg-primary">Default</span>
+            @if (automationByTarget().length) {
+              <div class="mt-3 d-flex flex-column gap-2">
+                @for (row of automationByTarget(); track row.target.selectionId) {
+                  <div>
+                    <label class="form-label mb-1">{{
+                      tr('compose.automation', { displayName: row.target.displayName })
+                    }}</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                      <select
+                        class="form-select"
+                        style="max-width: 14rem"
+                        [ngModel]="row.rule?.action ?? null"
+                        (ngModelChange)="setAutomationAction(row.target.selectionId, $event)"
+                      >
+                        <option [ngValue]="null">{{ tr('compose.none') }}</option>
+                        @if (row.canRepost) {
+                          <option [ngValue]="automationAction.Repost">
+                            {{ tr('compose.repostAfterDelay') }}
+                          </option>
+                        }
+                        @if (row.canDelete) {
+                          <option [ngValue]="automationAction.Delete">
+                            {{ tr('compose.deleteAfterDelay') }}
+                          </option>
+                        }
+                      </select>
+                      @if (row.rule) {
+                        <div class="input-group" style="max-width: 12rem">
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            class="form-control"
+                            [ngModel]="row.rule.delayHours"
+                            (ngModelChange)="setAutomationDelay(row.target.selectionId, $event)"
+                          />
+                          <span class="input-group-text">{{ tr('compose.hours') }}</span>
+                        </div>
                       }
                     </div>
-                    @if (resizeLabelsFor(m)) {
-                      <div class="small text-info mt-1">
-                        <i class="bi bi-arrows-angle-contract me-1"></i>Will be resized for
-                        {{ resizeLabelsFor(m) }}
+                    @if (row.rule && !(row.rule.delayHours > 0)) {
+                      <div class="form-text text-danger">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        {{ tr('compose.delayMustGreaterThan') }}
                       </div>
                     }
-                    <input
-                      class="form-control form-control-sm mt-1"
-                      placeholder="Alt text (optional)"
-                      [ngModel]="m.alt"
-                      (ngModelChange)="patchAlt(i, $event)"
-                    />
-                    @if (mediaItems().length > 1 && !m.isDefault) {
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-link px-0 mt-1"
-                        (click)="setDefaultMedia(i)"
-                      >
-                        Set as default
-                      </button>
-                    }
                   </div>
-                  <button class="btn btn-sm btn-outline-danger" (click)="removeMedia(i)">
-                    <i class="bi bi-trash"></i>
-                  </button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Media -->
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="card-title mb-0">{{ tr('compose.media') }}</h5>
+              <label class="btn btn-sm btn-outline-primary mb-0">
+                @if (uploading()) {
+                  <span class="spinner-border spinner-border-sm me-1"></span>
+                } @else {
+                  <i class="bi bi-upload me-1"></i>
+                }
+                {{ tr('compose.upload') }}
+                <input type="file" multiple hidden (change)="onFilesSelected($event)" />
+              </label>
+            </div>
+            @if (mediaUnsupportedTargets().length) {
+              <div class="alert alert-warning py-2 small d-flex align-items-start gap-2">
+                <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                <span>{{
+                  tr('compose.willPostTextOnly', {
+                    platforms: names(mediaUnsupportedTargets()),
+                  })
+                }}</span>
+              </div>
+            }
+            @if (mediaResizeTargets().length) {
+              <div class="alert alert-info py-2 small d-flex align-items-start gap-2">
+                <i class="bi bi-arrows-angle-contract mt-1"></i>
+                <span>
+                  {{
+                    tr(
+                      mediaResizeTargets().length === 1
+                        ? 'compose.resizeNoticeOne'
+                        : 'compose.resizeNoticeOther',
+                      { platforms: names(mediaResizeTargets()) }
+                    )
+                  }}
+                </span>
+              </div>
+            }
+            @if (mediaAttachmentLimitTargets().length) {
+              <div class="alert alert-warning py-2 small d-flex align-items-start gap-2">
+                <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                <div>
+                  @for (t of mediaAttachmentLimitTargets(); track t.selectionId) {
+                    <div>
+                      {{
+                        tr(
+                          maxAttachmentsFor(t) === 1
+                            ? 'compose.attachmentLimitOne'
+                            : 'compose.attachmentLimitOther',
+                          { platform: t.displayName, max: maxAttachmentsFor(t) }
+                        )
+                      }}
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+            @if (mediaItems().length === 0 && uploadTasks().length === 0) {
+              <p class="text-muted-2 mb-0">{{ tr('compose.noMediaAttached') }}</p>
+            } @else {
+              @if (uploadTasks().length) {
+                <div class="d-flex flex-column gap-2 mb-2">
+                  @for (t of uploadTasks(); track t.id) {
+                    <div class="border rounded p-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-file-earmark-arrow-up fs-4 text-primary"></i>
+                        <div class="flex-grow-1 min-w-0">
+                          <div class="d-flex justify-content-between gap-2">
+                            <div class="text-truncate fw-medium">{{ t.name }}</div>
+                            <div class="text-muted-2 small text-nowrap">
+                              {{ humanFileSize(t.size) }}
+                            </div>
+                          </div>
+                          @if (t.status === 'checking') {
+                            <div class="small text-muted-2 mt-1">
+                              <span class="spinner-border spinner-border-sm me-1"></span
+                              >{{ tr('compose.checking') }}
+                            </div>
+                          } @else if (t.status === 'uploading') {
+                            <div class="progress mt-1" style="height: 6px">
+                              <div
+                                class="progress-bar"
+                                role="progressbar"
+                                [style.width.%]="t.progress"
+                                [attr.aria-valuenow]="t.progress"
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                              ></div>
+                            </div>
+                          } @else if (t.status === 'error') {
+                            <div class="small text-danger mt-1 d-flex align-items-center gap-2">
+                              <span>{{ t.error }}</span>
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-link p-0"
+                                (click)="retryUpload(t.id)"
+                              >
+                                {{ tr('compose.retry') }}
+                              </button>
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-link p-0 text-muted-2"
+                                (click)="dismissUploadTask(t.id)"
+                              >
+                                {{ tr('compose.dismiss') }}
+                              </button>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  }
                 </div>
               }
-            </div>
-          }
-        </div>
-      </div>
-
-      <!-- Template + variables -->
-      <div class="card">
-        <div class="card-body">
-          <h5 class="card-title mb-3">Template</h5>
-          <div class="mb-3">
-            <label class="form-label" for="tpl">Apply a template (optional)</label>
-            <select
-              id="tpl"
-              class="form-select"
-              [ngModel]="templateId()"
-              (ngModelChange)="templateId.set($event)"
-            >
-              <option value="">None</option>
-              @for (t of templateList(); track t.id) {
-                <option [value]="t.id">{{ t.title }}</option>
+              @if (mediaItems().length > 1) {
+                <div class="small text-muted-2 mb-2">
+                  <i class="bi bi-info-circle me-1"></i
+                  ><span [innerHTML]="tr('compose.multipleImagesHint')"></span>
+                </div>
               }
-            </select>
+              <div class="d-flex flex-column gap-2">
+                @for (m of mediaItems(); track m.ref.key; let i = $index) {
+                  <div class="d-flex align-items-center gap-2 border rounded p-2">
+                    <i class="bi bi-file-earmark-image fs-4 text-primary"></i>
+                    <div class="flex-grow-1 min-w-0">
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="text-truncate fw-medium">{{ m.name }}</div>
+                        @if (m.isDefault) {
+                          <span class="badge text-bg-primary">{{
+                            tr('compose.defaultBadge')
+                          }}</span>
+                        }
+                      </div>
+                      @if (resizeLabelsFor(m)) {
+                        <div class="small text-info mt-1">
+                          <i class="bi bi-arrows-angle-contract me-1"></i
+                          >{{ tr('compose.willResized', { platforms: resizeLabelsFor(m) }) }}
+                        </div>
+                      }
+                      <input
+                        class="form-control form-control-sm mt-1"
+                        [placeholder]="tr('compose.altTextOptional')"
+                        [ngModel]="m.alt"
+                        (ngModelChange)="patchAlt(i, $event)"
+                      />
+                      @if (mediaItems().length > 1 && !m.isDefault) {
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-link px-0 mt-1"
+                          (click)="setDefaultMedia(i)"
+                        >
+                          {{ tr('compose.setDefault') }}
+                        </button>
+                      }
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" (click)="removeMedia(i)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                }
+              </div>
+            }
           </div>
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <label class="form-label mb-0">Variables</label>
-            <button class="btn btn-sm btn-outline-secondary" (click)="addVariable()">
-              <i class="bi bi-plus-lg"></i> Add
-            </button>
-          </div>
-          @for (v of variables(); track $index; let i = $index) {
-            <div class="input-group mb-2">
-              <input
-                class="form-control"
-                placeholder="key"
-                [ngModel]="v.key"
-                (ngModelChange)="patchVariable(i, 'key', $event)"
-              />
-              <input
-                class="form-control"
-                placeholder="value"
-                [ngModel]="v.value"
-                (ngModelChange)="patchVariable(i, 'value', $event)"
-              />
-              <button class="btn btn-outline-danger" (click)="removeVariable(i)">
-                <i class="bi bi-x-lg"></i>
+        </div>
+
+        <!-- Template + variables -->
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title mb-3">{{ tr('compose.template') }}</h5>
+            <div class="mb-3">
+              <label class="form-label" for="tpl">{{ tr('compose.applyTemplateOptional') }}</label>
+              <select
+                id="tpl"
+                class="form-select"
+                [ngModel]="templateId()"
+                (ngModelChange)="templateId.set($event)"
+              >
+                <option value="">{{ tr('compose.none') }}</option>
+                @for (t of templateList(); track t.id) {
+                  <option [value]="t.id">{{ t.title }}</option>
+                }
+              </select>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label mb-0">{{ tr('compose.variables') }}</label>
+              <button class="btn btn-sm btn-outline-secondary" (click)="addVariable()">
+                <i class="bi bi-plus-lg"></i> {{ tr('compose.add') }}
               </button>
             </div>
-          } @empty {
-            <p class="text-muted-2 small mb-0">
-              Add key/value pairs to fill placeholders in the selected template.
-            </p>
-          }
+            @for (v of variables(); track $index; let i = $index) {
+              <div class="input-group mb-2">
+                <input
+                  class="form-control"
+                  [placeholder]="tr('compose.key')"
+                  [ngModel]="v.key"
+                  (ngModelChange)="patchVariable(i, 'key', $event)"
+                />
+                <input
+                  class="form-control"
+                  [placeholder]="tr('compose.value')"
+                  [ngModel]="v.value"
+                  (ngModelChange)="patchVariable(i, 'value', $event)"
+                />
+                <button class="btn btn-outline-danger" (click)="removeVariable(i)">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            } @empty {
+              <p class="text-muted-2 small mb-0">
+                {{ tr('compose.addKeyValuePairs') }}
+              </p>
+            }
+          </div>
         </div>
-      </div>
 
-      <!--
+        <!--
         Choices the platform takes per submission rather than per account (FurAffinity's category,
         species, gender, gallery folders; Fediverse platforms' content warning). One section per
         selected target, since two accounts on the same platform can want different answers.
       -->
-      @for (group of targetOptionGroups(); track group.target.selectionId) {
+        @for (group of targetOptionGroups(); track group.target.selectionId) {
+          <div class="card mb-4">
+            <div class="card-body">
+              <h5 class="card-title d-flex align-items-center gap-2 mb-1">
+                <span
+                  class="avatar avatar-sm"
+                  [style.background]="brand(group.target.platform).color + '22'"
+                  [style.color]="brand(group.target.platform).color"
+                >
+                  <i class="bi" [class]="brand(group.target.platform).icon"></i>
+                </span>
+                {{ tr('compose.options', { displayName: group.target.displayName }) }}
+              </h5>
+              <p class="text-muted-2 small mb-3">
+                {{
+                  tr('compose.howSubmissionFiledAnything', {
+                    label: brand(group.target.platform).label,
+                  })
+                }}
+              </p>
+              @for (field of group.fields; track field.key) {
+                <app-descriptor-field
+                  [fieldId]="'opt-' + group.target.selectionId + '-' + field.key"
+                  [descriptor]="field.descriptor"
+                  [value]="targetOption(group.target.selectionId, field.key)"
+                  [error]="targetOptionError(group.target.selectionId, field.key)"
+                  (valueChange)="patchTargetOption(group.target.selectionId, field.key, $event)"
+                />
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Right: targets + schedule + submit -->
+      <div class="col-lg-4">
         <div class="card mb-4">
           <div class="card-body">
-            <h5 class="card-title d-flex align-items-center gap-2 mb-1">
-              <span
-                class="avatar avatar-sm"
-                [style.background]="brand(group.target.platform).color + '22'"
-                [style.color]="brand(group.target.platform).color"
-              >
-                <i class="bi" [class]="brand(group.target.platform).icon"></i>
-              </span>
-              {{ group.target.displayName }} options
-            </h5>
-            <p class="text-muted-2 small mb-3">
-              How this submission is filed on {{ brand(group.target.platform).label }}. Anything
-              left unset uses the platform's own default.
-            </p>
-            @for (field of group.fields; track field.key) {
-              <app-descriptor-field
-                [fieldId]="'opt-' + group.target.selectionId + '-' + field.key"
-                [descriptor]="field.descriptor"
-                [value]="targetOption(group.target.selectionId, field.key)"
-                [error]="targetOptionError(group.target.selectionId, field.key)"
-                (valueChange)="patchTargetOption(group.target.selectionId, field.key, $event)"
+            <h5 class="card-title mb-3">{{ tr('compose.deliver') }}</h5>
+            <div class="d-flex flex-column gap-2">
+              @for (t of selectableTargets(); track t.selectionId) {
+                <label class="d-flex align-items-center gap-2 border rounded p-2 cursor-pointer">
+                  <input
+                    class="form-check-input mt-0"
+                    type="checkbox"
+                    [checked]="isSelected(t.selectionId)"
+                    (change)="toggleTarget(t.selectionId)"
+                  />
+                  <span
+                    class="avatar avatar-sm"
+                    [style.background]="brand(t.platform).color + '22'"
+                    [style.color]="brand(t.platform).color"
+                  >
+                    <i class="bi" [class]="brand(t.platform).icon"></i>
+                  </span>
+                  <span class="flex-grow-1 min-w-0">
+                    <span class="fw-medium d-block text-truncate">{{ t.displayName }}</span>
+                    <small class="text-muted-2">{{ brand(t.platform).label }}</small>
+                  </span>
+                </label>
+              }
+            </div>
+            @if (unconfiguredMultiTargetConnectors().length > 0) {
+              <div class="alert alert-warning small mt-3 mb-0">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                {{
+                  tr('compose.pickWhichChatsChannels', {
+                    connectors: names(unconfiguredMultiTargetConnectors()),
+                  })
+                }}
+                <a routerLink="/connectors">{{ tr('compose.manageConnectors') }}</a
+                >.
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="form-check form-switch mb-2">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="sched"
+                [ngModel]="scheduleEnabled()"
+                (ngModelChange)="scheduleEnabled.set($event)"
+              />
+              <label class="form-check-label" for="sched">{{ tr('compose.scheduleLater') }}</label>
+            </div>
+            @if (scheduleEnabled()) {
+              <input
+                type="datetime-local"
+                class="form-control"
+                [ngModel]="postAt()"
+                (ngModelChange)="postAt.set($event)"
               />
             }
           </div>
         </div>
-      }
-    </div>
 
-    <!-- Right: targets + schedule + submit -->
-    <div class="col-lg-4">
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title mb-3">Deliver to</h5>
-          <div class="d-flex flex-column gap-2">
-            @for (t of selectableTargets(); track t.selectionId) {
-              <label class="d-flex align-items-center gap-2 border rounded p-2 cursor-pointer">
-                <input
-                  class="form-check-input mt-0"
-                  type="checkbox"
-                  [checked]="isSelected(t.selectionId)"
-                  (change)="toggleTarget(t.selectionId)"
-                />
-                <span
-                  class="avatar avatar-sm"
-                  [style.background]="brand(t.platform).color + '22'"
-                  [style.color]="brand(t.platform).color"
-                >
-                  <i class="bi" [class]="brand(t.platform).icon"></i>
-                </span>
-                <span class="flex-grow-1 min-w-0">
-                  <span class="fw-medium d-block text-truncate">{{ t.displayName }}</span>
-                  <small class="text-muted-2">{{ brand(t.platform).label }}</small>
-                </span>
-              </label>
-            }
-          </div>
-          @if (unconfiguredMultiTargetConnectors().length > 0) {
-            <div class="alert alert-warning small mt-3 mb-0">
-              <i class="bi bi-exclamation-triangle me-1"></i>
-              {{ names(unconfiguredMultiTargetConnectors()) }} — pick which chats/channels to expose
-              from <a routerLink="/connectors">Manage connectors</a>.
+        @if (mediaRequiredIssues().length) {
+          <div class="alert alert-warning">
+            <div class="fw-medium mb-1">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ tr('compose.attachMedia') }}
             </div>
-          }
-        </div>
-      </div>
+            <div class="small mb-0">
+              {{
+                tr(
+                  mediaRequiredIssues().length > 1
+                    ? 'compose.mediaRequiredOther'
+                    : 'compose.mediaRequiredOne',
+                  { platforms: mediaRequiredIssues().join(', ') }
+                )
+              }}
+            </div>
+          </div>
+        }
 
-      <div class="card mb-4">
-        <div class="card-body">
-          <div class="form-check form-switch mb-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="sched"
-              [ngModel]="scheduleEnabled()"
-              (ngModelChange)="scheduleEnabled.set($event)"
-            />
-            <label class="form-check-label" for="sched">Schedule for later</label>
+        @if (artconomyIssues().length) {
+          <div class="alert alert-warning">
+            <div class="fw-medium mb-1">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i
+              >{{ tr('compose.completeTheseArtconomyRequirements') }}
+            </div>
+            <ul class="small mb-0 ps-3">
+              @for (issue of artconomyIssues(); track issue) {
+                <li>{{ issue }}</li>
+              }
+            </ul>
           </div>
-          @if (scheduleEnabled()) {
-            <input
-              type="datetime-local"
-              class="form-control"
-              [ngModel]="postAt()"
-              (ngModelChange)="postAt.set($event)"
-            />
-          }
-        </div>
-      </div>
+        }
 
-      @if (mediaRequiredIssues().length) {
-        <div class="alert alert-warning">
-          <div class="fw-medium mb-1">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i>Attach media
+        @if (furAffinityIssues().length) {
+          <div class="alert alert-warning">
+            <div class="fw-medium mb-1">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i
+              >{{ tr('compose.completeTheseFuraffinityRequirements') }}
+            </div>
+            <ul class="small mb-0 ps-3">
+              @for (issue of furAffinityIssues(); track issue) {
+                <li>{{ issue }}</li>
+              }
+            </ul>
           </div>
-          <div class="small mb-0">
-            Required by {{ mediaRequiredIssues().join(', ') }}. Text-only posts aren't supported for
-            {{ mediaRequiredIssues().length > 1 ? 'these platforms' : 'this platform' }}.
-          </div>
-        </div>
-      }
+        }
 
-      @if (artconomyIssues().length) {
-        <div class="alert alert-warning">
-          <div class="fw-medium mb-1">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i>Complete these Artconomy
-            requirements
-          </div>
-          <ul class="small mb-0 ps-3">
-            @for (issue of artconomyIssues(); track issue) {
-              <li>{{ issue }}</li>
+        <div class="d-flex gap-2">
+          <button
+            class="btn btn-outline-secondary btn-lg flex-shrink-0"
+            (click)="saveDraft()"
+            [disabled]="!canSaveDraft()"
+          >
+            @if (savingDraft()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            } @else {
+              <i class="bi bi-save me-1"></i>
             }
-          </ul>
-        </div>
-      }
-
-      @if (furAffinityIssues().length) {
-        <div class="alert alert-warning">
-          <div class="fw-medium mb-1">
-            <i class="bi bi-exclamation-triangle-fill me-1"></i>Complete these FurAffinity
-            requirements
-          </div>
-          <ul class="small mb-0 ps-3">
-            @for (issue of furAffinityIssues(); track issue) {
-              <li>{{ issue }}</li>
+            {{ tr('compose.saveDraft') }}
+          </button>
+          <button
+            class="btn btn-primary btn-lg flex-grow-1"
+            (click)="submit()"
+            [disabled]="!canSubmit()"
+          >
+            @if (submitting()) {
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            } @else {
+              <i class="bi bi-send me-1"></i>
             }
-          </ul>
+            {{ scheduleEnabled() && postAt() ? tr('compose.schedulePost') : tr('compose.postNow') }}
+          </button>
         </div>
-      }
-
-      <div class="d-flex gap-2">
-        <button
-          class="btn btn-outline-secondary btn-lg flex-shrink-0"
-          (click)="saveDraft()"
-          [disabled]="!canSaveDraft()"
-        >
-          @if (savingDraft()) {
-            <span class="spinner-border spinner-border-sm me-1"></span>
-          } @else {
-            <i class="bi bi-save me-1"></i>
-          }
-          Save draft
-        </button>
-        <button
-          class="btn btn-primary btn-lg flex-grow-1"
-          (click)="submit()"
-          [disabled]="!canSubmit()"
-        >
-          @if (submitting()) {
-            <span class="spinner-border spinner-border-sm me-1"></span>
-          } @else {
-            <i class="bi bi-send me-1"></i>
-          }
-          {{ scheduleEnabled() && postAt() ? 'Schedule post' : 'Post now' }}
-        </button>
+        <p class="text-muted-2 small text-center mt-2 mb-0">
+          {{
+            selectedTargets().size === 1
+              ? tr('compose.targetsSelectedOne')
+              : tr('compose.targetsSelectedOther', { count: selectedTargets().size })
+          }}
+        </p>
       </div>
-      <p class="text-muted-2 small text-center mt-2 mb-0">
-        {{ selectedTargets().size }} target{{ selectedTargets().size === 1 ? '' : 's' }} selected
-      </p>
     </div>
-  </div>
-}
+  }
+</ng-container>

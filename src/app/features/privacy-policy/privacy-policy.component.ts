@@ -1,5 +1,7 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective } from '@jsverse/transloco';
 import { DeploymentConfigService } from '../../core/services/deployment-config.service';
 
 /**
@@ -14,13 +16,13 @@ import { DeploymentConfigService } from '../../core/services/deployment-config.s
  */
 @Component({
   selector: 'app-privacy-policy',
-  imports: [RouterLink],
+  imports: [TranslocoDirective, RouterLink, DatePipe],
   templateUrl: './privacy-policy.component.html',
 })
 export class PrivacyPolicyComponent {
   private deploymentConfig = inject(DeploymentConfigService);
 
-  readonly lastUpdated = 'August 2026';
+  readonly lastUpdated = new Date(2026, 7, 1);
 
   readonly operatorName = this.deploymentConfig.operatorName;
   readonly operatorContact = this.deploymentConfig.operatorContact;

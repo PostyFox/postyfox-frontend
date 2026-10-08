@@ -1,8 +1,10 @@
 import { Component, inject } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { ConfirmService } from '../../core/services/confirm.service';
 
 @Component({
   selector: 'app-confirm-dialog',
+  imports: [TranslocoPipe],
   template: `
     @if (svc.current(); as req) {
       <div class="modal fade show d-block" tabindex="-1" role="dialog">
@@ -17,14 +19,14 @@ import { ConfirmService } from '../../core/services/confirm.service';
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-outline-secondary" (click)="svc.respond(false)">
-                {{ req.cancelText || 'Cancel' }}
+                {{ req.cancelText || ('common.cancel' | transloco) }}
               </button>
               <button
                 type="button"
                 class="btn btn-{{ req.kind || 'primary' }}"
                 (click)="svc.respond(true)"
               >
-                {{ req.confirmText || 'Confirm' }}
+                {{ req.confirmText || ('common.confirm' | transloco) }}
               </button>
             </div>
           </div>

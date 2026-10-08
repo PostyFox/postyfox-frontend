@@ -1,6 +1,17 @@
 import { ServiceDefinition } from './api.models';
-import { BRANDS, brandFor, capabilitiesByPlatform } from './platforms';
+import { TestBed } from '@angular/core/testing';
+import { TranslocoService } from '@jsverse/transloco';
+
+import enGB from '../../../../public/i18n/en-GB.json';
+import { translocoTesting } from '../../../testing/transloco-testing';
+import { brandFor, capabilitiesByPlatform } from './platforms';
 import { darkThemeActive } from './theme';
+
+// brandFor() translates its copy, which needs a TranslocoService with en-GB loaded.
+beforeEach(() => {
+  TestBed.configureTestingModule({ imports: [translocoTesting()] });
+  TestBed.inject(TranslocoService);
+});
 
 describe('capabilitiesByPlatform', () => {
   const definition = (platform: string, warning: ServiceDefinition['warning']): ServiceDefinition =>
@@ -45,8 +56,11 @@ describe('brandFor', () => {
 
 describe('platform blurbs', () => {
   // The "Choose a platform" dialog shows each blurb on one line; longer ones get cut off (issue #31).
-  it.each(Object.entries(BRANDS))('%s blurb fits the connector picker', (_, brand) => {
-    expect(brand.blurb?.length ?? 0).toBeLessThanOrEqual(50);
+  const brands = Object.entries(enGB.platforms).filter(
+    ([, b]) => typeof b === 'object' && 'blurb' in b,
+  ) as [string, { blurb: string }][];
+  it.each(brands)('%s blurb fits the connector picker', (_, brand) => {
+    expect(brand.blurb.length).toBeLessThanOrEqual(50);
   });
 });
 

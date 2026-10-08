@@ -6,11 +6,12 @@ import { provideMarkdown } from 'ngx-markdown';
 
 import { environment } from '../../../environments/environment';
 import { TosComponent } from './tos.component';
+import { translocoTesting } from '../../../testing/transloco-testing';
 
 describe('TosComponent', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
-      imports: [TosComponent],
+      imports: [TosComponent, translocoTesting()],
       providers: [
         provideRouter([]),
         provideHttpClient(),

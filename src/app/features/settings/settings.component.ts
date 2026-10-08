@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { UserSettings } from '../../core/models/api.models';
 import { ProfileService } from '../../core/services/profile.service';
 import { ToastService } from '../../core/services/toast.service';
@@ -7,7 +8,7 @@ import { PageHeaderComponent } from '../../shared/components/page-header.compone
 
 @Component({
   selector: 'app-settings',
-  imports: [FormsModule, PageHeaderComponent],
+  imports: [TranslocoDirective, FormsModule, PageHeaderComponent],
   templateUrl: './settings.component.html',
 })
 export class SettingsComponent {
@@ -25,7 +26,7 @@ export class SettingsComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.toast.error('Could not load settings');
+        this.toast.error(translate('settings.couldNotLoadSettings'));
         this.loading.set(false);
       },
     });
@@ -39,12 +40,12 @@ export class SettingsComponent {
       next: (s) => {
         this.settings.set(s);
         this.saving.set(false);
-        this.toast.success('Settings saved');
+        this.toast.success(translate('settings.settingsSaved'));
       },
       error: () => {
         this.settings.set(previous);
         this.saving.set(false);
-        this.toast.error('Could not save settings');
+        this.toast.error(translate('settings.couldNotSaveSettings'));
       },
     });
   }

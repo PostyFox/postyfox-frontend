@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { MarkdownComponent } from 'ngx-markdown';
 import { OperationalSecret, PairedUserAgentSetting } from '../../core/models/api.models';
 import { AdminService } from '../../core/services/admin.service';
@@ -16,7 +17,7 @@ interface SecretGroup {
 
 @Component({
   selector: 'app-admin',
-  imports: [FormsModule, MarkdownComponent, PageHeaderComponent],
+  imports: [TranslocoDirective, FormsModule, MarkdownComponent, PageHeaderComponent],
   templateUrl: './admin.component.html',
 })
 export class AdminComponent {
@@ -54,7 +55,7 @@ export class AdminComponent {
         this.termsContent.set(status.current?.content ?? '');
         this.termsPublished.set(!!status.current);
       },
-      error: () => this.toast.error('Could not load the terms of service'),
+      error: () => this.toast.error(translate('admin.couldNotLoadTerms')),
     });
   }
 
@@ -62,16 +63,15 @@ export class AdminComponent {
     const confirmed = await this.confirm.ask(
       turnOff
         ? {
-            title: 'Turn off terms of service',
-            message: 'Users will no longer need to accept terms to use PostyFox.',
-            confirmText: 'Turn off',
+            title: translate('admin.turnOffTermsTitle'),
+            message: translate('admin.turnOffTermsMessage'),
+            confirmText: translate('admin.turnOff'),
             kind: 'danger',
           }
         : {
-            title: 'Publish terms of service',
-            message:
-              'Every user, including you, will have to accept these terms before they can use PostyFox again, through the site or the API.',
-            confirmText: 'Publish',
+            title: translate('admin.publishTermsTitle'),
+            message: translate('admin.publishTermsMessage'),
+            confirmText: translate('admin.publish'),
           },
     );
     if (!confirmed) return;
@@ -81,17 +81,17 @@ export class AdminComponent {
       next: (published) => {
         this.saving.set(null);
         if (published) {
-          this.toast.success('Terms of service published');
+          this.toast.success(translate('admin.termsServicePublished'));
           this.terms.load().subscribe(() => this.router.navigateByUrl('/terms'));
         } else {
           this.termsContent.set('');
           this.termsPublished.set(false);
-          this.toast.success('Terms of service turned off');
+          this.toast.success(translate('admin.termsServiceTurnedOff'));
         }
       },
       error: () => {
         this.saving.set(null);
-        this.toast.error('Could not save the terms of service');
+        this.toast.error(translate('admin.couldNotSaveTerms'));
       },
     });
   }
@@ -104,7 +104,7 @@ export class AdminComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.toast.error('Could not load operational secrets');
+        this.toast.error(translate('admin.couldNotLoadOperational'));
         this.loading.set(false);
       },
     });
@@ -113,7 +113,7 @@ export class AdminComponent {
   loadUserAgents(): void {
     this.admin.listPairedUserAgents().subscribe({
       next: (settings) => this.userAgents.set(settings),
-      error: () => this.toast.error('Could not load User-Agent settings'),
+      error: () => this.toast.error(translate('admin.couldNotLoadUser')),
     });
   }
 
@@ -125,11 +125,11 @@ export class AdminComponent {
           all.map((s) => (s.platform === updated.platform ? updated : s)),
         );
         this.saving.set(null);
-        this.toast.success(`${updated.name} saved`);
+        this.toast.success(translate('admin.saved', { name: updated.name }));
       },
       error: () => {
         this.saving.set(null);
-        this.toast.error(`Could not save ${setting.name}`);
+        this.toast.error(translate('admin.couldNotSave', { name: setting.name }));
       },
     });
   }
@@ -147,20 +147,28 @@ export class AdminComponent {
         this.replace(updated);
         this.setValue(secret.key, '');
         this.saving.set(null);
-        this.toast.success(`${secret.component} ${secret.displayName} saved`);
+        this.toast.success(
+          translate('admin.saved2', {
+            component: secret.component,
+            displayName: secret.displayName,
+          }),
+        );
       },
       error: () => {
         this.saving.set(null);
-        this.toast.error(`Could not save ${secret.displayName}`);
+        this.toast.error(translate('admin.couldNotSave2', { displayName: secret.displayName }));
       },
     });
   }
 
   async remove(secret: OperationalSecret): Promise<void> {
     const confirmed = await this.confirm.ask({
-      title: 'Delete operational secret',
-      message: `Delete ${secret.component} ${secret.displayName}? The connector may stop operating immediately.`,
-      confirmText: 'Delete',
+      title: translate('admin.deleteOperationalSecret'),
+      message: translate('admin.deleteConnectorMayStop', {
+        component: secret.component,
+        displayName: secret.displayName,
+      }),
+      confirmText: translate('admin.delete'),
       kind: 'danger',
     });
     if (!confirmed) return;
@@ -170,11 +178,16 @@ export class AdminComponent {
       next: () => {
         this.replace({ ...secret, configured: false });
         this.saving.set(null);
-        this.toast.success(`${secret.component} ${secret.displayName} deleted`);
+        this.toast.success(
+          translate('admin.deleted', {
+            component: secret.component,
+            displayName: secret.displayName,
+          }),
+        );
       },
       error: () => {
         this.saving.set(null);
-        this.toast.error(`Could not delete ${secret.displayName}`);
+        this.toast.error(translate('admin.couldNotDelete', { displayName: secret.displayName }));
       },
     });
   }

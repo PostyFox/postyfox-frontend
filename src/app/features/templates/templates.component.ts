@@ -1,6 +1,7 @@
 import { SlicePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { MarkdownComponent } from 'ngx-markdown';
 import { Template } from '../../core/models/api.models';
 import { ConfirmService } from '../../core/services/confirm.service';
@@ -17,7 +18,14 @@ interface EditModel {
 
 @Component({
   selector: 'app-templates',
-  imports: [FormsModule, SlicePipe, MarkdownComponent, PageHeaderComponent, EmptyStateComponent],
+  imports: [
+    TranslocoDirective,
+    FormsModule,
+    SlicePipe,
+    MarkdownComponent,
+    PageHeaderComponent,
+    EmptyStateComponent,
+  ],
   templateUrl: './templates.component.html',
 })
 export class TemplatesComponent {
@@ -42,7 +50,7 @@ export class TemplatesComponent {
         this.loading.set(false);
       },
       error: () => {
-        this.toast.error('Could not load templates');
+        this.toast.error(translate('templates.couldNotLoadTemplates'));
         this.loading.set(false);
       },
     });
@@ -73,13 +81,15 @@ export class TemplatesComponent {
       .upsert({ id: e.id, title: e.title.trim(), markdownBody: e.markdownBody })
       .subscribe({
         next: () => {
-          this.toast.success(e.id ? 'Template updated' : 'Template created');
+          this.toast.success(
+            e.id ? translate('templates.templateUpdated') : translate('templates.templateCreated'),
+          );
           this.saving.set(false);
           this.close();
           this.load();
         },
         error: () => {
-          this.toast.error('Could not save template');
+          this.toast.error(translate('templates.couldNotSaveTemplate'));
           this.saving.set(false);
         },
       });
@@ -87,18 +97,18 @@ export class TemplatesComponent {
 
   async remove(t: Template): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Delete template',
-      message: `Delete “${t.title}”? This cannot be undone.`,
-      confirmText: 'Delete',
+      title: translate('templates.deleteTemplate'),
+      message: translate('templates.deleteCannotUndone', { title: t.title }),
+      confirmText: translate('templates.delete'),
       kind: 'danger',
     });
     if (!ok) return;
     this.templates.delete(t.id).subscribe({
       next: () => {
-        this.toast.success('Template deleted');
+        this.toast.success(translate('templates.templateDeleted'));
         this.load();
       },
-      error: () => this.toast.error('Could not delete template'),
+      error: () => this.toast.error(translate('templates.couldNotDeleteTemplate')),
     });
   }
 }

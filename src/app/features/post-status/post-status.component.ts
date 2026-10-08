@@ -1,5 +1,6 @@
 import { Component, Input, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { Subscription, switchMap, timer } from 'rxjs';
 import {
   AutomationAction,
@@ -22,7 +23,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge.compo
 
 @Component({
   selector: 'app-post-status',
-  imports: [RouterLink, PageHeaderComponent, StatusBadgeComponent],
+  imports: [TranslocoDirective, RouterLink, PageHeaderComponent, StatusBadgeComponent],
   templateUrl: './post-status.component.html',
 })
 export class PostStatusComponent implements OnInit, OnDestroy {
@@ -51,11 +52,14 @@ export class PostStatusComponent implements OnInit, OnDestroy {
   }
 
   ratingLabel(rating: ContentRating | null): string | null {
-    return contentRatingOptions.find((o) => o.value === rating)?.label ?? null;
+    const key = contentRatingOptions.find((o) => o.value === rating)?.label;
+    return key ? translate(key) : null;
   }
 
   automationActionLabel(action: AutomationAction): string {
-    return action === AutomationAction.Repost ? 'Repost' : 'Delete';
+    return action === AutomationAction.Repost
+      ? translate('postStatus.repost')
+      : translate('postStatus.delete');
   }
 
   isCancellingAutomation(id: string): boolean {
@@ -67,7 +71,7 @@ export class PostStatusComponent implements OnInit, OnDestroy {
     this.cancellingAutomation.update((s) => new Set(s).add(automation.id));
     this.posts.cancelAutomation(postId, automation.id).subscribe({
       next: () => {
-        this.toast.success('Automation cancelled');
+        this.toast.success(translate('postStatus.automationCancelled'));
         this.refreshOnce();
       },
       error: (err) => {
@@ -77,8 +81,8 @@ export class PostStatusComponent implements OnInit, OnDestroy {
           return next;
         });
         this.toast.error(
-          'Could not cancel automation',
-          err?.status === 409 ? 'It already ran, or was already cancelled.' : undefined,
+          translate('postStatus.couldNotCancelAutomation'),
+          err?.status === 409 ? translate('postStatus.alreadyRanWasAlready') : undefined,
         );
       },
     });
@@ -113,7 +117,7 @@ export class PostStatusComponent implements OnInit, OnDestroy {
           if (err?.status === 404) {
             this.notFound.set(true);
           } else {
-            this.toast.error('Could not load post status');
+            this.toast.error(translate('postStatus.couldNotLoadPost'));
           }
           this.stop();
         },

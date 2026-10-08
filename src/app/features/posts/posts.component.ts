@@ -1,6 +1,7 @@
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { Subscription, switchMap, timer } from 'rxjs';
 import { PostSummary } from '../../core/models/api.models';
 import { brandFor } from '../../core/models/platforms';
@@ -35,6 +36,7 @@ export interface CalendarDay {
 @Component({
   selector: 'app-posts',
   imports: [
+    TranslocoDirective,
     RouterLink,
     DatePipe,
     NgTemplateOutlet,
@@ -129,25 +131,27 @@ export class PostsComponent implements OnInit, OnDestroy {
   /** Cancel the parts of a post that haven't gone out yet. */
   async cancel(p: PostSummary): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Cancel post',
-      message: `Cancel “${p.title || 'Untitled post'}”? Targets that haven't been sent yet will be stopped; anything already delivered stays.`,
-      confirmText: 'Cancel post',
-      cancelText: 'Keep',
+      title: translate('posts.cancelPost'),
+      message: translate('posts.cancelTargetsHaventBeen', {
+        title: p.title || translate('posts.untitledPost'),
+      }),
+      confirmText: translate('posts.cancelPost'),
+      cancelText: translate('posts.keep'),
       kind: 'warning',
     });
     if (!ok) return;
     this.setBusy(p.postId, true);
     this.posts.cancel(p.postId).subscribe({
       next: () => {
-        this.toast.success('Post cancelled');
+        this.toast.success(translate('posts.postCancelled'));
         this.setBusy(p.postId, false);
         this.reload();
       },
       error: (err) => {
         this.setBusy(p.postId, false);
         this.toast.error(
-          'Could not cancel post',
-          err?.status === 409 ? 'It already finished processing.' : undefined,
+          translate('posts.couldNotCancelPost'),
+          err?.status === 409 ? translate('posts.alreadyFinishedProcessing') : undefined,
         );
         this.reload();
       },
@@ -157,23 +161,25 @@ export class PostsComponent implements OnInit, OnDestroy {
   /** Permanently delete a post (history entry or stale/orphaned queued row). */
   async remove(p: PostSummary): Promise<void> {
     const ok = await this.confirm.ask({
-      title: 'Delete post',
-      message: `Permanently delete “${p.title || 'Untitled post'}”? This removes it and its stored content for good.`,
-      confirmText: 'Delete',
+      title: translate('posts.deletePost2'),
+      message: translate('posts.permanentlyDeleteRemovesIts', {
+        title: p.title || translate('posts.untitledPost'),
+      }),
+      confirmText: translate('posts.delete'),
       kind: 'danger',
     });
     if (!ok) return;
     this.setBusy(p.postId, true);
     this.posts.delete(p.postId).subscribe({
       next: () => {
-        this.toast.success('Post deleted');
+        this.toast.success(translate('posts.postDeleted'));
         // Optimistically drop it; the next poll reconciles anyway.
         this.all.update((rows) => rows.filter((r) => r.postId !== p.postId));
         this.setBusy(p.postId, false);
       },
       error: () => {
         this.setBusy(p.postId, false);
-        this.toast.error('Could not delete post');
+        this.toast.error(translate('posts.couldNotDeletePost'));
         this.reload();
       },
     });
@@ -184,9 +190,12 @@ export class PostsComponent implements OnInit, OnDestroy {
     const count = this.history().length;
     if (count === 0) return;
     const ok = await this.confirm.ask({
-      title: 'Clear history',
-      message: `Permanently delete all ${count} post${count === 1 ? '' : 's'} in your history? This removes them and their stored content for good. Drafts and posts still in flight are not affected.`,
-      confirmText: 'Delete all',
+      title: translate('posts.clearHistory'),
+      message:
+        count === 1
+          ? translate('posts.clearHistoryConfirmOne')
+          : translate('posts.clearHistoryConfirmOther', { count }),
+      confirmText: translate('posts.deleteAll'),
       kind: 'danger',
     });
     if (!ok) return;
@@ -194,12 +203,16 @@ export class PostsComponent implements OnInit, OnDestroy {
     this.posts.deleteAllHistory().subscribe({
       next: ({ deletedCount }) => {
         this.clearingHistory.set(false);
-        this.toast.success(`Deleted ${deletedCount} post${deletedCount === 1 ? '' : 's'}`);
+        this.toast.success(
+          deletedCount === 1
+            ? translate('posts.deletedPostsOne')
+            : translate('posts.deletedPostsOther', { count: deletedCount }),
+        );
         this.reload();
       },
       error: () => {
         this.clearingHistory.set(false);
-        this.toast.error('Could not clear history');
+        this.toast.error(translate('posts.couldNotClearHistory'));
         this.reload();
       },
     });
@@ -215,7 +228,7 @@ export class PostsComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.setBusy(p.postId, false);
-        this.toast.error('Could not load that post to reuse');
+        this.toast.error(translate('posts.couldNotLoadPost'));
       },
     });
   }
@@ -230,7 +243,7 @@ export class PostsComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.setBusy(p.postId, false);
-        this.toast.error('Could not load that draft');
+        this.toast.error(translate('posts.couldNotLoadDraft'));
       },
     });
   }
@@ -257,7 +270,7 @@ export class PostsComponent implements OnInit, OnDestroy {
         error: () => {
           this.loading.set(false);
           this.polling.set(false);
-          this.toast.error('Could not load your posts');
+          this.toast.error(translate('posts.couldNotLoadPosts'));
         },
       });
   }

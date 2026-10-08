@@ -9,6 +9,7 @@ import { authInterceptor } from '../interceptors/auth.interceptor';
 import { TermsStatus } from '../models/api.models';
 import { TermsService } from '../services/terms.service';
 import { termsGuard } from './terms.guard';
+import { translocoTesting } from '../../../testing/transloco-testing';
 
 /** Issue #417: nothing past the terms page until the current terms are accepted. */
 describe('terms of service gate', () => {
@@ -16,6 +17,7 @@ describe('terms of service gate', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
+      imports: [translocoTesting()],
       providers: [
         provideRouter([]),
         provideHttpClient(withInterceptors([authInterceptor])),
