@@ -1,5 +1,5 @@
 import { ServiceDefinition } from './api.models';
-import { brandFor, capabilitiesByPlatform } from './platforms';
+import { BRANDS, brandFor, capabilitiesByPlatform } from './platforms';
 import { darkThemeActive } from './theme';
 
 describe('capabilitiesByPlatform', () => {
@@ -40,6 +40,13 @@ describe('brandFor', () => {
   it('falls back to the platform id for unknown platforms', () => {
     expect(brandFor('Nope').label).toBe('Nope');
     expect(brandFor(null).label).toBe('Connector');
+  });
+});
+
+describe('platform blurbs', () => {
+  // The "Choose a platform" dialog shows each blurb on one line; longer ones get cut off (issue #31).
+  it.each(Object.entries(BRANDS))('%s blurb fits the connector picker', (_, brand) => {
+    expect(brand.blurb?.length ?? 0).toBeLessThanOrEqual(50);
   });
 });
 

@@ -96,7 +96,7 @@ export interface PlatformBrand {
   docs?: { href: string; text: string };
 }
 
-const BRANDS: Record<string, PlatformBrand> = {
+export const BRANDS: Record<string, PlatformBrand> = {
   DiscordWH: {
     label: 'Discord',
     icon: 'bi-discord',
@@ -111,7 +111,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     label: 'Telegram',
     icon: 'bi-telegram',
     color: '#26A5E4',
-    blurb: 'Post to Telegram chats or channels as your user account.',
+    blurb: 'Post to Telegram chats or channels as you.',
     setup:
       'Save the connector first, then use “Log in” on its card to complete the code / 2FA flow.',
   },
@@ -134,7 +134,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     icon: 'bi-palette-fill',
     color: '#2e3b4f',
     darkColor: '#8fa3c2',
-    blurb: 'Publish gallery submissions and journals to your FurAffinity account.',
+    blurb: 'Post submissions and journals to FurAffinity.',
     setup:
       'Sign in through PostyFox Connect so your FurAffinity password and session cookies never pass through this page.',
     docs: {
@@ -147,7 +147,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     icon: 'bi-twitter-x',
     color: '#14171a',
     darkColor: '#e7e9ea',
-    blurb: 'Publish text and image posts to your X (Twitter) account.',
+    blurb: 'Post text and images to X (Twitter).',
     setup:
       'Sign in through PostyFox Connect so your X password never passes through this page. Posts are limited to 280 characters and up to four images.',
   },
@@ -167,7 +167,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     label: 'Ko-fi',
     icon: 'bi-cup-hot-fill',
     color: '#FF5E5B',
-    blurb: 'Publish text posts and image gallery posts to your Ko-fi page.',
+    blurb: 'Post text and gallery posts to your Ko-fi page.',
     setup:
       'Sign in through PostyFox Connect so your Ko-fi password and session cookies never pass through this page. Every post needs a title.',
     docs: {
@@ -179,7 +179,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     label: 'Instagram',
     icon: 'bi-instagram',
     color: '#E1306C',
-    blurb: 'Publish feed posts to an Instagram Business or Creator account.',
+    blurb: 'Post to an Instagram Business or Creator account.',
     setup:
       'Connect with Instagram to authorise a Business or Creator account. Every post needs at least one image or video — Instagram has no text-only post type.',
   },
@@ -188,7 +188,7 @@ const BRANDS: Record<string, PlatformBrand> = {
     icon: 'bi-brush-fill',
     color: '#1976D2',
     darkColor: '#64a8f0',
-    blurb: 'Publish gallery submissions and journals to your Artconomy account.',
+    blurb: 'Post submissions and journals to Artconomy.',
     setup:
       'Sign in through PostyFox Connect so your Artconomy password and session cookies never pass through this page. Image posts need a rating and at least five tags.',
     docs: {

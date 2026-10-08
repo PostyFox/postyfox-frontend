@@ -301,6 +301,11 @@ body {
   color: var(--pf-text-muted);
 }
 
+// Bootstrap has no min-width utility; lets a flex child shrink so `text-truncate` can work.
+.min-w-0 {
+  min-width: 0;
+}
+
 // Fullscreen centered loader / splash
 .app-splash {
   display: grid;
