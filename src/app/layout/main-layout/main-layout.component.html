@@ -57,6 +57,34 @@
             type="button"
             data-bs-toggle="dropdown"
             aria-expanded="false"
+            [attr.aria-label]="tr('mainLayout.languageLabel', { name: langName })"
+            [title]="tr('mainLayout.language')"
+          >
+            <i class="bi bi-translate fs-5"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow overflow-auto" style="max-height: 70vh">
+            @for (l of languages; track l.code) {
+              <li>
+                <button
+                  class="dropdown-item"
+                  type="button"
+                  [class.active]="lang === l.code"
+                  [attr.lang]="l.code"
+                  (click)="setLang(l.code)"
+                >
+                  {{ l.name }}
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <div class="dropdown">
+          <button
+            class="btn btn-icon btn-sm border-0 text-body"
+            type="button"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
             [attr.aria-label]="
               tr('mainLayout.colourThemeLabel', {
                 mode: tr(currentTheme()?.label ?? 'mainLayout.themeSystem'),

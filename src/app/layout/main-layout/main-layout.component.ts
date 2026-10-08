@@ -3,6 +3,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { TranslocoDirective } from '@jsverse/transloco';
 import { AccountService } from '../../core/services/account.service';
 import { AuthService } from '../../core/services/auth.service';
+import { LanguageService } from '../../core/services/language.service';
+import { LANGUAGES } from '../../core/i18n/i18n';
 import { ThemeMode } from '../../core/models/theme';
 import { ProfileService } from '../../core/services/profile.service';
 import { ThemeService } from '../../core/services/theme.service';
@@ -25,6 +27,7 @@ export class MainLayoutComponent {
   private account = inject(AccountService);
   private profile = inject(ProfileService);
   private theme = inject(ThemeService);
+  private language = inject(LanguageService);
 
   readonly sidebarOpen = signal(false);
   readonly year = new Date().getFullYear();
@@ -71,6 +74,11 @@ export class MainLayoutComponent {
   readonly currentTheme = computed(() => this.themes.find((t) => t.mode === this.themeMode()));
   readonly themeIcon = computed(() => this.currentTheme()?.icon ?? 'bi-circle-half');
 
+  /** UI language (issue #33). */
+  readonly languages = LANGUAGES;
+  readonly lang = this.language.lang;
+  readonly langName = LANGUAGES.find((l) => l.code === this.lang)?.name ?? this.lang;
+
   /** `label`s are translation keys. */
   readonly nav: NavItem[] = [
     { label: 'nav.dashboard', icon: 'bi-grid-1x2', link: '/dashboard' },
@@ -95,6 +103,10 @@ export class MainLayoutComponent {
 
   setTheme(mode: ThemeMode): void {
     this.theme.setMode(mode);
+  }
+
+  setLang(lang: string): void {
+    this.language.setLang(lang);
   }
 
   onAvatarLoad(url: string): void {

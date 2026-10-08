@@ -38,9 +38,10 @@ npm test             # Vitest unit tests (jsdom, no browser needed)
 
 UI text lives in `public/i18n/<lang>.json` and is loaded at runtime by
 [Transloco](https://jsverse.gitbook.io/transloco) (en-GB is the source language). Templates use
-`*transloco="let tr"` and `tr('area.key')`; code uses `translate('area.key')`. To add a language,
-copy `en-GB.json` to `<lang>.json`, translate the values, and add the code to `AVAILABLE_LANGS` in
-`src/app/core/i18n/i18n.ts`. `npm run lint` fails on keys used but not defined, or defined but unused.
+`*transloco="let tr"` and `tr('area.key')`; code uses `translate('area.key')`. Translations are
+synced from Crowdin (`crowdin.yml`). To add a language, add its code and native name to `LANGUAGES`
+and its Angular locale data to `LOCALE_DATA` in `src/app/core/i18n/i18n.ts`. The UI language comes
+from the navbar picker (stored per-browser), else the browser's languages, else en-GB. `npm run lint` fails on keys used but not defined, or defined but unused.
 
 ## Run the whole stack (SPA + APIs + auth)
 

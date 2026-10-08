@@ -1,6 +1,4 @@
-import { registerLocaleData } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import localeEnGb from '@angular/common/locales/en-GB';
 import {
   ApplicationConfig,
   LOCALE_ID,
@@ -15,7 +13,7 @@ import {
   withComponentInputBinding,
   withInMemoryScrolling,
 } from '@angular/router';
-import { TranslocoService, provideTransloco } from '@jsverse/transloco';
+import { provideTransloco } from '@jsverse/transloco';
 import { provideMarkdown } from 'ngx-markdown';
 import { firstValueFrom } from 'rxjs';
 
@@ -29,16 +27,15 @@ import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { AccountService } from './core/services/account.service';
 import { AuthService } from './core/services/auth.service';
 import { DeploymentConfigService } from './core/services/deployment-config.service';
+import { LanguageService } from './core/services/language.service';
 import { TermsService } from './core/services/terms.service';
 import { ThemeService } from './core/services/theme.service';
 import { routes } from './app.routes';
 
-registerLocaleData(localeEnGb);
-
 export const appConfig: ApplicationConfig = {
   providers: [
-    // UK English dates/numbers in pipes (issue #32).
-    { provide: LOCALE_ID, useValue: 'en-GB' },
+    // Dates/numbers in pipes follow the UI language (issues #32, #33).
+    { provide: LOCALE_ID, useFactory: () => inject(LanguageService).lang },
     provideZonelessChangeDetection(),
     provideRouter(
       routes,
@@ -59,10 +56,9 @@ export const appConfig: ApplicationConfig = {
       loader: TranslocoHttpLoader,
     }),
     { provide: TitleStrategy, useClass: TranslatedTitleStrategy },
-    // Translations (issue #33) before first render, so `translate()` in code is always ready.
-    provideAppInitializer(() =>
-      firstValueFrom(inject(TranslocoService).load(inject(TranslocoService).getActiveLang())),
-    ),
+    // Locale data and translations (issue #33) before first render, so `translate()` in code is
+    // always ready.
+    provideAppInitializer(() => inject(LanguageService).load()),
     // Resolve the current user (via the proxy) before the first route renders.
     provideAppInitializer(() => firstValueFrom(inject(AuthService).loadUser())),
     // Load this instance's deployment config (operator name/contact) before the first route renders.
