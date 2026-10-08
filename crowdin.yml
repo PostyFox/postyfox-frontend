@@ -1,0 +1,3 @@
+files:
+  - source: /public/i18n/en-GB.json
+    translation: /public/i18n/%locale%.json
