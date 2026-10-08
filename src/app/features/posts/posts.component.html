@@ -82,65 +82,119 @@
       } @else {
         <div class="row g-3">
           @for (p of active(); track p.postId) {
-            <div class="col-md-6">
-              <div class="card h-100 border">
-                <div class="card-body">
-                  <div class="d-flex align-items-start gap-2 mb-2">
-                    <div class="flex-grow-1">
-                      <div class="fw-medium text-truncate">{{ p.title || 'Untitled post' }}</div>
-                      <small class="text-muted-2">{{ p.createdAt | date: 'medium' }}</small>
-                    </div>
-                    <app-status-badge [meta]="rootMeta(p)"></app-status-badge>
-                  </div>
-                  <div class="d-flex flex-wrap gap-1">
-                    @for (pl of p.platforms; track pl) {
-                      <span
-                        class="badge d-inline-flex align-items-center gap-1"
-                        [style.background]="brand(pl).color + '22'"
-                        [style.color]="brand(pl).color"
-                      >
-                        <i class="bi" [class]="brand(pl).icon"></i>{{ brand(pl).label }}
-                      </span>
-                    }
-                  </div>
-                  <div class="d-flex align-items-center gap-2 mt-2">
-                    <span class="text-muted-2 small">
-                      {{ p.deliveredCount }}/{{ p.targetCount }} delivered
-                    </span>
-                    <div class="ms-auto d-flex gap-1">
-                      <a
-                        class="btn btn-sm btn-outline-secondary"
-                        [routerLink]="['/posts', p.postId]"
-                      >
-                        <i class="bi bi-eye me-1"></i>View
-                      </a>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-warning"
-                        [disabled]="isBusy(p.postId)"
-                        (click)="cancel(p)"
-                      >
-                        <i class="bi bi-slash-circle me-1"></i>Cancel
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-sm btn-outline-danger"
-                        title="Delete this post"
-                        [disabled]="isBusy(p.postId)"
-                        (click)="remove(p)"
-                      >
-                        <i class="bi bi-trash"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ng-container *ngTemplateOutlet="postCard; context: { $implicit: p }"></ng-container>
           }
         </div>
       }
     </div>
   </div>
+
+  <!-- Scheduled -->
+  @if (scheduled().length > 0) {
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <h5 class="card-title mb-0">Scheduled</h5>
+          <span class="badge bg-label-secondary">{{ scheduled().length }}</span>
+          @if (scheduled().length > 1) {
+            <div class="btn-group btn-group-sm ms-auto" role="group" aria-label="Scheduled view">
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                title="List view"
+                [class.active]="!showCalendar()"
+                [attr.aria-pressed]="!showCalendar()"
+                (click)="setScheduledView('list')"
+              >
+                <i class="bi bi-grid me-1"></i>List
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                title="Calendar view"
+                [class.active]="showCalendar()"
+                [attr.aria-pressed]="showCalendar()"
+                (click)="setScheduledView('calendar')"
+              >
+                <i class="bi bi-calendar3 me-1"></i>Calendar
+              </button>
+            </div>
+          }
+        </div>
+
+        @if (showCalendar()) {
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              title="Previous month"
+              (click)="shiftMonth(-1)"
+            >
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" (click)="shiftMonth(0)">
+              Today
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-secondary"
+              title="Next month"
+              (click)="shiftMonth(1)"
+            >
+              <i class="bi bi-chevron-right"></i>
+            </button>
+            <span class="fw-medium ms-2">{{ calendarMonth() | date: 'MMMM y' }}</span>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-bordered mb-0" style="table-layout: fixed; min-width: 560px">
+              <thead>
+                <tr>
+                  @for (d of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; track d) {
+                    <th class="text-center small text-muted-2">{{ d }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (week of calendarWeeks(); track $index) {
+                  <tr>
+                    @for (day of week; track day.date.getTime()) {
+                      <td class="p-1 align-top" style="height: 5.5rem">
+                        <div
+                          class="small text-end"
+                          [class.text-muted-2]="!day.inMonth"
+                          [class.fw-bold]="day.today"
+                          [class.text-primary]="day.today"
+                        >
+                          {{ day.date.getDate() }}
+                        </div>
+                        @for (p of day.posts; track p.postId) {
+                          <a
+                            class="badge bg-label-primary d-block text-start text-truncate text-decoration-none mb-1"
+                            [routerLink]="['/posts', p.postId]"
+                            [title]="
+                              (p.postAt | date: 'short') + ' ' + (p.title || 'Untitled post')
+                            "
+                          >
+                            {{ p.postAt | date: 'shortTime' }} {{ p.title || 'Untitled post' }}
+                          </a>
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="row g-3">
+            @for (p of scheduled(); track p.postId) {
+              <ng-container *ngTemplateOutlet="postCard; context: { $implicit: p }"></ng-container>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  }
 
   <!-- History -->
   <div class="card">
@@ -253,3 +307,64 @@
     }
   </div>
 }
+
+<!-- Card for a submitted, not-yet-finished post (active or scheduled) -->
+<ng-template #postCard let-p>
+  <div class="col-md-6">
+    <div class="card h-100 border">
+      <div class="card-body">
+        <div class="d-flex align-items-start gap-2 mb-2">
+          <div class="flex-grow-1">
+            <div class="fw-medium text-truncate">{{ p.title || 'Untitled post' }}</div>
+            @if (isScheduled(p)) {
+              <small class="text-muted-2">
+                <i class="bi bi-calendar-event me-1"></i>{{ p.postAt | date: 'medium' }}
+              </small>
+            } @else {
+              <small class="text-muted-2">{{ p.createdAt | date: 'medium' }}</small>
+            }
+          </div>
+          <app-status-badge [meta]="rootMeta(p)"></app-status-badge>
+        </div>
+        <div class="d-flex flex-wrap gap-1">
+          @for (pl of p.platforms; track pl) {
+            <span
+              class="badge d-inline-flex align-items-center gap-1"
+              [style.background]="brand(pl).color + '22'"
+              [style.color]="brand(pl).color"
+            >
+              <i class="bi" [class]="brand(pl).icon"></i>{{ brand(pl).label }}
+            </span>
+          }
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <span class="text-muted-2 small">
+            {{ p.deliveredCount }}/{{ p.targetCount }} delivered
+          </span>
+          <div class="ms-auto d-flex gap-1">
+            <a class="btn btn-sm btn-outline-secondary" [routerLink]="['/posts', p.postId]">
+              <i class="bi bi-eye me-1"></i>View
+            </a>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-warning"
+              [disabled]="isBusy(p.postId)"
+              (click)="cancel(p)"
+            >
+              <i class="bi bi-slash-circle me-1"></i>Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-danger"
+              title="Delete this post"
+              [disabled]="isBusy(p.postId)"
+              (click)="remove(p)"
+            >
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>
