@@ -249,7 +249,7 @@
     "displayName": "Display name",
     "configuration": "Configuration",
     "connection": "Connection",
-    "authorisePostyfoxPostBehalf": "Authorise PostyFox to post on your behalf — no tokens to copy or paste.",
+    "authorisePostyfoxPostBehalf": "Authorize PostyFox to post on your behalf — no tokens to copy or paste.",
     "reconnect": "Reconnect",
     "saveConnect": "Save & connect",
     "connectBrowserSession": "Connect your browser session",
@@ -295,7 +295,7 @@
     "couldNotStartConnection": "Could not start connection",
     "connected": "Connected",
     "connectionFailed": "Connection failed",
-    "authorisationWasNotCompleted": "Authorisation was not completed.",
+    "authorisationWasNotCompleted": "Authorization was not completed.",
     "couldNotSaveConnector2": "Could not save the connector",
     "couldNotCreatePairing": "Could not create a pairing token",
     "couldNotCopyClipboard": "Could not copy to clipboard",
@@ -372,7 +372,7 @@
     "postAgain": "Post again",
     "delivered2": "{{ deliveredCount }}/{{ targetCount }} delivered",
     "cancel": "Cancel",
-    "postCancelled": "Post cancelled",
+    "postCancelled": "Post canceled",
     "couldNotCancelPost": "Could not cancel post",
     "alreadyFinishedProcessing": "It already finished processing.",
     "postDeleted": "Post deleted",
@@ -419,13 +419,13 @@
     "pendingDelivery": "pending delivery",
     "done": "Done",
     "failed": "Failed",
-    "cancelled": "Cancelled",
+    "cancelled": "Canceled",
     "tagsDroppedTitle": "{{ count }} tag(s) dropped to fit the character limit",
     "dropped": "{{ count }} dropped",
     "inHours": "in {{ hours }}h",
-    "automationCancelled": "Automation cancelled",
+    "automationCancelled": "Automation canceled",
     "couldNotCancelAutomation": "Could not cancel automation",
-    "alreadyRanWasAlready": "It already ran, or was already cancelled.",
+    "alreadyRanWasAlready": "It already ran, or was already canceled.",
     "couldNotLoadPost": "Could not load post status",
     "repost": "Repost",
     "delete": "Delete"
@@ -465,7 +465,7 @@
     "contactAddress": "[contact address]",
     "removingConnectorDeletesIts": ". Removing a connector deletes its stored credentials; it does not retract content already delivered to the destination platform.",
     "n8Security": "8. Security",
-    "accessInstanceRequiresAuthentication": "Access to this instance requires authentication, and API keys are stored only as salted hashes. Reasonable technical and organisational measures are used to protect stored data, but no system can be guaranteed 100% secure. If you believe your credentials have been compromised, disconnect the affected connector and rotate any exposed credentials immediately.",
+    "accessInstanceRequiresAuthentication": "Access to this instance requires authentication, and API keys are stored only as salted hashes. Reasonable technical and organizational measures are used to protect stored data, but no system can be guaranteed 100% secure. If you believe your credentials have been compromised, disconnect the affected connector and rotate any exposed credentials immediately.",
     "n9ChildrensPrivacy": "9. Children's privacy",
     "serviceNotDirectedChildren": "This service is not directed at children and is not intended for use by anyone under the minimum age required to hold an account on the platforms it posts to.",
     "n10ChangesPolicy": "10. Changes to this policy",
@@ -518,7 +518,7 @@
     "templates": "Templates",
     "reusableMarkdownBodiesPosts": "Reusable Markdown bodies for your posts",
     "noTemplatesYet": "No templates yet",
-    "templatesLetStandardiseHow": "Templates let you standardise how posts are rendered per platform.",
+    "templatesLetStandardiseHow": "Templates let you standardize how posts are rendered per platform.",
     "eGStandardAnnouncement": "e.g. Standard announcement",
     "writeTemplateMarkdown": "Write your template in Markdown…",
     "newTemplate": "New template",
@@ -639,7 +639,7 @@
   },
   "mainLayout": {
     "toggleMenu": "Toggle menu",
-    "colourTheme": "Colour theme",
+    "colourTheme": "Color theme",
     "menu": "Menu",
     "operations": "Operations",
     "administration": "Administration",
@@ -655,10 +655,12 @@
     "privacyPolicy": "Privacy policy",
     "termsService": "Terms of service",
     "uiVApiV": "UI v{{ frontendVersion }} · API v{{ backendVersion }}",
-    "colourThemeLabel": "Colour theme: {{ mode }}",
+    "colourThemeLabel": "Color theme: {{ mode }}",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "themeSystem": "System"
+    "themeSystem": "System",
+    "language": "Language",
+    "languageLabel": "Language: {{ name }}"
   },
   "nav": {
     "privacyPolicy": "Privacy Policy",
@@ -699,7 +701,7 @@
     },
     "Tumblr": {
       "blurb": "Post to a Tumblr blog.",
-      "setup": "Provide OAuth tokens obtained from authorising the Tumblr application."
+      "setup": "Provide OAuth tokens obtained from authorizing the Tumblr application."
     },
     "FurAffinity": {
       "blurb": "Post submissions and journals to FurAffinity.",
@@ -722,7 +724,7 @@
     },
     "Instagram": {
       "blurb": "Post to an Instagram Business or Creator account.",
-      "setup": "Connect with Instagram to authorise a Business or Creator account. Every post needs at least one image or video — Instagram has no text-only post type."
+      "setup": "Connect with Instagram to authorize a Business or Creator account. Every post needs at least one image or video — Instagram has no text-only post type."
     },
     "Artconomy": {
       "blurb": "Post submissions and journals to Artconomy.",
@@ -731,7 +733,7 @@
     },
     "SoFurry": {
       "blurb": "Publish image submissions to your SoFurry account.",
-      "setup": "Connect with SoFurry to authorise your account. Every post needs a title, a rating and at least one image."
+      "setup": "Connect with SoFurry to authorize your account. Every post needs a title, a rating and at least one image."
     },
     "fallbackLabel": "Connector",
     "chips": {
@@ -763,7 +765,7 @@
     "delivered": "Delivered",
     "partiallyFailed": "Partially failed",
     "failed": "Failed",
-    "cancelled": "Cancelled",
+    "cancelled": "Canceled",
     "draft": "Draft",
     "ready": "Ready"
   }
