@@ -617,6 +617,20 @@ export interface PostSummary {
   postAt: string | null;
   /** How many of this post's automation rules (issue #323) are still pending. */
   pendingAutomationCount: number;
+  /** This post's pending automation rules with when each should run, for the calendar view. */
+  pendingAutomations?: PendingAutomation[] | null;
+}
+
+/** A pending automation rule placed on the calendar. */
+export interface PendingAutomation {
+  action: AutomationAction;
+  platform: string;
+  dueAt: string;
+  /**
+   * True when the target hasn't delivered yet, so `dueAt` is the post's scheduled (or creation)
+   * time plus the rule's delay rather than a fixed due time.
+   */
+  estimated: boolean;
 }
 
 /** Result of `DELETE /api/posts/history`: how many posts were removed. */
