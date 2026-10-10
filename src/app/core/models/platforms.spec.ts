@@ -4,7 +4,7 @@ import { TranslocoService } from '@jsverse/transloco';
 
 import enGB from '../../../../public/i18n/en-GB.json';
 import { translocoTesting } from '../../../testing/transloco-testing';
-import { brandFor, capabilitiesByPlatform } from './platforms';
+import { brandFor, capabilitiesByPlatform, contentLength } from './platforms';
 import { darkThemeActive } from './theme';
 
 // brandFor() translates its copy, which needs a TranslocoService with en-GB loaded.
@@ -74,5 +74,21 @@ describe('brandFor in dark mode', () => {
 
     expect(brandFor('X').color).toBe('#e7e9ea');
     expect(brandFor('DiscordWH').color).toBe('#5865F2');
+  });
+});
+
+describe('contentLength', () => {
+  it('counts only the visible text of markdown links and bold on Bluesky', () => {
+    const body = '**Hi** [site](https://example.com/a) Sent using [PostyFox](https://postyfox.com)';
+    expect(contentLength('BlueSky', body)).toBe('Hi site Sent using PostyFox'.length);
+  });
+
+  it('leaves non-http link syntax counted as written on Bluesky', () => {
+    expect(contentLength('BlueSky', '[a](relative)')).toBe('[a](relative)'.length);
+  });
+
+  it('counts the raw text on other platforms', () => {
+    const body = '[site](https://example.com)';
+    expect(contentLength('DiscordWH', body)).toBe(body.length);
   });
 });

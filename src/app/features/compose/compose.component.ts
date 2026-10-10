@@ -25,6 +25,7 @@ import {
   FieldDescriptor,
   brandFor,
   capabilitiesByPlatform,
+  contentLength,
   contentRatingOptions,
   parseFieldDescriptors,
   previewInlineTags,
@@ -396,9 +397,9 @@ export class ComposeComponent {
       const includeTags = requiresTags || this.includeTagsFor(target);
       let preview: { included: string[]; omitted: number } | null = null;
       if (!supportsTags && includeTags && tags.length > 0) {
-        const baseLength = hasPlaceholder
-          ? description.length - '{tags}'.length
-          : description.length + 2; // "\n\n" separator when appended rather than interpolated
+        const length = contentLength(target.platform, description);
+        // "\n\n" separator when appended rather than interpolated
+        const baseLength = hasPlaceholder ? length - '{tags}'.length : length + 2;
         preview = previewInlineTags(tags, Math.max(0, baseLength), c?.maxContentLength ?? null);
       }
       return { target, supportsTags, requiresTags, minTags, includeTags, preview };
@@ -494,10 +495,28 @@ export class ComposeComponent {
     return limits.length ? Math.min(...limits) : null;
   });
 
-  readonly descriptionLength = computed(() => this.description().length);
+  /** Each selected target with a character cap, and the description's length as that platform counts it. */
+  private readonly lengthsByTarget = computed(() => {
+    const caps = this.capsByPlatform();
+    const description = this.description();
+    return this.selectedConnectors().flatMap((c) => {
+      const max = caps[c.platform]?.maxContentLength;
+      return typeof max === 'number'
+        ? [{ max, length: contentLength(c.platform, description) }]
+        : [];
+    });
+  });
+
+  /** Length shown against {@link effectiveMaxLength}: as counted by the platform with the tightest cap. */
+  readonly descriptionLength = computed(() => {
+    const tightest = this.lengthsByTarget().reduce<{ max: number; length: number } | null>(
+      (best, row) => (best == null || row.max < best.max ? row : best),
+      null,
+    );
+    return tightest?.length ?? this.description().length;
+  });
   readonly overLimit = computed(() => {
-    const max = this.effectiveMaxLength();
-    return max != null && this.descriptionLength() > max;
+    return this.lengthsByTarget().some((row) => row.length > row.max);
   });
 
   /** Selected targets that will drop attached media (platform doesn't support it). */
