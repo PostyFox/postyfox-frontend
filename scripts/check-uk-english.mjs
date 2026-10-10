@@ -1,5 +1,6 @@
 // Issue #32: the UI is written in UK English, ready for localisation. Fails on US spellings in
-// src/ templates, styles, strings and comments, and in the public/i18n translation files. Runs as
+// src/ templates, styles, strings and comments, and in en-GB.json, the Crowdin source. The other
+// public/i18n files come from Crowdin in their own locale's spelling, so they're skipped. Runs as
 // part of `npm run lint`.
 // `color`/`center`/`centered` are left out: CSS and Bootstrap use them.
 import { readFileSync, readdirSync } from 'node:fs';
@@ -32,14 +33,15 @@ function sourceFiles(dir) {
   });
 }
 
-const found = [join(root, 'src'), join(root, 'public/i18n')].flatMap(sourceFiles).flatMap((file) =>
-  readFileSync(file, 'utf-8')
-    .split('\n')
-    .flatMap((line, i) =>
-      (line.match(US_SPELLING) ?? [])
-        .filter((w) => !ALLOWED.has(w))
-        .map((w) => `${relative(root, file)}:${i + 1}  ${w}`),
-    ),
+const found = [...sourceFiles(join(root, 'src')), join(root, 'public/i18n/en-GB.json')].flatMap(
+  (file) =>
+    readFileSync(file, 'utf-8')
+      .split('\n')
+      .flatMap((line, i) =>
+        (line.match(US_SPELLING) ?? [])
+          .filter((w) => !ALLOWED.has(w))
+          .map((w) => `${relative(root, file)}:${i + 1}  ${w}`),
+      ),
 );
 
 if (found.length > 0) {
