@@ -391,7 +391,9 @@
     "clearHistoryConfirmOne": "Permanently delete the 1 post in your history? This removes it and its stored content for good. Drafts and posts still in flight are not affected.",
     "clearHistoryConfirmOther": "Permanently delete all {{ count }} posts in your history? This removes them and their stored content for good. Drafts and posts still in flight are not affected.",
     "deletedPostsOne": "Deleted 1 post",
-    "deletedPostsOther": "Deleted {{ count }} posts"
+    "deletedPostsOther": "Deleted {{ count }} posts",
+    "upcomingAutomations": "Upcoming automations",
+    "estimatedAutomationTime": "Estimated time. This post hasn't been delivered yet, so the automation will run its set delay after delivery."
   },
   "postStatus": {
     "postStatus": "Post status",
