@@ -22,7 +22,7 @@
     "@angular/router": "^22.2.1",
     "@jsverse/transloco": "^8.4.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.222.0",
-    "@opentelemetry/instrumentation": "^0.222.0",
+    "@opentelemetry/instrumentation": "^0.223.0",
     "@opentelemetry/instrumentation-fetch": "^0.222.0",
     "@opentelemetry/instrumentation-xml-http-request": "^0.222.0",
     "@opentelemetry/resources": "^2.10.0",
