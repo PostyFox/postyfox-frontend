@@ -456,6 +456,137 @@
                         [ngModel]="m.alt"
                         (ngModelChange)="patchAlt(i, $event)"
                       />
+                      @let framing = framingInfo()[i];
+                      @if (framing?.targets?.length) {
+                        <div
+                          class="small mt-1"
+                          [class.text-warning]="!m.framing"
+                          [class.text-muted-2]="m.framing"
+                        >
+                          <i class="bi bi-aspect-ratio me-1"></i
+                          >{{ tr('compose.framingNeeded', { platforms: names(framing!.targets) }) }}
+                        </div>
+                      } @else if (m.width && m.height && !m.framing && !m.framingOpen) {
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-link px-0 mt-1"
+                          (click)="toggleFraming(i)"
+                        >
+                          <i class="bi bi-aspect-ratio me-1"></i>{{ tr('compose.adjustFraming') }}
+                        </button>
+                      }
+                      @if (framing?.targets?.length || m.framing || m.framingOpen) {
+                        <div class="border rounded p-2 mt-2">
+                          <div class="d-flex flex-wrap align-items-center gap-3">
+                            <div class="form-check form-check-inline m-0">
+                              <input
+                                class="form-check-input"
+                                type="radio"
+                                [id]="'pad-' + i"
+                                [name]="'framing-' + i"
+                                [checked]="m.framing?.mode === framingMode.Pad"
+                                (change)="setFramingMode(i, framingMode.Pad)"
+                              />
+                              <label class="form-check-label" [for]="'pad-' + i">{{
+                                tr('compose.framingPad')
+                              }}</label>
+                            </div>
+                            <div class="form-check form-check-inline m-0">
+                              <input
+                                class="form-check-input"
+                                type="radio"
+                                [id]="'crop-' + i"
+                                [name]="'framing-' + i"
+                                [checked]="m.framing?.mode === framingMode.Crop"
+                                [disabled]="!m.previewUrl || !framing?.cropRange"
+                                (change)="setFramingMode(i, framingMode.Crop)"
+                              />
+                              <label class="form-check-label" [for]="'crop-' + i">{{
+                                tr('compose.framingCrop')
+                              }}</label>
+                            </div>
+                            @if (m.framing) {
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-link px-0 ms-auto"
+                                (click)="clearFraming(i)"
+                              >
+                                {{ tr('compose.framingClear') }}
+                              </button>
+                            } @else if (m.framingOpen) {
+                              <button
+                                type="button"
+                                class="btn btn-sm btn-link px-0 ms-auto"
+                                (click)="toggleFraming(i)"
+                              >
+                                {{ tr('compose.framingClose') }}
+                              </button>
+                            }
+                          </div>
+                          @if (!framing?.targets?.length) {
+                            <div class="small text-muted-2 mt-1">
+                              {{ tr('compose.framingOptionalHint') }}
+                            </div>
+                          }
+                          @if (framing && !framing.cropRange) {
+                            <div class="small text-muted-2 mt-1">
+                              {{ tr('compose.framingNoCommonCrop') }}
+                            </div>
+                          }
+                          @if (m.framing?.mode === framingMode.Pad) {
+                            <div class="d-flex flex-wrap align-items-center gap-3 mt-2">
+                              <div class="form-check m-0">
+                                <input
+                                  class="form-check-input"
+                                  type="checkbox"
+                                  [id]="'transparent-' + i"
+                                  [checked]="!m.framing?.background"
+                                  (change)="
+                                    setPadBackground(i, m.framing?.background ? null : '#ffffff')
+                                  "
+                                />
+                                <label class="form-check-label small" [for]="'transparent-' + i">{{
+                                  tr('compose.framingTransparent')
+                                }}</label>
+                              </div>
+                              @if (m.framing?.background) {
+                                <input
+                                  type="color"
+                                  class="form-control form-control-color form-control-sm"
+                                  [attr.aria-label]="tr('compose.framingColour')"
+                                  [value]="m.framing!.background"
+                                  (input)="setPadBackground(i, $any($event.target).value)"
+                                />
+                              } @else {
+                                <span class="small text-muted-2">{{
+                                  tr('compose.framingTransparentHint')
+                                }}</span>
+                              }
+                            </div>
+                          }
+                          @if (
+                            m.framing?.mode === framingMode.Crop &&
+                            m.framing?.crop &&
+                            m.previewUrl &&
+                            m.width &&
+                            m.height
+                          ) {
+                            <div class="mt-2">
+                              <app-crop-editor
+                                [src]="m.previewUrl"
+                                [imageWidth]="m.width"
+                                [imageHeight]="m.height"
+                                [range]="framing?.cropRange ?? openRange"
+                                [region]="m.framing!.crop!"
+                                (regionChange)="setCrop(i, $event)"
+                              />
+                              <div class="small text-muted-2 mt-1">
+                                {{ tr('compose.framingCropHint') }}
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
                       @if (mediaItems().length > 1 && !m.isDefault) {
                         <button
                           type="button"
@@ -645,6 +776,17 @@
                   { platforms: mediaRequiredIssues().join(', ') }
                 )
               }}
+            </div>
+          </div>
+        }
+
+        @if (framingIssues().length) {
+          <div class="alert alert-warning">
+            <div class="fw-medium mb-1">
+              <i class="bi bi-aspect-ratio me-1"></i>{{ tr('compose.chooseFraming') }}
+            </div>
+            <div class="small mb-0">
+              {{ tr('compose.framingIssue', { files: framingIssues().join(', ') }) }}
             </div>
           </div>
         }

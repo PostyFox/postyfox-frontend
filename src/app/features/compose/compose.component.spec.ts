@@ -9,6 +9,7 @@ import {
   PostContent,
   ServiceDefinition,
   UserConnector,
+  MediaFramingMode,
 } from '../../core/models/api.models';
 import { ConnectorsService } from '../../core/services/connectors.service';
 import { MediaService } from '../../core/services/media.service';
@@ -717,6 +718,97 @@ describe('ComposeComponent — media-required platforms (Instagram)', () => {
     fixture.detectChanges();
 
     expect(fixture.componentInstance.mediaRequiredIssues()).toEqual([]);
+  });
+
+  // ----- aspect-ratio framing (issue #39) -----
+
+  function withTallImage(fixture: ComponentFixture<ComposeComponent>): void {
+    fixture.componentInstance.mediaLimitsByConnector.set({
+      [igConnector.id]: {
+        connectorId: igConnector.id,
+        platform: 'Instagram',
+        displayName: 'My Instagram',
+        willResize: false,
+        imageSizeLimit: null,
+        videoSizeLimit: null,
+        maxMediaAttachments: 10,
+        imageMaxWidth: 1440,
+        imageMaxHeight: 1800,
+        videoMaxWidth: null,
+        videoMaxHeight: null,
+        imageMinAspectRatio: 0.8,
+        imageMaxAspectRatio: 1.91,
+      },
+    });
+    fixture.componentInstance.mediaItems.set([
+      {
+        ref: { container: 'media', key: 'u/tall.png', contentType: 'image/png' },
+        name: 'tall.png',
+        alt: '',
+        mimeType: 'image/png',
+        isDefault: true,
+        width: 400,
+        height: 1000,
+        previewUrl: 'blob:tall',
+      },
+    ]);
+    fixture.detectChanges();
+  }
+
+  it('blocks submission until an image outside the platform shape is padded or cropped', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const c = fixture.componentInstance;
+
+    expect(c.framingInfo()[0].targets.map((t) => t.displayName)).toEqual(['My Instagram']);
+    expect(c.framingIssues()).toEqual(['tall.png']);
+    expect(c.canSubmit()).toBe(false);
+
+    c.setFramingMode(0, MediaFramingMode.Pad);
+    expect(c.framingIssues()).toEqual([]);
+  });
+
+  it('starts a crop at the largest centred region the platform accepts', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const c = fixture.componentInstance;
+
+    c.setFramingMode(0, MediaFramingMode.Crop);
+
+    // 400 wide at 4:5 → 500 tall of 1000: the middle half.
+    expect(c.mediaItems()[0].framing).toEqual({
+      mode: MediaFramingMode.Crop,
+      crop: { x: 0, y: 0.25, width: 1, height: 0.5 },
+    });
+  });
+
+  it('sends the framing choice with the media ref', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const c = fixture.componentInstance;
+    c.setPadBackground(0, '#112233');
+
+    const body = c['buildBody']();
+
+    expect(body.media?.[0].framing).toEqual({ mode: MediaFramingMode.Pad, background: '#112233' });
+  });
+
+  it('needs no framing for an image already inside the platform shape', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const c = fixture.componentInstance;
+    c.mediaItems.update((m) => m.map((x) => ({ ...x, width: 1000, height: 1000 })));
+
+    expect(c.framingIssues()).toEqual([]);
+  });
+
+  it('shows the pad and crop choice on an out-of-range image', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Outside the shape My Instagram accepts');
+    expect(text).toContain('Choose how to fit these images');
   });
 });
 

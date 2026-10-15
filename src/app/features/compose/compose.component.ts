@@ -12,6 +12,9 @@ import {
   ConnectorDestinationSummary,
   ContentRating,
   MediaCheckResultItem,
+  CropRegion,
+  MediaFraming,
+  MediaFramingMode,
   MediaLimits,
   MediaRef,
   PostContent,
@@ -21,6 +24,7 @@ import {
   TextTemplate,
   UserConnector,
 } from '../../core/models/api.models';
+import { AspectRange, initialCrop, intersectRanges } from '../../core/models/crop-geometry';
 import {
   FieldDescriptor,
   brandFor,
@@ -39,9 +43,13 @@ import { TagPresetsService } from '../../core/services/tag-presets.service';
 import { TemplatesService } from '../../core/services/templates.service';
 import { TextTemplatesService } from '../../core/services/text-templates.service';
 import { ToastService } from '../../core/services/toast.service';
+import { CropEditorComponent } from '../../shared/components/crop-editor.component';
 import { DescriptorFieldComponent } from '../../shared/components/descriptor-field.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header.component';
+
+/** A crop range with no bounds, for framing an image no selected target constrains. */
+const OPEN_RANGE: AspectRange = { min: 0, max: Number.POSITIVE_INFINITY };
 
 interface MediaItem {
   ref: MediaRef;
@@ -59,6 +67,15 @@ interface MediaItem {
    * the upload/remove handlers, and prefill restoration.
    */
   isDefault: boolean;
+  /** Upright pixel size, decoded locally at upload; undefined for prefilled or non-image media. */
+  width?: number;
+  height?: number;
+  /** Object URL of the selected file, for the crop editor; undefined for prefilled media. */
+  previewUrl?: string;
+  /** The author's pad/crop choice for platforms with an aspect-ratio range (issue #39). */
+  framing?: MediaFraming | null;
+  /** Whether the framing controls are open even though no selected platform requires them. */
+  framingOpen?: boolean;
 }
 
 /**
@@ -74,6 +91,8 @@ interface UploadTask {
   progress: number;
   status: 'checking' | 'uploading' | 'error';
   error?: string;
+  /** Upright pixel size from the pre-flight decode, carried onto the {@link MediaItem}. */
+  dimensions?: { width: number; height: number } | null;
 }
 
 /**
@@ -120,6 +139,7 @@ interface TargetOptionsGroup {
     PageHeaderComponent,
     EmptyStateComponent,
     DescriptorFieldComponent,
+    CropEditorComponent,
   ],
   templateUrl: './compose.component.html',
 })
@@ -186,6 +206,8 @@ export class ComposeComponent {
    */
   readonly targetAutomation = signal<Record<string, AutomationRequest | null>>({});
   readonly automationAction = AutomationAction;
+  readonly framingMode = MediaFramingMode;
+  readonly openRange = OPEN_RANGE;
 
   readonly enabledConnectors = computed(() => this.connectorList().filter((c) => c.enabled));
   readonly capsByPlatform = computed(() => capabilitiesByPlatform(this.catalogue()));
@@ -559,6 +581,43 @@ export class ComposeComponent {
     });
   });
 
+  /**
+   * Per attached item (same order as {@link mediaItems}), the selected targets whose aspect-ratio
+   * range the image falls outside (issue #39), and the range a crop must stay inside to suit every
+   * selected target that has one. Items with unknown dimensions (prefilled) have no targets.
+   */
+  readonly framingInfo = computed(() => {
+    const limits = this.mediaLimitsByConnector();
+    const ranged = this.selectedConnectors().flatMap((target) => {
+      const l = limits[target.connectorId];
+      if (l?.imageMinAspectRatio == null && l?.imageMaxAspectRatio == null) return [];
+      const range: AspectRange = {
+        min: l.imageMinAspectRatio ?? 0,
+        max: l.imageMaxAspectRatio ?? Number.POSITIVE_INFINITY,
+      };
+      return [{ target, range }];
+    });
+    const cropRange = intersectRanges(ranged.map((r) => r.range));
+    return this.mediaItems().map((item) => {
+      const ratio = item.width && item.height ? item.width / item.height : null;
+      const targets =
+        ratio === null
+          ? []
+          : ranged
+              .filter(({ range }) => ratio < range.min || ratio > range.max)
+              .map((r) => r.target);
+      return { targets, cropRange };
+    });
+  });
+
+  /** Names of images a selected target can't accept as-is and the author hasn't framed yet. */
+  readonly framingIssues = computed(() => {
+    const info = this.framingInfo();
+    return this.mediaItems()
+      .filter((item, i) => info[i]?.targets.length && !item.framing)
+      .map((item) => item.name);
+  });
+
   /** Selected targets that ignore the title (platform doesn't support one). */
   readonly titleIgnoredTargets = computed(() => {
     if (!this.title().trim()) return [];
@@ -576,6 +635,7 @@ export class ComposeComponent {
       this.artconomyIssues().length === 0 &&
       this.tagsRequiredIssues().length === 0 &&
       this.mediaRequiredIssues().length === 0 &&
+      this.framingIssues().length === 0 &&
       this.automationDelayIssues().length === 0 &&
       Object.keys(this.targetOptionErrors()).length === 0 &&
       !this.submitting() &&
@@ -700,6 +760,7 @@ export class ComposeComponent {
         alt: ref.alt ?? '',
         mimeType: ref.contentType,
         isDefault: ref.isDefault ?? false,
+        framing: ref.framing ?? null,
       })),
     );
     this.ensureDefaultMedia();
@@ -817,15 +878,16 @@ export class ComposeComponent {
 
     this.imageDimensions$(task.file)
       .pipe(
-        switchMap((dimensions) =>
-          this.connectors.checkMedia({
+        switchMap((dimensions) => {
+          this.patchUploadTask(task.id, { dimensions });
+          return this.connectors.checkMedia({
             connectorIds,
             fileSize: task.file.size,
             mimeType: task.file.type,
             width: dimensions?.width ?? null,
             height: dimensions?.height ?? null,
-          }),
-        ),
+          });
+        }),
       )
       .subscribe({
         next: (checks) => {
@@ -883,6 +945,7 @@ export class ComposeComponent {
     ref: MediaRef,
     resizeChecks: MediaCheckResultItem[],
   ): void {
+    const dimensions = this.uploadTasks().find((t) => t.id === task.id)?.dimensions;
     const item: MediaItem = {
       ref,
       name: task.name,
@@ -893,6 +956,10 @@ export class ComposeComponent {
       // The very first image attached becomes the default; later ones don't disturb an existing
       // choice. ensureDefaultMedia() below covers the empty-list race between concurrent uploads.
       isDefault: this.mediaItems().length === 0,
+      width: dimensions?.width,
+      height: dimensions?.height,
+      previewUrl: dimensions ? URL.createObjectURL(task.file) : undefined,
+      framing: null,
     };
     this.mediaItems.update((m) => [...m, item]);
     this.ensureDefaultMedia();
@@ -963,8 +1030,48 @@ export class ComposeComponent {
   }
 
   removeMedia(i: number): void {
+    const url = this.mediaItems()[i]?.previewUrl;
+    if (url) URL.revokeObjectURL(url);
     this.mediaItems.update((m) => m.filter((_, idx) => idx !== i));
     this.ensureDefaultMedia();
+  }
+
+  // ----- framing (issue #39) ------------------------------------------------
+  /** Opens or closes the optional framing controls for an image no selected target requires it for. */
+  toggleFraming(i: number): void {
+    this.patchMedia(i, { framingOpen: !this.mediaItems()[i]?.framingOpen });
+  }
+
+  /** Switches an image between padding and cropping, starting a crop at the largest region that fits. */
+  setFramingMode(i: number, mode: MediaFramingMode): void {
+    const item = this.mediaItems()[i];
+    if (!item) return;
+    if (mode === MediaFramingMode.Pad) {
+      this.patchMedia(i, { framing: { mode, background: item.framing?.background ?? null } });
+      return;
+    }
+    const range = this.framingInfo()[i]?.cropRange ?? OPEN_RANGE;
+    const crop =
+      item.framing?.crop ??
+      (item.width && item.height ? initialCrop(item.width, item.height, range) : null);
+    this.patchMedia(i, { framing: { mode, crop } });
+  }
+
+  /** Sets the padding colour ("#rrggbb"), or null for transparent. */
+  setPadBackground(i: number, background: string | null): void {
+    this.patchMedia(i, { framing: { mode: MediaFramingMode.Pad, background } });
+  }
+
+  setCrop(i: number, crop: CropRegion): void {
+    this.patchMedia(i, { framing: { mode: MediaFramingMode.Crop, crop } });
+  }
+
+  clearFraming(i: number): void {
+    this.patchMedia(i, { framing: null, framingOpen: false });
+  }
+
+  private patchMedia(i: number, patch: Partial<MediaItem>): void {
+    this.mediaItems.update((m) => m.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
   }
 
   /** Guarantees exactly one item is flagged default whenever media is attached. */
@@ -993,6 +1100,7 @@ export class ComposeComponent {
       ...m.ref,
       alt: m.alt.trim() || null,
       isDefault: m.isDefault,
+      framing: m.framing ?? null,
     }));
 
     let postAt: string | null = null;
