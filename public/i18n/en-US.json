@@ -224,7 +224,23 @@
     "fileExceedsLimit": "File exceeds the {{ limit }} upload limit",
     "fileTooLarge": "File is too large to upload",
     "networkError": "Network error — check your connection",
-    "uploadFailed": "Upload failed"
+    "uploadFailed": "Upload failed",
+    "framingNeeded": "Outside the shape {{ platforms }} accepts. Choose to pad or crop it.",
+    "adjustFraming": "Set crop or padding",
+    "framingPad": "Pad",
+    "framingCrop": "Crop",
+    "framingClear": "Clear",
+    "framingClose": "Close",
+    "framingOptionalHint": "Used only by platforms that need a different shape. A crop's centre also sets the focal point on Mastodon-style servers.",
+    "framingNoCommonCrop": "The selected platforms accept no shape in common, so this image can only be padded.",
+    "framingTransparent": "Transparent",
+    "framingColour": "Padding colour",
+    "framingTransparentHint": "Becomes white on platforms that only accept JPEG.",
+    "framingCropHint": "Drag the box to move it and the corner to resize it. Arrow keys move it; Shift+arrow keys resize it.",
+    "cropImageAlt": "Image to crop",
+    "cropBoxLabel": "Crop region",
+    "chooseFraming": "Choose how to fit these images",
+    "framingIssue": "Some selected platforms only accept certain shapes. Pad or crop: {{ files }}"
   },
   "connectors": {
     "pasteIntoStrongUse": "Paste this into <strong>Use a pairing token instead</strong> in the extension.",
@@ -391,7 +407,9 @@
     "clearHistoryConfirmOne": "Permanently delete the 1 post in your history? This removes it and its stored content for good. Drafts and posts still in flight are not affected.",
     "clearHistoryConfirmOther": "Permanently delete all {{ count }} posts in your history? This removes them and their stored content for good. Drafts and posts still in flight are not affected.",
     "deletedPostsOne": "Deleted 1 post",
-    "deletedPostsOther": "Deleted {{ count }} posts"
+    "deletedPostsOther": "Deleted {{ count }} posts",
+    "upcomingAutomations": "Upcoming automations",
+    "estimatedAutomationTime": "Estimated time. This post hasn't been delivered yet, so the automation will run its set delay after delivery."
   },
   "postStatus": {
     "postStatus": "Post status",
