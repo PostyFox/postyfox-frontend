@@ -521,6 +521,21 @@ describe('ComposeComponent — client-side upload size cap', () => {
     expect(media.upload).not.toHaveBeenCalled();
   });
 
+  it('rejects an SVG without uploading it', async () => {
+    const fixture = configure(null);
+    const file = new File(['<svg/>'], 'logo.svg', { type: 'image/svg+xml' });
+    fixture.componentInstance.onFilesSelected({
+      target: { files: [file], value: '' },
+    } as unknown as Event);
+    await fixture.whenStable();
+
+    const tasks = fixture.componentInstance.uploadTasks();
+    expect(tasks.length).toBe(1);
+    expect(tasks[0].status).toBe('error');
+    expect(tasks[0].error).toContain('SVG');
+    expect(media.upload).not.toHaveBeenCalled();
+  });
+
   it('uploads a file within the cap as normal', async () => {
     const fixture = configure(1000000);
     media.upload.mockReturnValue(

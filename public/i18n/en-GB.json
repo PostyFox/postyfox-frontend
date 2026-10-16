@@ -223,6 +223,7 @@
     "issueArtconomyImageType": "Use a JPEG, PNG, GIF, or WebP image.",
     "fileExceedsLimit": "File exceeds the {{ limit }} upload limit",
     "fileTooLarge": "File is too large to upload",
+    "svgUnsupported": "SVG isn't supported. Export it as a PNG or JPEG and upload that.",
     "networkError": "Network error — check your connection",
     "uploadFailed": "Upload failed",
     "framingNeeded": "Outside the shape {{ platforms }} accepts. Choose to pad or crop it.",

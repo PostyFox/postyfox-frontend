@@ -850,6 +850,14 @@ export class ComposeComponent {
    * instead of only failing partway through (or after) the upload itself.
    */
   private startUpload(task: UploadTask): void {
+    // No connector can deliver SVG, and the browser can't decode its dimensions for framing.
+    if (task.file.type === 'image/svg+xml' || /\.svgz?$/i.test(task.file.name)) {
+      this.patchUploadTask(task.id, {
+        status: 'error',
+        error: translate('compose.svgUnsupported'),
+      });
+      return;
+    }
     const cap = this.mediaLimits()?.maxUploadSizeBytes;
     if (cap != null && task.file.size > cap) {
       this.patchUploadTask(task.id, {
