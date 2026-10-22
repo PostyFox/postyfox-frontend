@@ -41,22 +41,23 @@ or `/oauth2` traffic (the gateway routes those elsewhere).
 
 Mirrors the core repo's split:
 
-- **`.github/workflows/frontend-ci.yml`** (`frontend-ci`): lint, production build and unit tests on
-  every push/PR; on a push to `main` it builds the container image and pushes it to
-  `ghcr.io/<owner>/postyfox-frontend:<sha>`. Every environment runs this one production image (the
-  SPA is same-origin `/api` + `/oauth2` everywhere, so there is no per-environment build).
-- **`.github/workflows/deploy.yml`** (`deploy`): triggered by a successful `frontend-ci` run on
-  `main`. Dev runs directly on the self-hosted runner node (the same box and `/opt/postyfox/dev`
-  layout core deploys to), copies this repo's overlay + gateway fragments locally, then uses the
-  latest successful `frontend-ci` build from `main` to roll the `frontend` service into the running
-  core stack (docker-compose). This workflow is **dev-only**: it does not touch production.
-- **`.github/workflows/release.yml`** (`release`): manually dispatched, semver release. Deploys
-  DEV the same way as above (docker-compose overlay), then, after `production` environment
-  approval, deploys **PROD as its own Kubernetes/Helm release** (`deploy/helm/postyfox-frontend`),
-  into the SAME `postyfox` namespace as postyfox-core's release, via `helm upgrade --install`.
-  Requires a `KUBE_CONFIG` secret on the `production` GitHub Environment (base64-encoded
-  kubeconfig, the same cluster/namespace as core's release; a Service Account token scoped to
-  `postyfox` is recommended). See `deploy/helm/postyfox-frontend/values.yaml` for chart options.
+- **`.github/workflows/pr.yml`** (`PR Validation`): lint, production build, unit tests and helm
+  lint on every PR.
+- **`.github/workflows/build.yml`** (`Build`): on a push to `main` (or manual dispatch) reruns PR
+  Validation, then builds the image and pushes `ghcr.io/postyfox/postyfox-frontend:<sha>`, with
+  the next semver (Conventional Commits) baked in as `<x.y.z>+<short sha>`. Every environment runs
+  this one production image (the SPA is same-origin `/api` + `/oauth2` everywhere).
+- **`.github/workflows/deploy.yml`** (`Deploy`): ships images Build already pushed; nothing is
+  rebuilt.
+  - **development**: automatic after each successful main Build, or manual for any built commit.
+    Runs on the self-hosted runner, copies this repo's overlay + gateway fragments into
+    `/opt/postyfox/dev` and rolls the `frontend` service into the running core stack.
+  - **production**: manual only, and only for commits with a successful Build on `main`. After
+    `production` environment approval it deploys **its own Helm release**
+    (`deploy/helm/postyfox-frontend`) into the same `postyfox` namespace as postyfox-core's
+    release, via `helm upgrade --install`. Tick `release` to tag `vX.Y.Z` on the deployed commit
+    and publish a GitHub Release. Requires a `KUBE_CONFIG` secret on the `production` environment
+    (base64-encoded kubeconfig, same cluster/namespace as core).
 
   > Unlike dev (which drops gateway conf.d fragments onto core's shared nginx), prod wiring is
   > declarative: set `gateway.frontend.enabled: true` (+ `serviceName`/`servicePort` matching this
