@@ -1,0 +1,29 @@
+name: PR Validation
+
+on:
+  pull_request:
+  # Build runs the same checks before producing the image
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  # only supersede PR runs; a cancelled call from Build would fail that build
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  node:
+    uses: aneillans/github-templates/.github/workflows/node-ci.yml@v1
+    with:
+      lint_command: npm run lint
+      build_command: npm run build -- --configuration production
+      test_command: npm test -- --watch=false
+
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+      - run: helm lint deploy/helm/postyfox-frontend

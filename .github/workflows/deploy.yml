@@ -1,99 +1,93 @@
-name: deploy
+name: Deploy
+
+# Ships images already built by Build; nothing is rebuilt here.
+#   development: automatic after every successful main Build, or manual for any built commit
+#   production:  manual only, and only for commits with a successful Build on main.
+#                Optionally tags vX.Y.Z (the version baked in at build) and publishes a GitHub Release.
+
+on:
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [development, production]
+        default: development
+      sha:
+        description: Commit to deploy (blank = latest successful main Build)
+        required: false
+        type: string
+      release:
+        description: Production only. Tag vX.Y.Z and publish a GitHub Release after deploying
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
-  actions: read
-
-on:
-  workflow_dispatch:
-
-  workflow_run:
-    workflows: [frontend-ci]
-    types: [completed]
-    branches: [main]
 
 env:
-  REGISTRY: ghcr.io
-  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-  DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-  DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+  IMAGE_REPOSITORY: ghcr.io/postyfox/postyfox-frontend
 
 jobs:
-  check-prerequisites:
-    # Verify all required secrets are configured
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check required secrets
-        run: |
-          missing=0
-
-          if [ -z "$DEPLOY_HOST" ]; then
-            echo "❌ Missing required secret: DEPLOY_HOST"
-            missing=1
-          fi
-
-          if [ -z "$DEPLOY_USER" ]; then
-            echo "❌ Missing required secret: DEPLOY_USER"
-            missing=1
-          fi
-
-          if [ -z "$DEPLOY_SSH_KEY" ]; then
-            echo "❌ Missing required secret: DEPLOY_SSH_KEY"
-            missing=1
-          fi
-
-          if [ "$missing" -ne 0 ]; then
-            echo
-            echo "Configure them in: Settings -> Secrets and variables -> Actions"
-            exit 1
-          fi
-
-          echo "✅ Required deployment secrets are configured"
-
-  validate-image:
-    # Manual deploys target the exact commit selected in the dispatch UI. Verify its CI run and
-    # image before occupying the self-hosted deployment runner.
-    needs: check-prerequisites
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push'
-      )
+  resolve:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       actions: read
       packages: read
     outputs:
-      repository: ${{ steps.image.outputs.repository }}
-      tag: ${{ steps.image.outputs.tag }}
+      environment: ${{ steps.target.outputs.environment }}
+      sha: ${{ steps.sha.outputs.sha }}
+      version: ${{ steps.image.outputs.version }}
     steps:
-      - name: Resolve image
-        id: image
+      - name: Resolve environment
+        id: target
         env:
-          IMAGE_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-        run: |
-          echo "repository=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-          echo "tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+        run: echo "environment=${INPUT_ENVIRONMENT:-development}" >> "$GITHUB_OUTPUT"
 
-      - name: Require a successful CI build for the selected commit
-        if: github.event_name == 'workflow_dispatch'
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve commit
+        id: sha
         env:
           GH_TOKEN: ${{ github.token }}
-          IMAGE_TAG: ${{ steps.image.outputs.tag }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_SHA: ${{ inputs.sha }}
         run: |
-          runs="$(gh api \
-            --method GET \
-            "repos/$GITHUB_REPOSITORY/actions/workflows/frontend-ci.yml/runs" \
-            -f "head_sha=$IMAGE_TAG" \
-            -f status=success \
-            -f per_page=100 \
-            --jq '[.workflow_runs[] | select(.head_sha == env.IMAGE_TAG and (.event == "push" or .event == "workflow_dispatch"))] | length')"
-          if [ "$runs" -eq 0 ]; then
-            echo "::warning::Commit $IMAGE_TAG has no successful frontend-ci image build."
-            echo "::warning::Run frontend-ci for the target branch before deploying."
+          if [ -n "$RUN_SHA" ]; then
+            sha="$RUN_SHA"
+          elif [ -n "$INPUT_SHA" ]; then
+            [[ "$INPUT_SHA" =~ ^[0-9a-fA-F]{7,40}$ ]] || { echo "::error::Not a commit SHA: $INPUT_SHA"; exit 1; }
+            sha="$(git rev-parse --verify "${INPUT_SHA}^{commit}")"
+          else
+            sha="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/runs?branch=main&status=success&per_page=1" \
+              --jq '.workflow_runs[0].head_sha // empty')"
+            [ -n "$sha" ] || { echo "::error::No successful main Build found"; exit 1; }
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Deploying $sha"
+
+      - name: Require a successful Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.sha.outputs.sha }}
+          ENVIRONMENT: ${{ steps.target.outputs.environment }}
+        run: |
+          branch_filter='true'
+          [ "$ENVIRONMENT" = production ] && branch_filter='.head_branch == "main"'
+          count="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/build.yml/runs?head_sha=$SHA&status=success" \
+            --jq "[.workflow_runs[] | select($branch_filter)] | length")"
+          if [ "$count" -eq 0 ]; then
+            [ "$ENVIRONMENT" = production ] && echo "::error::$SHA has no successful Build on main" \
+              || echo "::error::$SHA has no successful Build"
             exit 1
           fi
 
@@ -103,83 +97,101 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Require the deployable image
+      - name: Require image and read version
+        id: image
         env:
-          IMAGE: ${{ steps.image.outputs.repository }}:${{ steps.image.outputs.tag }}
+          SHA: ${{ steps.sha.outputs.sha }}
         run: |
-          if ! docker buildx imagetools inspect "$IMAGE" >/dev/null; then
-            echo "::warning::Deployable image $IMAGE does not exist or is not accessible."
-            echo "::warning::Run frontend-ci for the target branch before deploying."
-            exit 1
-          fi
+          docker buildx imagetools inspect "$IMAGE_REPOSITORY:$SHA" >/dev/null \
+            || { echo "::error::Missing image $IMAGE_REPOSITORY:$SHA"; exit 1; }
+          version="$(docker buildx imagetools inspect "$IMAGE_REPOSITORY:$SHA" --format '{{json .Image}}' \
+            | jq -r '.config.Env[] | select(startswith("APP_VERSION=")) | sub("^APP_VERSION="; "")')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version $version"
 
-  deploy-dev:
-    # Always deploy dev when the CI image build succeeds on a push.
-    needs: validate-image
+  development:
+    needs: resolve
+    if: needs.resolve.outputs.environment == 'development'
     runs-on: [self-hosted]
     environment: development
+    concurrency: deploy-development-frontend
+    env:
+      STACK_DIR: /opt/postyfox/dev
+      COMPOSE_PROJECT_NAME: postyfox-dev
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.validate-image.outputs.tag }}
+          ref: ${{ needs.resolve.outputs.sha }}
 
       - name: Copy deployment files
         run: |
-          echo "📦 Copying frontend overlay + gateway fragments to dev stack..."
-          # The runner is already on the deployment node, so write directly into the local core stack.
-          mkdir -p /opt/postyfox/dev/gateway/conf.d/upstreams /opt/postyfox/dev/gateway/conf.d/routes
-          cp deploy/docker-compose.frontend.server.yml /opt/postyfox/dev/
-          cp deploy/gateway/conf.d/upstreams/frontend.conf /opt/postyfox/dev/gateway/conf.d/upstreams/frontend.conf
-          cp deploy/gateway/conf.d/routes/90-root.conf /opt/postyfox/dev/gateway/conf.d/routes/90-root.conf
+          # The runner is on the dev host, so write straight into core's stack
+          mkdir -p "$STACK_DIR"/gateway/conf.d/upstreams "$STACK_DIR"/gateway/conf.d/routes
+          cp deploy/docker-compose.frontend.server.yml "$STACK_DIR"/
+          cp deploy/gateway/conf.d/upstreams/frontend.conf "$STACK_DIR"/gateway/conf.d/upstreams/frontend.conf
+          cp deploy/gateway/conf.d/routes/90-root.conf "$STACK_DIR"/gateway/conf.d/routes/90-root.conf
 
       - name: Deploy frontend to dev stack
         env:
-          IMAGE_REPOSITORY: ${{ needs.validate-image.outputs.repository }}
-          IMAGE_TAG: ${{ needs.validate-image.outputs.tag }}
+          IMAGE_TAG: ${{ needs.resolve.outputs.sha }}
         run: |
-          echo "🚀 Deploying frontend to dev stack..."
-          set -e
-          cd /opt/postyfox/dev
-          echo '📋 Checking .env file exists...'
-          [ -f .env ] || { echo '❌ Missing .env file (core stack not initialised?)'; exit 1; }
+          cd "$STACK_DIR"
+          [ -f .env ] || { echo "::error::Missing $STACK_DIR/.env (core stack not initialised?)"; exit 1; }
+          # .env may pin the frontend image; the workflow's values win
+          wf_repository="$IMAGE_REPOSITORY"; wf_tag="$IMAGE_TAG"
           source .env 2>/dev/null || true
-          export FRONTEND_IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
-          export FRONTEND_IMAGE_TAG=${{ env.IMAGE_TAG }}
-          export COMPOSE_PROJECT_NAME=postyfox-dev
-          COMPOSE_FILES='-f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml'
-          echo '🔄 Pulling frontend image...'
-          docker compose $COMPOSE_FILES pull frontend || { echo '❌ Failed to pull frontend image'; exit 1; }
-          echo '⬆️ Updating frontend service...'
-          docker compose $COMPOSE_FILES up -d --no-deps frontend || { echo '❌ Failed to start frontend'; exit 1; }
-          echo '🔄 Reloading gateway (conf.d fragments are bind-mounted; restart picks up the SPA route)...'
-          docker compose $COMPOSE_FILES restart gateway || { echo '❌ Failed to restart gateway'; exit 1; }
-          echo '✅ Dev frontend deployed successfully'
-          docker compose $COMPOSE_FILES ps frontend gateway || {
-            echo "❌ Dev deployment failed"
+          export FRONTEND_IMAGE_REPOSITORY="$wf_repository" FRONTEND_IMAGE_TAG="$wf_tag"
+          compose() { docker compose -f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml "$@"; }
+          compose pull frontend
+          compose up -d --no-deps frontend
+          # conf.d fragments are bind-mounted; restart picks up the SPA route
+          compose restart gateway
+          compose ps frontend gateway
+
+  production:
+    needs: resolve
+    if: needs.resolve.outputs.environment == 'production'
+    concurrency: deploy-production-frontend
+    uses: aneillans/github-templates/.github/workflows/helm-deploy.yml@v1
+    with:
+      environment: production
+      # cluster API is only reachable from the self-hosted runner
+      runs_on: self-hosted
+      ref: ${{ needs.resolve.outputs.sha }}
+      chart: deploy/helm/postyfox-frontend
+      release: postyfox-frontend
+      namespace: postyfox
+      values_files: deploy/helm/postyfox-frontend/values-prod.yaml
+      set_values: |
+        image.repository=ghcr.io/postyfox/postyfox-frontend
+        image.tag=${{ needs.resolve.outputs.sha }}
+        service.name=postyfox-frontend
+    # KUBE_CONFIG is a production environment secret, read by the template job
+
+  release:
+    needs: [resolve, production]
+    if: inputs.release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+      - name: Tag and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+          VERSION: ${{ needs.resolve.outputs.version }}
+        run: |
+          tag="v${VERSION%%+*}"
+          [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::No release version baked into the image (got '$VERSION')"; exit 1; }
+          if git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null; then
+            echo "::error::$tag already exists; deployed $SHA without tagging"
             exit 1
-          }
-
-      - name: Health check
-        run: |
-          echo "🏥 Running health checks..."
-          sleep 10
-          cd /opt/postyfox/dev && \
-          docker compose -f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml ps frontend | grep -E '(Up|healthy)' || { \
-          echo '⚠️ Warning: frontend may not be healthy yet'; }; \
-          true
-
-      - name: Deployment summary
-        if: success()
-        run: |
-          cat << 'EOF'
-          ✅ Dev frontend deployment completed successfully!
-
-          📊 Stack Information:
-          - Environment: Development (auto-deploy on every push)
-          - Project: postyfox-dev
-          - Location: /opt/postyfox/dev
-          - Image: ${{ needs.validate-image.outputs.repository }}:${{ needs.validate-image.outputs.tag }}
-
-          📝 Check logs:
-          - cd /opt/postyfox/dev && docker compose logs -f frontend
-          EOF
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "Release $tag" "$SHA"
+          git push origin "$tag"
+          gh release create "$tag" --verify-tag --title "$tag" --generate-notes

@@ -37,5 +37,9 @@ RUN chmod +x /docker-entrypoint.d/40-deployment-config.sh
 # The Angular `application` builder emits the browser bundle under dist/spa/browser.
 COPY --from=build /app/dist/spa/browser /usr/share/nginx/html
 
+# Same version as the bundle; the Deploy workflow reads it from the image config.
+ARG VERSION=0.0.0-dev
+ENV APP_VERSION=$VERSION
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
