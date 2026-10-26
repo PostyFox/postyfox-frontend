@@ -178,6 +178,7 @@
     "scheduleLater": "Schedule for later",
     "attachMedia": "Attach media",
     "completeTheseArtconomyRequirements": "Complete these Artconomy requirements",
+    "completeTheseDeviantArtRequirements": "Complete these DeviantArt requirements",
     "completeTheseFuraffinityRequirements": "Complete these FurAffinity requirements",
     "saveDraft": "Save draft",
     "schedulePost": "Schedule post",
@@ -201,6 +202,7 @@
     "pickLeastOneTarget": "Pick at least one target",
     "completeFuraffinityRequirements": "Complete the FurAffinity requirements",
     "completeArtconomyRequirements": "Complete the Artconomy requirements",
+    "completeDeviantArtRequirements": "Complete the DeviantArt requirements",
     "addTags": "Add tags",
     "required2": "Required by {{ platforms }}",
     "chooseContentRating": "Choose a content rating",
@@ -221,6 +223,7 @@
     "issueTitleMax": "Keep the title to {{ max }} characters or fewer.",
     "issueArtconomySingleImage": "Attach only one image: an Artconomy submission is a single file.",
     "issueArtconomyImageType": "Use a JPEG, PNG, GIF, or WebP image.",
+    "issueDaImageType": "Use a JPEG, PNG, or GIF image for the default image.",
     "fileExceedsLimit": "File exceeds the {{ limit }} upload limit",
     "fileTooLarge": "File is too large to upload",
     "networkError": "Network error — check your connection",
@@ -734,6 +737,10 @@
     "SoFurry": {
       "blurb": "Publish image submissions to your SoFurry account.",
       "setup": "Connect with SoFurry to authorize your account. Every post needs a title, a rating and at least one image."
+    },
+    "DeviantArt": {
+      "blurb": "Publish images to your DeviantArt gallery.",
+      "setup": "Connect with DeviantArt to authorise your account. Every post needs a rating and one image; with several attached, the default image is used."
     },
     "fallbackLabel": "Connector",
     "chips": {

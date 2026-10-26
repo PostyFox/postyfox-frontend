@@ -335,6 +335,9 @@ export class ComposeComponent {
     this.selectedConnectors().some((c) => c.platform === 'FurAffinity'),
   );
 
+  readonly deviantArtSelected = computed(() =>
+    this.selectedConnectors().some((c) => c.platform === 'DeviantArt'),
+  );
   readonly artconomySelected = computed(() =>
     this.selectedConnectors().some((c) => c.platform === 'Artconomy'),
   );
@@ -508,6 +511,24 @@ export class ComposeComponent {
     return issues;
   });
 
+  /**
+   * Requirements DeviantArt enforces at delivery time, surfaced before the post is queued. Required
+   * media and rating are covered by the generic checks.
+   */
+  readonly deviantArtIssues = computed(() => {
+    if (!this.deviantArtSelected()) return [];
+    const issues: string[] = [];
+    const media = this.mediaItems();
+    if (media.length > 0) {
+      // A Sta.sh upload is one file: the author's chosen default image, the rest are dropped.
+      const item = media.find((m) => m.isDefault) ?? media[0];
+      const contentType = (item.mimeType || item.ref.contentType).toLowerCase();
+      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(contentType))
+        issues.push(translate('compose.issueDaImageType'));
+    }
+    return issues;
+  });
+
   /** Tightest character limit across selected targets (null → no limit applies). */
   readonly effectiveMaxLength = computed<number | null>(() => {
     const caps = this.capsByPlatform();
@@ -633,6 +654,7 @@ export class ComposeComponent {
       this.ratingRequiredIssues().length === 0 &&
       this.furAffinityIssues().length === 0 &&
       this.artconomyIssues().length === 0 &&
+      this.deviantArtIssues().length === 0 &&
       this.tagsRequiredIssues().length === 0 &&
       this.mediaRequiredIssues().length === 0 &&
       this.framingIssues().length === 0 &&
@@ -1171,6 +1193,10 @@ export class ComposeComponent {
     }
     if (this.artconomyIssues().length) {
       this.toast.warning(translate('compose.completeArtconomyRequirements'));
+      return;
+    }
+    if (this.deviantArtIssues().length) {
+      this.toast.warning(translate('compose.completeDeviantArtRequirements'));
       return;
     }
     if (this.tagsRequiredIssues().length) {

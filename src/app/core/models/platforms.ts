@@ -198,6 +198,13 @@ const BRANDS: Record<string, PlatformBrand> = {
     blurb: 'platforms.SoFurry.blurb',
     setup: 'platforms.SoFurry.setup',
   },
+  DeviantArt: {
+    label: 'DeviantArt',
+    icon: 'bi-easel-fill',
+    color: '#05CC47',
+    blurb: 'platforms.DeviantArt.blurb',
+    setup: 'platforms.DeviantArt.setup',
+  },
 };
 
 const FALLBACK: PlatformBrand = { label: '', icon: 'bi-plug', color: '#8c57ff' };
