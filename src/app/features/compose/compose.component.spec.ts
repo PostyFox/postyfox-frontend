@@ -1143,3 +1143,125 @@ describe('ComposeComponent — Artconomy', () => {
     expect(cmp.artconomyIssues()).toEqual([]);
   });
 });
+
+/** DeviantArt uploads one image (the default) and takes only JPEG, PNG or GIF. */
+describe('ComposeComponent — DeviantArt', () => {
+  const daConnector: UserConnector = {
+    id: 'conn-da',
+    serviceDefinitionId: 'DeviantArt',
+    platform: 'DeviantArt',
+    displayName: 'My DA',
+    configJson: '{}',
+    enabled: true,
+    defaultIncludeTags: true,
+    defaultRating: null,
+  };
+
+  const daDefinition: ServiceDefinition = {
+    id: 'DeviantArt',
+    name: 'DeviantArt',
+    enabled: true,
+    configSchema: '{}',
+    secureConfigSchema: null,
+    postOptionsSchema: null,
+    platform: 'DeviantArt',
+    supportsTitle: true,
+    supportsMedia: true,
+    supportsThreads: false,
+    maxContentLength: null,
+    supportsOAuth: true,
+    supportsCookiePairing: false,
+    supportsRating: true,
+    requiresRating: true,
+    supportsTags: true,
+    requiresTags: false,
+    minTags: 0,
+    requiresMedia: true,
+    supportsTextOnly: false,
+    warning: null,
+    supportsMultipleTargets: false,
+    supportsContentWarning: false,
+    supportsRepost: false,
+    supportsDelete: false,
+  };
+
+  function image(name: string, mimeType = 'image/png', isDefault = false) {
+    return {
+      ref: { container: 'media', key: `u/${name}`, contentType: mimeType },
+      name,
+      alt: '',
+      mimeType,
+      isDefault,
+    } as ReturnType<ComposeComponent['mediaItems']>[number];
+  }
+
+  function configure(): ComposeComponent {
+    TestBed.configureTestingModule({
+      imports: [ComposeComponent, translocoTesting()],
+      providers: [
+        {
+          provide: ConnectorsService,
+          useValue: {
+            list: vi.fn().mockReturnValue(of([daConnector])),
+            listAllDestinations: vi.fn().mockReturnValue(of([])),
+            checkMedia: vi.fn().mockReturnValue(of([])),
+          },
+        },
+        { provide: TemplatesService, useValue: { list: vi.fn().mockReturnValue(of([])) } },
+        { provide: TagPresetsService, useValue: { list: vi.fn().mockReturnValue(of([])) } },
+        { provide: TextTemplatesService, useValue: { list: vi.fn().mockReturnValue(of([])) } },
+        {
+          provide: ServicesService,
+          useValue: { list: vi.fn().mockReturnValue(of([daDefinition])) },
+        },
+        {
+          provide: PostsService,
+          useValue: { create: vi.fn(), updateDraft: vi.fn(), publish: vi.fn(), list: vi.fn() },
+        },
+        {
+          provide: MediaService,
+          useValue: {
+            upload: vi.fn(),
+            getLimits: vi.fn().mockReturnValue(of({ maxUploadSizeBytes: null })),
+          },
+        },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } },
+        {
+          provide: Router,
+          useValue: { getCurrentNavigation: vi.fn().mockReturnValue(null), navigate: vi.fn() },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ComposeComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleTarget(daConnector.id);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  it('rejects a WebP default image before posting', () => {
+    const cmp = configure();
+    cmp.mediaItems.set([image('a.webp', 'image/webp')]);
+
+    expect(cmp.deviantArtIssues()).toEqual([
+      'Use a JPEG, PNG, or GIF image for the default image.',
+    ]);
+    expect(cmp.canSubmit()).toBe(false);
+  });
+
+  it('checks only the default image when several are attached', () => {
+    const cmp = configure();
+    cmp.mediaItems.set([image('a.webp', 'image/webp'), image('b.gif', 'image/gif', true)]);
+    expect(cmp.deviantArtIssues()).toEqual([]);
+
+    cmp.mediaItems.set([image('a.png'), image('b.webp', 'image/webp', true)]);
+    expect(cmp.deviantArtIssues()).toHaveLength(1);
+  });
+
+  it('has no issues without media (the generic media check covers that)', () => {
+    const cmp = configure();
+    expect(cmp.deviantArtIssues()).toEqual([]);
+    expect(cmp.mediaRequiredIssues()).toEqual(['My DA']);
+  });
+});
