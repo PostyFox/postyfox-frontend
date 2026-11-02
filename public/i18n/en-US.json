@@ -160,6 +160,7 @@
     "media": "Media",
     "upload": "Upload",
     "willPostTextOnly": "{{ platforms }} will post text only (no media support).",
+    "videoUnsupported": "Video isn't accepted by {{ platforms }}. Choose \"Convert to GIF (no audio)\" in the post options where offered, or deselect them.",
     "noMediaAttached": "No media attached.",
     "checking": "Checking…",
     "retry": "Retry",
