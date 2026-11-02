@@ -349,6 +349,16 @@
                 </span>
               </div>
             }
+            @if (videoUnsupportedTargets().length) {
+              <div class="alert alert-warning py-2 small d-flex align-items-start gap-2">
+                <i class="bi bi-camera-video-off mt-1"></i>
+                <span>{{
+                  tr('compose.videoUnsupported', {
+                    platforms: names(videoUnsupportedTargets()),
+                  })
+                }}</span>
+              </div>
+            }
             @if (mediaAttachmentLimitTargets().length) {
               <div class="alert alert-warning py-2 small d-flex align-items-start gap-2">
                 <i class="bi bi-exclamation-triangle-fill mt-1"></i>

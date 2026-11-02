@@ -466,7 +466,11 @@ export class ComposeComponent {
       // that support multiple images), it uses the author's chosen default image and drops the rest.
       const item = media.find((m) => m.isDefault) ?? media[0];
       const contentType = (item.mimeType || item.ref.contentType).toLowerCase();
-      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(contentType)) {
+      // A video is caught by videoUnsupportedTargets, or sent as a GIF when opted in (issue #40).
+      if (
+        !contentType.startsWith('video/') &&
+        !['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(contentType)
+      ) {
         issues.push(translate('compose.issueFaImageType'));
       }
       if (
@@ -503,7 +507,9 @@ export class ComposeComponent {
     if (media.length > 1) issues.push(translate('compose.issueArtconomySingleImage'));
     if (media.length === 1) {
       const contentType = (media[0].mimeType || media[0].ref.contentType).toLowerCase();
+      // A video is caught by videoUnsupportedTargets, or sent as a GIF when opted in (issue #40).
       if (
+        !contentType.startsWith('video/') &&
         !['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'].includes(contentType)
       )
         issues.push(translate('compose.issueArtconomyImageType'));
@@ -523,7 +529,11 @@ export class ComposeComponent {
       // A Sta.sh upload is one file: the author's chosen default image, the rest are dropped.
       const item = media.find((m) => m.isDefault) ?? media[0];
       const contentType = (item.mimeType || item.ref.contentType).toLowerCase();
-      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(contentType))
+      // A video is caught by videoUnsupportedTargets, or sent as a GIF when opted in (issue #40).
+      if (
+        !contentType.startsWith('video/') &&
+        !['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(contentType)
+      )
         issues.push(translate('compose.issueDaImageType'));
     }
     return issues;
@@ -569,6 +579,28 @@ export class ComposeComponent {
     return this.selectedConnectors().filter(
       (c) => caps[c.platform] && !caps[c.platform].supportsMedia,
     );
+  });
+
+  /**
+   * Selected targets that take no video (issue #40) but would be sent one: their reported formats
+   * include no video type and the author hasn't picked "Convert to GIF" for them. A single-file
+   * platform sends only its default item, so only that one counts there.
+   */
+  readonly videoUnsupportedTargets = computed(() => {
+    const items = this.mediaItems();
+    if (items.length === 0) return [];
+    const limits = this.mediaLimitsByConnector();
+    const isVideo = (m: (typeof items)[number]) =>
+      (m.mimeType || m.ref.contentType).toLowerCase().startsWith('video/');
+    return this.selectedConnectors().filter((t) => {
+      const l = limits[t.connectorId];
+      if (!l?.supportedMimeTypes || l.supportedMimeTypes.some((m) => m.startsWith('video/')))
+        return false;
+      if (this.targetOptions()[t.selectionId]?.['VideoAsGif'] === 'true') return false;
+      const sent =
+        l.maxMediaAttachments === 1 ? [items.find((m) => m.isDefault) ?? items[0]] : items;
+      return sent.some(isVideo);
+    });
   });
 
   /** Selected targets that will resize at least one attached media item before delivery. */
@@ -655,6 +687,7 @@ export class ComposeComponent {
       this.furAffinityIssues().length === 0 &&
       this.artconomyIssues().length === 0 &&
       this.deviantArtIssues().length === 0 &&
+      this.videoUnsupportedTargets().length === 0 &&
       this.tagsRequiredIssues().length === 0 &&
       this.mediaRequiredIssues().length === 0 &&
       this.framingIssues().length === 0 &&
@@ -1197,6 +1230,14 @@ export class ComposeComponent {
     }
     if (this.deviantArtIssues().length) {
       this.toast.warning(translate('compose.completeDeviantArtRequirements'));
+      return;
+    }
+    if (this.videoUnsupportedTargets().length) {
+      this.toast.warning(
+        translate('compose.videoUnsupported', {
+          platforms: this.names(this.videoUnsupportedTargets()),
+        }),
+      );
       return;
     }
     if (this.tagsRequiredIssues().length) {
