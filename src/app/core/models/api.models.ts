@@ -507,6 +507,8 @@ export interface MediaCheckResultItem {
   imageMaxAspectRatio?: number | null;
   /** True when the checked image is outside that range and needs padding or cropping. */
   needsFraming?: boolean;
+  /** Image and video formats the platform takes; no video format means image-only (issue #40). */
+  supportedMimeTypes?: string[] | null;
 }
 
 // ---------------------------------------------------------------------------

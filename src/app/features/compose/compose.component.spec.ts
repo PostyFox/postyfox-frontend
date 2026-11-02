@@ -1264,4 +1264,55 @@ describe('ComposeComponent — DeviantArt', () => {
     expect(cmp.deviantArtIssues()).toEqual([]);
     expect(cmp.mediaRequiredIssues()).toEqual(['My DA']);
   });
+
+  /** What the media check reports for an image-only, single-file platform like DeviantArt. */
+  function imageOnlyLimits(cmp: ComposeComponent) {
+    cmp.mediaLimitsByConnector.set({
+      'conn-da': {
+        connectorId: 'conn-da',
+        platform: 'DeviantArt',
+        displayName: 'My DA',
+        willResize: false,
+        imageSizeLimit: null,
+        videoSizeLimit: null,
+        maxMediaAttachments: 1,
+        imageMaxWidth: null,
+        imageMaxHeight: null,
+        videoMaxWidth: null,
+        videoMaxHeight: null,
+        supportedMimeTypes: ['image/jpeg', 'image/png', 'image/gif'],
+      },
+    });
+  }
+
+  it('blocks a video for an image-only target until it converts to GIF', () => {
+    const cmp = configure();
+    imageOnlyLimits(cmp);
+    cmp.mediaItems.set([image('clip.mp4', 'video/mp4', true)]);
+
+    expect(cmp.videoUnsupportedTargets().map((t) => t.displayName)).toEqual(['My DA']);
+    // Covered by the video warning rather than repeated as an image-type issue.
+    expect(cmp.deviantArtIssues()).toEqual([]);
+    expect(cmp.canSubmit()).toBe(false);
+
+    cmp.patchTargetOption('conn-da', 'VideoAsGif', 'true');
+    expect(cmp.videoUnsupportedTargets()).toEqual([]);
+  });
+
+  it('ignores a video that a single-file platform would not send', () => {
+    const cmp = configure();
+    imageOnlyLimits(cmp);
+    cmp.mediaItems.set([image('a.png', 'image/png', true), image('clip.mp4', 'video/mp4')]);
+    expect(cmp.videoUnsupportedTargets()).toEqual([]);
+  });
+
+  it('does not warn for a platform that takes video', () => {
+    const cmp = configure();
+    imageOnlyLimits(cmp);
+    cmp.mediaLimitsByConnector.update((all) => ({
+      'conn-da': { ...all['conn-da'], supportedMimeTypes: ['image/jpeg', 'video/mp4'] },
+    }));
+    cmp.mediaItems.set([image('clip.mp4', 'video/mp4', true)]);
+    expect(cmp.videoUnsupportedTargets()).toEqual([]);
+  });
 });
