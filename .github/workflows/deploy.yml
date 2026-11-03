@@ -118,19 +118,20 @@ jobs:
   production:
     needs: [resolve, build]
     if: ${{ !cancelled() && needs.resolve.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.build.result) && needs.resolve.outputs.environment == 'production' }}
+    runs-on: self-hosted # cluster API is only reachable from the self-hosted runner
+    environment: production
     concurrency: deploy-production-frontend
-    uses: aneillans/github-templates/.github/workflows/helm-deploy.yml@v1
-    with:
-      environment: production
-      # cluster API is only reachable from the self-hosted runner
-      runs_on: self-hosted
-      ref: ${{ needs.resolve.outputs.sha }}
-      chart: deploy/helm/postyfox-frontend
-      release: postyfox-frontend
-      namespace: postyfox
-      values_files: deploy/helm/postyfox-frontend/values-prod.yaml
-      set_values: |
-        image.repository=ghcr.io/postyfox/postyfox-frontend
-        image.tag=${{ needs.resolve.outputs.sha }}
-        service.name=postyfox-frontend
-    # KUBE_CONFIG is a production environment secret, read by the template job
+    steps:
+      - uses: aneillans/github-templates/actions/helm-deploy@v1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          chart: deploy/helm/postyfox-frontend
+          release: postyfox-frontend
+          namespace: postyfox
+          values_files: deploy/helm/postyfox-frontend/values-prod.yaml
+          set_values: |
+            image.repository=ghcr.io/postyfox/postyfox-frontend
+            image.tag=${{ needs.resolve.outputs.sha }}
+            service.name=postyfox-frontend
+          # KUBE_CONFIG is a production environment secret, only readable from a job with `environment:` set
+          secrets_json: ${{ toJSON(secrets) }}
