@@ -1,68 +1,54 @@
-# PostyFox: frontend
+# PostyFox Frontend
 
-Angular 21 (LTS Version) single-page app for the [PostyFox platform](../postyfox-core). Write a post once and
-deliver it to Discord, Telegram, BlueSky and Tumblr; manage connectors, templates, external triggers
-and API keys.
+The web app for PostyFox: write a post once and send it to many social platforms, now or on a
+schedule. It runs on top of [postyfox-core](https://github.com/PostyFox/postyfox-core), which does
+the posting.
 
-- **Framework:** Angular 21 (standalone components, signals)
-- **UI:** Bootstrap 5 with a Materio-inspired theme (`src/styles/`)
-- **Auth:** cookie session via the oauth2-proxy edge → Keycloak (the browser holds no tokens).
-  See [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md).
-- **APIs:** the core-api / post-api, consumed same-origin under `/api/*`.
+## What you can do
 
-## Prerequisites
+- Connect accounts on Discord, Telegram, Bluesky, Tumblr, Instagram, the Fediverse, FurAffinity,
+  Toyhouse, Ko-fi, SoFurry, DeviantArt, Artconomy and X.
+- Compose a post with images or video, pick where it goes, and set each site's own options.
+- Schedule posts, save drafts, and set reposts or deletions for later.
+- Follow each post's progress and browse your history.
+- Reuse templates, text snippets and tag presets.
+- Create API keys, set up webhook triggers, and give someone else access to your account.
 
-- Node.js 22+ and npm
-- The core platform running (for API + auth). See `../postyfox-core/README.md`.
+The interface is in UK English and translated through Crowdin.
 
-## Develop
+## Quick start
+
+You need Node.js 24 and the postyfox-core stack running locally.
 
 ```bash
 npm install
-npm start          # ng serve → http://127.0.0.1:4200
+npm start
 ```
 
-`proxy.conf.json` forwards `/api` and `/oauth2` to a running edge at `http://localhost:4180`.
-Sign in once at http://localhost:4180 (see [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) for why).
+Sign in once at <http://localhost:4180> as `postyfox` / `postyfox`, then open
+<http://127.0.0.1:4200>. To run the frontend inside the full stack instead, see the
+[development guide](./docs/DEVELOPMENT.md#run-the-whole-stack-spa--apis--auth).
 
-## Build & quality
+## Build and test
 
 ```bash
-npm run build        # production build → dist/spa/browser
-npm run build-dev    # dev configuration
-npm run lint         # eslint (ts + templates) + translation key check
-npm test             # Vitest unit tests (jsdom, no browser needed)
+npm run build
+npm run lint
+npm test
 ```
 
-## Localisation
+## Documentation
 
-UI text lives in `public/i18n/<lang>.json` and is loaded at runtime by
-[Transloco](https://jsverse.gitbook.io/transloco) (en-GB is the source language). Templates use
-`*transloco="let tr"` and `tr('area.key')`; code uses `translate('area.key')`. Translations are
-synced from Crowdin (`crowdin.yml`). To add a language, add its code and native name to `LANGUAGES`
-and its Angular locale data to `LOCALE_DATA` in `src/app/core/i18n/i18n.ts`. The UI language comes
-from the navbar picker (stored per-browser), else the browser's languages, else en-GB. `npm run lint` fails on keys used but not defined, or defined but unused.
+| Doc | For |
+|-----|-----|
+| [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Stack, running locally, translations, project layout |
+| [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) | How auth works, the container, CI/CD, the Helm chart |
+| [docs/OBSERVABILITY.md](./docs/OBSERVABILITY.md) | Browser tracing |
+| [docs/DECISIONS.md](./docs/DECISIONS.md) | Why it's built this way (ADRs) |
 
-## Run the whole stack (SPA + APIs + auth)
+## Releases
 
-```bash
-cd ../postyfox-core/deploy
-docker compose \
-  -f docker-compose.yml \
-  -f ../../postyfox-frontend/deploy/docker-compose.frontend.yml \
-  up --build
-# open http://localhost:4180  (login: postyfox / postyfox)
-```
+Current (production ready) releases can be found here on GitHub.
+In development releases can be found on https://packages.neillans.co.uk, however, you should ONLY use these if you know what you are doing or have been asked to test something specific!
 
-## Project layout
-
-```
-src/app/
-  core/            models, typed API services, auth, guard, interceptor, toast/confirm
-  layout/          Materio shell (sidebar, navbar, user menu)
-  shared/          reusable UI (page header, empty state, status badge, dialogs)
-  features/        dashboard, connectors, templates, compose, post-status, triggers, api-keys
-src/styles/        Materio-inspired Bootstrap theme (variables + layout)
-deploy/            gateway config + compose overlay to serve the SPA behind the edge
-docs/              deployment & architecture notes
-```
+The packages server (packages.neillans.co.uk) is available through the great generosity of Inedo by providing us with an Enterprise License for our Open Source projects.

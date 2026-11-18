@@ -4,7 +4,12 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
-import { PostRootStatus, PostSummary } from '../../core/models/api.models';
+import {
+  AutomationAction,
+  PendingAutomation,
+  PostRootStatus,
+  PostSummary,
+} from '../../core/models/api.models';
 import { PostsComponent, buildCalendar } from './posts.component';
 import { translocoTesting } from '../../../testing/transloco-testing';
 
@@ -26,12 +31,16 @@ function post(id: string, rootStatus: PostRootStatus, postAt: string | null = nu
   };
 }
 
+function repost(dueAt: string, estimated = false): PendingAutomation {
+  return { action: AutomationAction.Repost, platform: 'BlueSky', dueAt, estimated };
+}
+
 describe('buildCalendar', () => {
   // October 2026 starts on a Thursday and ends on a Saturday.
   const october = new Date(2026, 9, 1);
 
   it('lays out Monday-first weeks padded with neighbouring days', () => {
-    const weeks = buildCalendar(october, [], new Date(2026, 9, 8));
+    const weeks = buildCalendar(october, [], [], new Date(2026, 9, 8));
     expect(weeks.length).toBe(5);
     expect(weeks.every((w) => w.length === 7)).toBe(true);
     expect(weeks[0][0].date).toEqual(new Date(2026, 8, 28));
@@ -51,9 +60,26 @@ describe('buildCalendar', () => {
     const a = post('a', PostRootStatus.Queued, new Date(2026, 9, 10, 9).toISOString());
     const b = post('b', PostRootStatus.Queued, new Date(2026, 9, 10, 18).toISOString());
     const c = post('c', PostRootStatus.Queued, new Date(2026, 10, 3, 9).toISOString());
-    const days = buildCalendar(october, [a, b, c], new Date(2026, 9, 8)).flat();
-    expect(days.find((d) => d.date.getDate() === 10)!.posts).toEqual([a, b]);
-    expect(days.flatMap((d) => d.posts)).not.toContain(c);
+    const days = buildCalendar(october, [a, b, c], [], new Date(2026, 9, 8)).flat();
+    expect(days.find((d) => d.date.getDate() === 10)!.entries.map((e) => e.post)).toEqual([a, b]);
+    expect(days.flatMap((d) => d.entries.map((e) => e.post))).not.toContain(c);
+  });
+
+  it('interleaves automations with posts by time on their dueAt day', () => {
+    const a = post('a', PostRootStatus.Queued, new Date(2026, 9, 10, 9).toISOString());
+    const b = post('b', PostRootStatus.Delivered);
+    const automation = repost(new Date(2026, 9, 10, 8).toISOString(), true);
+    const days = buildCalendar(
+      october,
+      [a],
+      [{ post: b, automation }],
+      new Date(2026, 9, 8),
+    ).flat();
+    const entries = days.find((d) => d.date.getDate() === 10)!.entries;
+    expect(entries.map((e) => [e.kind, e.post.postId])).toEqual([
+      ['automation', 'b'],
+      ['post', 'a'],
+    ]);
   });
 });
 
@@ -115,12 +141,55 @@ describe('PostsComponent', () => {
     expect(scheduledCard(el)).toBeUndefined();
   });
 
-  it('offers no calendar toggle for a single scheduled post', () => {
+  it('offers the calendar for a single scheduled post', () => {
     localStorage.setItem(VIEW_KEY, 'calendar');
     const card = scheduledCard(render([soon]))!;
-    expect(card.querySelector('[aria-label="Scheduled view"]')).toBeNull();
-    expect(card.querySelector('table')).toBeNull();
-    expect(card.textContent).toContain('Post soon');
+    expect(card.querySelector('[aria-label="Scheduled view"]')).not.toBeNull();
+    expect(card.querySelector('table a')?.getAttribute('href')).toBe('/posts/soon');
+  });
+
+  it('shows pending automations, flagging estimated times', () => {
+    const delivered = {
+      ...post('done', PostRootStatus.Delivered),
+      pendingAutomationCount: 1,
+      pendingAutomations: [repost(new Date(2026, 9, 12, 9).toISOString())],
+    };
+    const queued = {
+      ...soon,
+      pendingAutomationCount: 1,
+      pendingAutomations: [repost(new Date(2026, 9, 11, 9).toISOString(), true)],
+    };
+    const el = render([delivered, queued]);
+    let card = scheduledCard(el)!;
+    expect(card.querySelector('.badge')!.textContent!.trim()).toBe('3');
+    const rows = [...card.querySelectorAll('li')];
+    expect(rows.map((r) => r.querySelector('a')!.getAttribute('href'))).toEqual([
+      '/posts/soon',
+      '/posts/done',
+    ]);
+    expect(rows[0].querySelector('[title]')!.getAttribute('title')).toContain('Estimated time');
+    expect(rows[1].querySelector('.bi-info-circle')).toBeNull();
+
+    button(card, 'Calendar').click();
+    fixture.detectChanges();
+    card = scheduledCard(el)!;
+    const [estimated, fixed] = [
+      ...card.querySelectorAll<HTMLAnchorElement>('table a.bg-label-info'),
+    ];
+    expect(estimated.getAttribute('href')).toBe('/posts/soon');
+    expect(estimated.textContent).toContain('~');
+    expect(estimated.title).toContain('Estimated time');
+    expect(fixed.getAttribute('href')).toBe('/posts/done');
+    expect(fixed.title).not.toContain('Estimated time');
+  });
+
+  it('shows the section for automations alone', () => {
+    const delivered = {
+      ...post('done', PostRootStatus.Delivered),
+      pendingAutomationCount: 1,
+      pendingAutomations: [repost(new Date(2026, 9, 12, 9).toISOString())],
+    };
+    expect(scheduledCard(render([delivered]))).toBeDefined();
   });
 
   it('switches between list and calendar and remembers the choice', () => {

@@ -1,0 +1,50 @@
+name: Build
+run-name: ${{ github.ref_type == 'tag' && format('Build {0}', github.ref_name) || github.event.head_commit.message || format('Build {0}', github.ref_name) }}
+
+# Validates, then builds and pushes the image to GHCR tagged with the full commit SHA.
+# Deploy only ever ships images built here. Release dispatches this on the tag, which also tags
+# the images with the version and stamps them with it exactly.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    uses: ./.github/workflows/pr.yml
+
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      version: ${{ steps.version.outputs.stamp }}
+    steps:
+      - name: Compute version (PR branches and titles, commit messages)
+        id: version
+        uses: aneillans/github-templates/actions/next-version@v1
+
+  image:
+    needs: [validate, version]
+    permissions:
+      contents: read
+      packages: write
+    uses: aneillans/github-templates/.github/workflows/docker-build-push.yml@v1
+    with:
+      registry: ghcr.io
+      registry_username: ${{ github.actor }}
+      image_name: postyfox/postyfox-frontend
+      build_args: |
+        BUILD_ENV=production
+        VERSION=${{ needs.version.outputs.version }}
+    secrets:
+      registry_password: ${{ secrets.GITHUB_TOKEN }}

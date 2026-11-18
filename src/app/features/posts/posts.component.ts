@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular
 import { Router, RouterLink } from '@angular/router';
 import { TranslocoDirective, translate } from '@jsverse/transloco';
 import { Subscription, switchMap, timer } from 'rxjs';
-import { PostSummary } from '../../core/models/api.models';
+import { AutomationAction, PendingAutomation, PostSummary } from '../../core/models/api.models';
 import { brandFor } from '../../core/models/platforms';
 import {
   ROOT_STATUS_META,
@@ -21,11 +21,22 @@ const SCHEDULED_VIEW_STORAGE_KEY = 'postyfox.scheduledView';
 
 type ScheduledView = 'list' | 'calendar';
 
+/** A post's pending automation rule, alongside the post it belongs to. */
+export interface UpcomingAutomation {
+  post: PostSummary;
+  automation: PendingAutomation;
+}
+
+/** One thing on a calendar day: a scheduled post going out, or an automation running. */
+export type CalendarEntry =
+  | { kind: 'post'; at: Date; post: PostSummary }
+  | ({ kind: 'automation'; at: Date } & UpcomingAutomation);
+
 export interface CalendarDay {
   date: Date;
   inMonth: boolean;
   today: boolean;
-  posts: PostSummary[];
+  entries: CalendarEntry[];
 }
 
 /**
@@ -71,15 +82,24 @@ export class PostsComponent implements OnInit, OnDestroy {
       .filter((p) => this.isScheduled(p))
       .sort((a, b) => Date.parse(a.postAt!) - Date.parse(b.postAt!)),
   );
+  /** Pending automation rules across submitted posts, soonest first. */
+  readonly upcomingAutomations = computed(() =>
+    this.all()
+      .filter((p) => !isRootStatusDraft(p.rootStatus))
+      .flatMap((post) =>
+        (post.pendingAutomations ?? []).map((automation) => ({ post, automation })),
+      )
+      .sort((a, b) => Date.parse(a.automation.dueAt) - Date.parse(b.automation.dueAt)),
+  );
+  readonly upcomingCount = computed(
+    () => this.scheduled().length + this.upcomingAutomations().length,
+  );
   readonly active = computed(() =>
     this.all().filter((p) => isRootStatusPending(p.rootStatus) && !this.isScheduled(p)),
   );
-  /** The calendar only earns its place once there's more than one scheduled post. */
-  readonly showCalendar = computed(
-    () => this.scheduled().length > 1 && this.scheduledView() === 'calendar',
-  );
+  readonly showCalendar = computed(() => this.scheduledView() === 'calendar');
   readonly calendarWeeks = computed(() =>
-    buildCalendar(this.calendarMonth(), this.scheduled(), new Date()),
+    buildCalendar(this.calendarMonth(), this.scheduled(), this.upcomingAutomations(), new Date()),
   );
   readonly drafts = computed(() => this.all().filter((p) => isRootStatusDraft(p.rootStatus)));
   readonly history = computed(() =>
@@ -109,6 +129,19 @@ export class PostsComponent implements OnInit, OnDestroy {
     this.calendarMonth.set(
       delta === 0 ? startOfMonth(new Date()) : new Date(m.getFullYear(), m.getMonth() + delta, 1),
     );
+  }
+
+  /** "Repost · Bluesky" */
+  automationLabel(a: PendingAutomation): string {
+    const action =
+      a.action === AutomationAction.Repost
+        ? translate('postStatus.repost')
+        : translate('postStatus.delete');
+    return `${action} · ${this.brand(a.platform).label}`;
+  }
+
+  automationIcon(a: PendingAutomation): string {
+    return a.action === AutomationAction.Repost ? 'bi-arrow-repeat' : 'bi-trash';
   }
 
   rootMeta(p: PostSummary) {
@@ -298,13 +331,26 @@ function dayKey(d: Date): string {
 
 /**
  * Monday-first weeks covering `month`, padded with the neighbouring months' days. Posts land on
- * the local day of their `postAt`; `posts` is assumed already sorted by time.
+ * the local day of their `postAt` and automations on their `dueAt`, each day in time order.
  */
-export function buildCalendar(month: Date, posts: PostSummary[], today: Date): CalendarDay[][] {
-  const byDay = new Map<string, PostSummary[]>();
-  for (const p of posts) {
-    const key = dayKey(new Date(p.postAt!));
-    byDay.set(key, [...(byDay.get(key) ?? []), p]);
+export function buildCalendar(
+  month: Date,
+  posts: PostSummary[],
+  automations: UpcomingAutomation[],
+  today: Date,
+): CalendarDay[][] {
+  const entries: CalendarEntry[] = [
+    ...posts.map((post) => ({ kind: 'post' as const, at: new Date(post.postAt!), post })),
+    ...automations.map((a) => ({
+      kind: 'automation' as const,
+      at: new Date(a.automation.dueAt),
+      ...a,
+    })),
+  ].sort((a, b) => a.at.getTime() - b.at.getTime());
+  const byDay = new Map<string, CalendarEntry[]>();
+  for (const e of entries) {
+    const key = dayKey(e.at);
+    byDay.set(key, [...(byDay.get(key) ?? []), e]);
   }
 
   const first = startOfMonth(month);
@@ -320,7 +366,7 @@ export function buildCalendar(month: Date, posts: PostSummary[], today: Date): C
         date,
         inMonth: date.getMonth() === first.getMonth(),
         today: dayKey(date) === dayKey(today),
-        posts: byDay.get(dayKey(date)) ?? [],
+        entries: byDay.get(dayKey(date)) ?? [],
       });
       cursor.setDate(cursor.getDate() + 1);
     }

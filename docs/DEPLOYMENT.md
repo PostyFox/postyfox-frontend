@@ -1,6 +1,6 @@
 # PostyFox frontend: architecture & deployment
 
-The frontend is an **Angular 19 SPA** (Materio-inspired Bootstrap 5 theme). It holds **no tokens**:
+The frontend is an **Angular 22 SPA** (Materio-inspired Bootstrap 5 theme). It holds **no tokens**:
 authentication is owned entirely by the **oauth2-proxy** edge that fronts the PostyFox platform.
 
 ## How auth works
@@ -30,9 +30,11 @@ That responsibility lives in `deploy/oauth2-proxy/oauth2-proxy.cfg` in the core 
 
 ## The container
 
-`Dockerfile` builds the SPA and serves the static bundle with nginx (`nginx.conf`), which does the
-SPA deep-link fallback to `index.html`. The image only serves static files. It never handles API
-or `/oauth2` traffic (the gateway routes those elsewhere).
+`Dockerfile` builds the SPA (Node 24) and serves the static bundle with nginx (`nginx.conf`), which
+does the SPA deep-link fallback to `index.html`. The image only serves static files. It never handles
+API or `/oauth2` traffic (the gateway routes those elsewhere). `docker-entrypoint.sh` writes the
+operator name and contact (`OPERATOR_NAME`, `OPERATOR_CONTACT`) into a JSON asset at startup, so one
+image serves every deployment.
 
 - `BUILD_ENV=production` (default) → `ng build --configuration production`
 - `BUILD_ENV=dev` → `ng build --configuration dev`
@@ -41,22 +43,27 @@ or `/oauth2` traffic (the gateway routes those elsewhere).
 
 Mirrors the core repo's split:
 
-- **`.github/workflows/frontend-ci.yml`** (`frontend-ci`): lint, production build and unit tests on
-  every push/PR; on a push to `main` it builds the container image and pushes it to
-  `ghcr.io/<owner>/postyfox-frontend:<sha>`. Every environment runs this one production image (the
-  SPA is same-origin `/api` + `/oauth2` everywhere, so there is no per-environment build).
-- **`.github/workflows/deploy.yml`** (`deploy`): triggered by a successful `frontend-ci` run on
-  `main`. Dev runs directly on the self-hosted runner node (the same box and `/opt/postyfox/dev`
-  layout core deploys to), copies this repo's overlay + gateway fragments locally, then uses the
-  latest successful `frontend-ci` build from `main` to roll the `frontend` service into the running
-  core stack (docker-compose). This workflow is **dev-only**: it does not touch production.
-- **`.github/workflows/release.yml`** (`release`): manually dispatched, semver release. Deploys
-  DEV the same way as above (docker-compose overlay), then, after `production` environment
-  approval, deploys **PROD as its own Kubernetes/Helm release** (`deploy/helm/postyfox-frontend`),
-  into the SAME `postyfox` namespace as postyfox-core's release, via `helm upgrade --install`.
-  Requires a `KUBE_CONFIG` secret on the `production` GitHub Environment (base64-encoded
-  kubeconfig, the same cluster/namespace as core's release; a Service Account token scoped to
-  `postyfox` is recommended). See `deploy/helm/postyfox-frontend/values.yaml` for chart options.
+- **`.github/workflows/pr.yml`** (`PR Validation`): lint, production build, unit tests and helm
+  lint on every PR.
+- **`.github/workflows/build.yml`** (`Build`): on a push to `main` (or manual dispatch) reruns PR
+  Validation, then builds the image and pushes `ghcr.io/postyfox/postyfox-frontend:<sha>`, with
+  the next semver (Conventional Commits) baked in as `<x.y.z>+<short sha>`. Every environment runs
+  this one production image (the SPA is same-origin `/api` + `/oauth2` everywhere).
+- **`.github/workflows/deploy.yml`** (`Deploy`): takes a branch, tag or SHA and ships the images
+  Build pushed for it, building first if a ref has none.
+  - **development**: automatic after each successful main Build, or manual for any ref.
+    Runs on the self-hosted runner, copies this repo's overlay + gateway fragments into
+    `/opt/postyfox/dev` and rolls the `frontend` service into the running core stack.
+  - **production**: manual only, for commits on `main` or published release tags. After
+    `production` environment approval it deploys **its own Helm release**
+    (`deploy/helm/postyfox-frontend`) into the same `postyfox` namespace as postyfox-core's
+    release, via `helm upgrade --install`. Requires a `KUBE_CONFIG` secret on the `production`
+    environment (base64-encoded kubeconfig, same cluster/namespace as core).
+- **`.github/workflows/release.yml`** (`Release`): tags `vX.Y.Z` (computed from the PRs since the last
+  tag, or given), writes the notes, builds the image at the tag and attaches a deploy zip with the
+  packaged chart, all as a draft. Deploy the tag to development and check it.
+- **`.github/workflows/publish-release.yml`** (`Publish Release`): publishes the draft. Production
+  refuses a release tag until this has run.
 
   > Unlike dev (which drops gateway conf.d fragments onto core's shared nginx), prod wiring is
   > declarative: set `gateway.frontend.enabled: true` (+ `serviceName`/`servicePort` matching this
@@ -76,8 +83,10 @@ and `include conf.d/routes/*.conf` (inside its one `server`), loading fragments 
 postyfox-core/deploy/gateway/
   nginx.conf                       # thin base: map, includes, shared proxy headers, /healthz
   conf.d/upstreams/backends.conf   # upstream core / upstream post
+  conf.d/routes/05-maintenance.conf # maintenance flag + error-page fallback
   conf.d/routes/10-apis.conf       # /api/posts,/api/webhooks,/swagger-post,/openapi-post → post
                                    # /api/, /swagger, /openapi → core   (explicit)
+  conf.d/routes/20-otlp.conf       # /otlp/v1/traces → otel-collector (browser telemetry)
   conf.d/routes/90-root.conf       # catch-all: / → core   (core-only default)
 ```
 
@@ -130,137 +139,30 @@ and the dev-server proxy forwards it to the edge. If you hit a `401`, the app re
 the proxy to re-authenticate. For anything auth-sensitive, prefer running the full overlay stack
 above.
 
-## PostyFox Frontend Helm Chart
+## Helm chart
 
-This chart deploys the PostyFox frontend application to a Kubernetes cluster using Helm.
-
-### Prerequisites
-
-- Kubernetes 1.19+
-- Helm 3.0+
-
-### Installing the Chart
-
-To install the chart with the release name `my-release`:
+`deploy/helm/postyfox-frontend` deploys the nginx image as a `Deployment` + `Service`, with an
+optional `Ingress`. Production installs it as the `postyfox-frontend` release in the
+`postyfox` namespace; core's gateway proxies `/` to its Service, so the chart's own ingress stays off.
 
 ```bash
-helm install my-release ./postyfox-frontend
+helm upgrade --install postyfox-frontend deploy/helm/postyfox-frontend \
+  --namespace postyfox \
+  -f deploy/helm/postyfox-frontend/values-prod.yaml \
+  --set image.tag=<commit sha>
 ```
 
-### Uninstalling the Chart
+Key values (defaults in `values.yaml`, production overlay in `values-prod.yaml`):
 
-To uninstall the chart:
+| Value | Default | Notes |
+|-------|---------|-------|
+| `image.repository` | `ghcr.io/postyfox/postyfox-frontend` | |
+| `image.tag` | chart `appVersion` | CI sets the commit SHA, including when deploying a release tag |
+| `replicaCount` | `1` | `2` in production |
+| `operator.name`, `operator.contact` | empty | Injected at container start into the privacy policy (`docker-entrypoint.sh`); empty leaves placeholders |
+| `service.port` / `service.targetPort` | `80` / `80` | Must match core's `gateway.frontend.servicePort` |
+| `ingress.enabled`, `ingress.host`, `ingress.tls` | `false`, empty, `[]` | Only for running without core's gateway |
+| `resources` | `{}` | Production sets 50m/64Mi requests, 500m/512Mi limits |
+| `autoscaling.*` | disabled | Unused: the chart has no HPA template |
 
-```bash
-helm uninstall my-release
-```
-
-### Configuration
-
-The following table lists the configurable parameters for this chart and their default values.
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `replicaCount` | Number of frontend replicas | `1` |
-| `image.repository` | Frontend image repository | `postyfox/frontend` |
-| `image.tag` | Frontend image tag | `` |
-| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
-| `service.type` | Kubernetes service type | `ClusterIP` |
-| `service.port` | Service port | `80` |
-| `service.targetPort` | Target port | `80` |
-| `ingress.enabled` | Enable ingress resource | `false` |
-| `ingress.className` | Ingress class name | `` |
-| `ingress.annotations` | Ingress annotations | `{}` |
-| `ingress.hosts` | Ingress hosts | `[{host: chart-example.local, paths: [{path: /, pathType: ImplementationSpecific}]}]` |
-| `ingress.tls` | Ingress TLS configuration | `[]` |
-| `resources` | CPU/memory resources requests/limits | `{}` |
-| `autoscaling.enabled` | Enable horizontal pod autoscaler | `false` |
-| `autoscaling.minReplicas` | Minimum number of replicas | `1` |
-| `autoscaling.maxReplicas` | Maximum number of replicas | `100` |
-| `autoscaling.targetCPUUtilizationPercentage` | Target CPU utilisation | `80` |
-
-### Values
-
-The following values can be configured in the `values.yaml` file:
-
-```yaml
-# Default values for postyfox-frontend chart
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
-
-replicaCount: 1
-
-image:
-  repository: postyfox/frontend
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
-
-imagePullSecrets: []
-nameOverride: ""
-fullnameOverride: ""
-
-serviceAccount:
-  # Specifies whether a service account should be created
-  create: false
-  # Annotations to add to the service account
-  annotations: {}
-  # The name of the service account to use.
-  # If not set and create is true, a name is generated using the fullname template
-  name: ""
-
-podAnnotations: {}
-
-podSecurityContext: {}
-# fsGroup: 2000
-
-securityContext: {}
-# capabilities:
-#   drop:
-#   - ALL
-# readOnlyRootFilesystem: true
-# runAsNonRoot: true
-# runAsUser: 1000
-
-service:
-  type: ClusterIP
-  port: 80
-  targetPort: 80
-  protocol: TCP
-
-ingress:
-  enabled: false
-  className: ""
-  annotations: {}
-  hosts:
-    - host: chart-example.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
-
-resources: {}
-# We usually recommend not to specify default resources and to leave this as a conscious
-# choice for the user. This also increases chances charts run on environments with little
-# resources, such as Minikube. If you do want to specify resources, uncomment the following
-# lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-# limits:
-#   cpu: 100m
-#   memory: 128Mi
-# requests:
-#   cpu: 100m
-#   memory: 128Mi
-
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
-
-nodeSelector: {}
-
-tolerations: []
-
-affinity: {}
-```
+See `values.yaml` for the rest (service account, pod security context, scheduling).

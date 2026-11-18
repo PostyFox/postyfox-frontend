@@ -1,185 +1,137 @@
-name: deploy
+name: Deploy
+run-name: Deploy ${{ inputs.ref || github.event.workflow_run.head_sha || 'newest main' }} to ${{ inputs.environment || 'development' }}
+
+# Ships images built by Build, dispatching Build first if a branch or tag has none.
+#   development: automatic after every successful main Build, or manual for any branch, tag or commit
+#   production:  manual, with approval, for a published release tag or a commit on main
+# Releases are cut by Release and published by Publish Release, separately from deploying.
+
+on:
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [development, production]
+        default: development
+      ref:
+        description: Branch, tag (e.g. v1.5.0) or SHA to deploy (blank = newest built commit on main)
+        required: false
+        type: string
 
 permissions:
   contents: read
-  actions: read
-
-on:
-  workflow_dispatch:
-
-  workflow_run:
-    workflows: [frontend-ci]
-    types: [completed]
-    branches: [main]
 
 env:
-  REGISTRY: ghcr.io
-  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-  DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-  DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+  IMAGE_REPOSITORY: ghcr.io/postyfox/postyfox-frontend
 
 jobs:
-  check-prerequisites:
-    # Verify all required secrets are configured
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check required secrets
-        run: |
-          missing=0
-
-          if [ -z "$DEPLOY_HOST" ]; then
-            echo "❌ Missing required secret: DEPLOY_HOST"
-            missing=1
-          fi
-
-          if [ -z "$DEPLOY_USER" ]; then
-            echo "❌ Missing required secret: DEPLOY_USER"
-            missing=1
-          fi
-
-          if [ -z "$DEPLOY_SSH_KEY" ]; then
-            echo "❌ Missing required secret: DEPLOY_SSH_KEY"
-            missing=1
-          fi
-
-          if [ "$missing" -ne 0 ]; then
-            echo
-            echo "Configure them in: Settings -> Secrets and variables -> Actions"
-            exit 1
-          fi
-
-          echo "✅ Required deployment secrets are configured"
-
-  validate-image:
-    # Manual deploys target the exact commit selected in the dispatch UI. Verify its CI run and
-    # image before occupying the self-hosted deployment runner.
-    needs: check-prerequisites
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event_name == 'workflow_run' &&
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push'
-      )
+  resolve:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions:
-      actions: read
+      contents: read
       packages: read
     outputs:
-      repository: ${{ steps.image.outputs.repository }}
-      tag: ${{ steps.image.outputs.tag }}
+      environment: ${{ steps.target.outputs.environment }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      ref: ${{ steps.resolve.outputs.ref }}
+      built: ${{ steps.resolve.outputs.built }}
     steps:
-      - name: Resolve image
-        id: image
+      - name: Resolve environment
+        id: target
         env:
-          IMAGE_TAG: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-        run: |
-          echo "repository=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-          echo "tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+        run: echo "environment=${INPUT_ENVIRONMENT:-development}" >> "$GITHUB_OUTPUT"
 
-      - name: Require a successful CI build for the selected commit
-        if: github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          IMAGE_TAG: ${{ steps.image.outputs.tag }}
-        run: |
-          runs="$(gh api \
-            --method GET \
-            "repos/$GITHUB_REPOSITORY/actions/workflows/frontend-ci.yml/runs" \
-            -f "head_sha=$IMAGE_TAG" \
-            -f status=success \
-            -f per_page=100 \
-            --jq '[.workflow_runs[] | select(.head_sha == env.IMAGE_TAG and (.event == "push" or .event == "workflow_dispatch"))] | length')"
-          if [ "$runs" -eq 0 ]; then
-            echo "::warning::Commit $IMAGE_TAG has no successful frontend-ci image build."
-            echo "::warning::Run frontend-ci for the target branch before deploying."
-            exit 1
-          fi
-
-      - uses: docker/login-action@v4
+      # SHA-tagged images exist only for commits Build validated and pushed
+      - name: Resolve commit
+        id: resolve
+        uses: aneillans/github-templates/actions/resolve-deploy@v1
         with:
+          images: |
+            ghcr.io/postyfox/postyfox-frontend
+          run_sha: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ inputs.ref }}
+          require_branch: ${{ steps.target.outputs.environment == 'production' && 'main' || '' }}
+          require_published: ${{ steps.target.outputs.environment == 'production' }}
+          allow_missing: "true"
+          version_env: APP_VERSION
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Require the deployable image
-        env:
-          IMAGE: ${{ steps.image.outputs.repository }}:${{ steps.image.outputs.tag }}
-        run: |
-          if ! docker buildx imagetools inspect "$IMAGE" >/dev/null; then
-            echo "::warning::Deployable image $IMAGE does not exist or is not accessible."
-            echo "::warning::Run frontend-ci for the target branch before deploying."
-            exit 1
-          fi
+  build:
+    needs: resolve
+    if: needs.resolve.outputs.built == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: aneillans/github-templates/actions/build-and-wait@v1
+        with:
+          ref: ${{ needs.resolve.outputs.ref }}
 
-  deploy-dev:
-    # Always deploy dev when the CI image build succeeds on a push.
-    needs: validate-image
+  development:
+    needs: [resolve, build]
+    if: ${{ !cancelled() && needs.resolve.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.build.result) && needs.resolve.outputs.environment == 'development' }}
     runs-on: [self-hosted]
     environment: development
+    concurrency: deploy-development-frontend
+    env:
+      STACK_DIR: /opt/postyfox/dev
+      COMPOSE_PROJECT_NAME: postyfox-dev
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.validate-image.outputs.tag }}
+          ref: ${{ needs.resolve.outputs.sha }}
 
       - name: Copy deployment files
         run: |
-          echo "📦 Copying frontend overlay + gateway fragments to dev stack..."
-          # The runner is already on the deployment node, so write directly into the local core stack.
-          mkdir -p /opt/postyfox/dev/gateway/conf.d/upstreams /opt/postyfox/dev/gateway/conf.d/routes
-          cp deploy/docker-compose.frontend.server.yml /opt/postyfox/dev/
-          cp deploy/gateway/conf.d/upstreams/frontend.conf /opt/postyfox/dev/gateway/conf.d/upstreams/frontend.conf
-          cp deploy/gateway/conf.d/routes/90-root.conf /opt/postyfox/dev/gateway/conf.d/routes/90-root.conf
+          # The runner is on the dev host, so write straight into core's stack
+          mkdir -p "$STACK_DIR"/gateway/conf.d/upstreams "$STACK_DIR"/gateway/conf.d/routes
+          cp deploy/docker-compose.frontend.server.yml "$STACK_DIR"/
+          cp deploy/gateway/conf.d/upstreams/frontend.conf "$STACK_DIR"/gateway/conf.d/upstreams/frontend.conf
+          cp deploy/gateway/conf.d/routes/90-root.conf "$STACK_DIR"/gateway/conf.d/routes/90-root.conf
 
       - name: Deploy frontend to dev stack
         env:
-          IMAGE_REPOSITORY: ${{ needs.validate-image.outputs.repository }}
-          IMAGE_TAG: ${{ needs.validate-image.outputs.tag }}
+          IMAGE_TAG: ${{ needs.resolve.outputs.sha }}
         run: |
-          echo "🚀 Deploying frontend to dev stack..."
-          set -e
-          cd /opt/postyfox/dev
-          echo '📋 Checking .env file exists...'
-          [ -f .env ] || { echo '❌ Missing .env file (core stack not initialised?)'; exit 1; }
+          cd "$STACK_DIR"
+          [ -f .env ] || { echo "::error::Missing $STACK_DIR/.env (core stack not initialised?)"; exit 1; }
+          # .env may pin the frontend image; the workflow's values win
+          wf_repository="$IMAGE_REPOSITORY"; wf_tag="$IMAGE_TAG"
           source .env 2>/dev/null || true
-          export FRONTEND_IMAGE_REPOSITORY=${{ env.IMAGE_REPOSITORY }}
-          export FRONTEND_IMAGE_TAG=${{ env.IMAGE_TAG }}
-          export COMPOSE_PROJECT_NAME=postyfox-dev
-          COMPOSE_FILES='-f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml'
-          echo '🔄 Pulling frontend image...'
-          docker compose $COMPOSE_FILES pull frontend || { echo '❌ Failed to pull frontend image'; exit 1; }
-          echo '⬆️ Updating frontend service...'
-          docker compose $COMPOSE_FILES up -d --no-deps frontend || { echo '❌ Failed to start frontend'; exit 1; }
-          echo '🔄 Reloading gateway (conf.d fragments are bind-mounted; restart picks up the SPA route)...'
-          docker compose $COMPOSE_FILES restart gateway || { echo '❌ Failed to restart gateway'; exit 1; }
-          echo '✅ Dev frontend deployed successfully'
-          docker compose $COMPOSE_FILES ps frontend gateway || {
-            echo "❌ Dev deployment failed"
-            exit 1
-          }
+          export FRONTEND_IMAGE_REPOSITORY="$wf_repository" FRONTEND_IMAGE_TAG="$wf_tag"
+          compose() { docker compose -f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml "$@"; }
+          compose pull frontend
+          compose up -d --no-deps frontend
+          # conf.d fragments are bind-mounted; restart picks up the SPA route
+          compose restart gateway
+          compose ps frontend gateway
 
-      - name: Health check
-        run: |
-          echo "🏥 Running health checks..."
-          sleep 10
-          cd /opt/postyfox/dev && \
-          docker compose -f docker-compose.server.yml -f docker-compose.dev.yml -f docker-compose.frontend.server.yml ps frontend | grep -E '(Up|healthy)' || { \
-          echo '⚠️ Warning: frontend may not be healthy yet'; }; \
-          true
-
-      - name: Deployment summary
-        if: success()
-        run: |
-          cat << 'EOF'
-          ✅ Dev frontend deployment completed successfully!
-
-          📊 Stack Information:
-          - Environment: Development (auto-deploy on every push)
-          - Project: postyfox-dev
-          - Location: /opt/postyfox/dev
-          - Image: ${{ needs.validate-image.outputs.repository }}:${{ needs.validate-image.outputs.tag }}
-
-          📝 Check logs:
-          - cd /opt/postyfox/dev && docker compose logs -f frontend
-          EOF
+  production:
+    needs: [resolve, build]
+    if: ${{ !cancelled() && needs.resolve.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.build.result) && needs.resolve.outputs.environment == 'production' }}
+    runs-on: self-hosted # cluster API is only reachable from the self-hosted runner
+    environment: production
+    concurrency: deploy-production-frontend
+    steps:
+      - uses: aneillans/github-templates/actions/helm-deploy@v1
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+          chart: deploy/helm/postyfox-frontend
+          release: postyfox-frontend
+          namespace: postyfox
+          values_files: deploy/helm/postyfox-frontend/values-prod.yaml
+          set_values: |
+            image.repository=ghcr.io/postyfox/postyfox-frontend
+            image.tag=${{ needs.resolve.outputs.sha }}
+            service.name=postyfox-frontend
+          # KUBE_CONFIG is a production environment secret, only readable from a job with `environment:` set
+          secrets_json: ${{ toJSON(secrets) }}

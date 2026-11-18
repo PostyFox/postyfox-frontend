@@ -198,6 +198,13 @@ const BRANDS: Record<string, PlatformBrand> = {
     blurb: 'platforms.SoFurry.blurb',
     setup: 'platforms.SoFurry.setup',
   },
+  DeviantArt: {
+    label: 'DeviantArt',
+    icon: 'bi-easel-fill',
+    color: '#05CC47',
+    blurb: 'platforms.DeviantArt.blurb',
+    setup: 'platforms.DeviantArt.setup',
+  },
 };
 
 const FALLBACK: PlatformBrand = { label: '', icon: 'bi-plug', color: '#8c57ff' };
@@ -354,6 +361,24 @@ export function formatHashtag(tag: string): string {
   const trimmed = tag.trim().replace(/\s+/g, '_');
   if (!trimmed) return '';
   return trimmed.startsWith('#') ? trimmed : `#${trimmed}`;
+}
+
+// Keep in step with TemplateEngine.BlueskyMarkdownRegex in core and MARKDOWN_REGEX in the Bluesky
+// connector, which turn `[text](https://url)` and `**bold**` into facets over the visible text.
+const BLUESKY_MARKDOWN =
+  /\[(?<text>[^\]\n]+)\]\((?<url>https?:\/\/[^\s()]+(?:\([^\s()]*\)[^\s()]*)*)\)|\*\*(?<bold>[^*\n]+)\*\*/g;
+
+/**
+ * Length of `markdown` as `platform` counts it against its cap; mirrors the server's
+ * `TemplateEngine.ContentLength`. Bluesky only counts the visible text of markdown links and bold;
+ * everything else counts the text as written.
+ */
+export function contentLength(platform: string, markdown: string): number {
+  if (platform.toLowerCase() !== 'bluesky') return markdown.length;
+  return markdown.replace(
+    BLUESKY_MARKDOWN,
+    (_m, text?: string, _url?: string, bold?: string) => text ?? bold ?? '',
+  ).length;
 }
 
 /** Result of {@link previewInlineTags}: which tags fit, and how many had to be dropped. */

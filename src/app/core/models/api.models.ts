@@ -422,6 +422,34 @@ export interface MediaRef {
    * multiple images ignore it and attach everything.
    */
   isDefault?: boolean;
+  /**
+   * How to fit this image into a platform's accepted aspect-ratio range (issue #39). Applied only on
+   * platforms whose range the image falls outside; null/absent means no choice was made.
+   */
+  framing?: MediaFraming | null;
+}
+
+/** How an image outside a platform's accepted aspect-ratio range is brought within it. */
+export enum MediaFramingMode {
+  /** Extend the short sides with {@link MediaFraming.background}. */
+  Pad = 0,
+  /** Cut the image down to {@link MediaFraming.crop}. */
+  Crop = 1,
+}
+
+/** A crop rectangle as fractions (0..1) of the upright image, origin top-left. */
+export interface CropRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface MediaFraming {
+  mode: MediaFramingMode;
+  /** "#rrggbb" padding colour, or null for transparent (white where the format has no alpha). */
+  background?: string | null;
+  crop?: CropRegion | null;
 }
 
 /** Live per-connector limits reported by `GET /api/connectors/{id}/limits`. */
@@ -474,6 +502,13 @@ export interface MediaCheckResultItem {
   imageMaxHeight: number | null;
   videoMaxWidth: number | null;
   videoMaxHeight: number | null;
+  /** Width ÷ height bounds the platform rejects images outside of; null means no bound. */
+  imageMinAspectRatio?: number | null;
+  imageMaxAspectRatio?: number | null;
+  /** True when the checked image is outside that range and needs padding or cropping. */
+  needsFraming?: boolean;
+  /** Image and video formats the platform takes; no video format means image-only (issue #40). */
+  supportedMimeTypes?: string[] | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -617,6 +652,20 @@ export interface PostSummary {
   postAt: string | null;
   /** How many of this post's automation rules (issue #323) are still pending. */
   pendingAutomationCount: number;
+  /** This post's pending automation rules with when each should run, for the calendar view. */
+  pendingAutomations?: PendingAutomation[] | null;
+}
+
+/** A pending automation rule placed on the calendar. */
+export interface PendingAutomation {
+  action: AutomationAction;
+  platform: string;
+  dueAt: string;
+  /**
+   * True when the target hasn't delivered yet, so `dueAt` is the post's scheduled (or creation)
+   * time plus the rule's delay rather than a fixed due time.
+   */
+  estimated: boolean;
 }
 
 /** Result of `DELETE /api/posts/history`: how many posts were removed. */

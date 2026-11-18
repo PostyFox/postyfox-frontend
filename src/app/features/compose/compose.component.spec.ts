@@ -9,6 +9,7 @@ import {
   PostContent,
   ServiceDefinition,
   UserConnector,
+  MediaFramingMode,
 } from '../../core/models/api.models';
 import { ConnectorsService } from '../../core/services/connectors.service';
 import { MediaService } from '../../core/services/media.service';
@@ -718,6 +719,97 @@ describe('ComposeComponent — media-required platforms (Instagram)', () => {
 
     expect(fixture.componentInstance.mediaRequiredIssues()).toEqual([]);
   });
+
+  // ----- aspect-ratio framing (issue #39) -----
+
+  function withTallImage(fixture: ComponentFixture<ComposeComponent>): void {
+    fixture.componentInstance.mediaLimitsByConnector.set({
+      [igConnector.id]: {
+        connectorId: igConnector.id,
+        platform: 'Instagram',
+        displayName: 'My Instagram',
+        willResize: false,
+        imageSizeLimit: null,
+        videoSizeLimit: null,
+        maxMediaAttachments: 10,
+        imageMaxWidth: 1440,
+        imageMaxHeight: 1800,
+        videoMaxWidth: null,
+        videoMaxHeight: null,
+        imageMinAspectRatio: 0.8,
+        imageMaxAspectRatio: 1.91,
+      },
+    });
+    fixture.componentInstance.mediaItems.set([
+      {
+        ref: { container: 'media', key: 'u/tall.png', contentType: 'image/png' },
+        name: 'tall.png',
+        alt: '',
+        mimeType: 'image/png',
+        isDefault: true,
+        width: 400,
+        height: 1000,
+        previewUrl: 'blob:tall',
+      },
+    ]);
+    fixture.detectChanges();
+  }
+
+  it('blocks submission until an image outside the platform shape is padded or cropped', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const c = fixture.componentInstance;
+
+    expect(c.framingInfo()[0].targets.map((t) => t.displayName)).toEqual(['My Instagram']);
+    expect(c.framingIssues()).toEqual(['tall.png']);
+    expect(c.canSubmit()).toBe(false);
+
+    c.setFramingMode(0, MediaFramingMode.Pad);
+    expect(c.framingIssues()).toEqual([]);
+  });
+
+  it('starts a crop at the largest centred region the platform accepts', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const c = fixture.componentInstance;
+
+    c.setFramingMode(0, MediaFramingMode.Crop);
+
+    // 400 wide at 4:5 → 500 tall of 1000: the middle half.
+    expect(c.mediaItems()[0].framing).toEqual({
+      mode: MediaFramingMode.Crop,
+      crop: { x: 0, y: 0.25, width: 1, height: 0.5 },
+    });
+  });
+
+  it('sends the framing choice with the media ref', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const c = fixture.componentInstance;
+    c.setPadBackground(0, '#112233');
+
+    const body = c['buildBody']();
+
+    expect(body.media?.[0].framing).toEqual({ mode: MediaFramingMode.Pad, background: '#112233' });
+  });
+
+  it('needs no framing for an image already inside the platform shape', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const c = fixture.componentInstance;
+    c.mediaItems.update((m) => m.map((x) => ({ ...x, width: 1000, height: 1000 })));
+
+    expect(c.framingIssues()).toEqual([]);
+  });
+
+  it('shows the pad and crop choice on an out-of-range image', () => {
+    const fixture = configure();
+    withTallImage(fixture);
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+
+    expect(text).toContain('Outside the shape My Instagram accepts');
+    expect(text).toContain('Choose how to fit these images');
+  });
 });
 
 /** FurAffinity posts a journal when no image is attached: no tags, rating or image required. */
@@ -1049,5 +1141,178 @@ describe('ComposeComponent — Artconomy', () => {
     const cmp = configure().componentInstance;
     cmp.mediaItems.set([image('a.webp', 'image/webp')]);
     expect(cmp.artconomyIssues()).toEqual([]);
+  });
+});
+
+/** DeviantArt uploads one image (the default) and takes only JPEG, PNG or GIF. */
+describe('ComposeComponent — DeviantArt', () => {
+  const daConnector: UserConnector = {
+    id: 'conn-da',
+    serviceDefinitionId: 'DeviantArt',
+    platform: 'DeviantArt',
+    displayName: 'My DA',
+    configJson: '{}',
+    enabled: true,
+    defaultIncludeTags: true,
+    defaultRating: null,
+  };
+
+  const daDefinition: ServiceDefinition = {
+    id: 'DeviantArt',
+    name: 'DeviantArt',
+    enabled: true,
+    configSchema: '{}',
+    secureConfigSchema: null,
+    postOptionsSchema: null,
+    platform: 'DeviantArt',
+    supportsTitle: true,
+    supportsMedia: true,
+    supportsThreads: false,
+    maxContentLength: null,
+    supportsOAuth: true,
+    supportsCookiePairing: false,
+    supportsRating: true,
+    requiresRating: true,
+    supportsTags: true,
+    requiresTags: false,
+    minTags: 0,
+    requiresMedia: true,
+    supportsTextOnly: false,
+    warning: null,
+    supportsMultipleTargets: false,
+    supportsContentWarning: false,
+    supportsRepost: false,
+    supportsDelete: false,
+  };
+
+  function image(name: string, mimeType = 'image/png', isDefault = false) {
+    return {
+      ref: { container: 'media', key: `u/${name}`, contentType: mimeType },
+      name,
+      alt: '',
+      mimeType,
+      isDefault,
+    } as ReturnType<ComposeComponent['mediaItems']>[number];
+  }
+
+  function configure(): ComposeComponent {
+    TestBed.configureTestingModule({
+      imports: [ComposeComponent, translocoTesting()],
+      providers: [
+        {
+          provide: ConnectorsService,
+          useValue: {
+            list: vi.fn().mockReturnValue(of([daConnector])),
+            listAllDestinations: vi.fn().mockReturnValue(of([])),
+            checkMedia: vi.fn().mockReturnValue(of([])),
+          },
+        },
+        { provide: TemplatesService, useValue: { list: vi.fn().mockReturnValue(of([])) } },
+        { provide: TagPresetsService, useValue: { list: vi.fn().mockReturnValue(of([])) } },
+        { provide: TextTemplatesService, useValue: { list: vi.fn().mockReturnValue(of([])) } },
+        {
+          provide: ServicesService,
+          useValue: { list: vi.fn().mockReturnValue(of([daDefinition])) },
+        },
+        {
+          provide: PostsService,
+          useValue: { create: vi.fn(), updateDraft: vi.fn(), publish: vi.fn(), list: vi.fn() },
+        },
+        {
+          provide: MediaService,
+          useValue: {
+            upload: vi.fn(),
+            getLimits: vi.fn().mockReturnValue(of({ maxUploadSizeBytes: null })),
+          },
+        },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } },
+        {
+          provide: Router,
+          useValue: { getCurrentNavigation: vi.fn().mockReturnValue(null), navigate: vi.fn() },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ComposeComponent);
+    fixture.detectChanges();
+    fixture.componentInstance.toggleTarget(daConnector.id);
+    fixture.detectChanges();
+    return fixture.componentInstance;
+  }
+
+  it('rejects a WebP default image before posting', () => {
+    const cmp = configure();
+    cmp.mediaItems.set([image('a.webp', 'image/webp')]);
+
+    expect(cmp.deviantArtIssues()).toEqual([
+      'Use a JPEG, PNG, or GIF image for the default image.',
+    ]);
+    expect(cmp.canSubmit()).toBe(false);
+  });
+
+  it('checks only the default image when several are attached', () => {
+    const cmp = configure();
+    cmp.mediaItems.set([image('a.webp', 'image/webp'), image('b.gif', 'image/gif', true)]);
+    expect(cmp.deviantArtIssues()).toEqual([]);
+
+    cmp.mediaItems.set([image('a.png'), image('b.webp', 'image/webp', true)]);
+    expect(cmp.deviantArtIssues()).toHaveLength(1);
+  });
+
+  it('has no issues without media (the generic media check covers that)', () => {
+    const cmp = configure();
+    expect(cmp.deviantArtIssues()).toEqual([]);
+    expect(cmp.mediaRequiredIssues()).toEqual(['My DA']);
+  });
+
+  /** What the media check reports for an image-only, single-file platform like DeviantArt. */
+  function imageOnlyLimits(cmp: ComposeComponent) {
+    cmp.mediaLimitsByConnector.set({
+      'conn-da': {
+        connectorId: 'conn-da',
+        platform: 'DeviantArt',
+        displayName: 'My DA',
+        willResize: false,
+        imageSizeLimit: null,
+        videoSizeLimit: null,
+        maxMediaAttachments: 1,
+        imageMaxWidth: null,
+        imageMaxHeight: null,
+        videoMaxWidth: null,
+        videoMaxHeight: null,
+        supportedMimeTypes: ['image/jpeg', 'image/png', 'image/gif'],
+      },
+    });
+  }
+
+  it('blocks a video for an image-only target until it converts to GIF', () => {
+    const cmp = configure();
+    imageOnlyLimits(cmp);
+    cmp.mediaItems.set([image('clip.mp4', 'video/mp4', true)]);
+
+    expect(cmp.videoUnsupportedTargets().map((t) => t.displayName)).toEqual(['My DA']);
+    // Covered by the video warning rather than repeated as an image-type issue.
+    expect(cmp.deviantArtIssues()).toEqual([]);
+    expect(cmp.canSubmit()).toBe(false);
+
+    cmp.patchTargetOption('conn-da', 'VideoAsGif', 'true');
+    expect(cmp.videoUnsupportedTargets()).toEqual([]);
+  });
+
+  it('ignores a video that a single-file platform would not send', () => {
+    const cmp = configure();
+    imageOnlyLimits(cmp);
+    cmp.mediaItems.set([image('a.png', 'image/png', true), image('clip.mp4', 'video/mp4')]);
+    expect(cmp.videoUnsupportedTargets()).toEqual([]);
+  });
+
+  it('does not warn for a platform that takes video', () => {
+    const cmp = configure();
+    imageOnlyLimits(cmp);
+    cmp.mediaLimitsByConnector.update((all) => ({
+      'conn-da': { ...all['conn-da'], supportedMimeTypes: ['image/jpeg', 'video/mp4'] },
+    }));
+    cmp.mediaItems.set([image('clip.mp4', 'video/mp4', true)]);
+    expect(cmp.videoUnsupportedTargets()).toEqual([]);
   });
 });

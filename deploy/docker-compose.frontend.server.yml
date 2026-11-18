@@ -5,7 +5,7 @@
 # of core's compose files and run inside the SAME compose project as core (COMPOSE_PROJECT_NAME=
 # postyfox-dev / -prod) so the SPA container shares core's network and the gateway can resolve it.
 #
-# Deployed by .github/workflows/deploy.yml, from core's deploy directory on the server
+# Deployed by .github/workflows/deploy.yml (development job), from core's deploy directory on the server
 # (/opt/postyfox/<env>), e.g.:
 #
 #   export FRONTEND_IMAGE_REPOSITORY=ghcr.io/postyfox/postyfox-frontend

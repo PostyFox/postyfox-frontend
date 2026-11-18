@@ -12,7 +12,7 @@ operator:
 
 image:
   registry: ghcr.io
-  repository: postyfox/postyfox-core
+  repository: ghcr.io/postyfox/postyfox-frontend
   # tag is set via --set image.tag at deploy time
   pullPolicy: IfNotPresent
 

@@ -92,40 +92,38 @@
     </div>
 
     <!-- Scheduled -->
-    @if (scheduled().length > 0) {
+    @if (upcomingCount() > 0) {
       <div class="card mb-4">
         <div class="card-body">
           <div class="d-flex align-items-center gap-2 mb-3">
             <h5 class="card-title mb-0">{{ tr('posts.scheduled') }}</h5>
-            <span class="badge bg-label-secondary">{{ scheduled().length }}</span>
-            @if (scheduled().length > 1) {
-              <div
-                class="btn-group btn-group-sm ms-auto"
-                role="group"
-                [attr.aria-label]="tr('posts.scheduledView')"
+            <span class="badge bg-label-secondary">{{ upcomingCount() }}</span>
+            <div
+              class="btn-group btn-group-sm ms-auto"
+              role="group"
+              [attr.aria-label]="tr('posts.scheduledView')"
+            >
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                [title]="tr('posts.listView')"
+                [class.active]="!showCalendar()"
+                [attr.aria-pressed]="!showCalendar()"
+                (click)="setScheduledView('list')"
               >
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary"
-                  [title]="tr('posts.listView')"
-                  [class.active]="!showCalendar()"
-                  [attr.aria-pressed]="!showCalendar()"
-                  (click)="setScheduledView('list')"
-                >
-                  <i class="bi bi-grid me-1"></i>{{ tr('posts.list') }}
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-outline-secondary"
-                  [title]="tr('posts.calendarView')"
-                  [class.active]="showCalendar()"
-                  [attr.aria-pressed]="showCalendar()"
-                  (click)="setScheduledView('calendar')"
-                >
-                  <i class="bi bi-calendar3 me-1"></i>{{ tr('posts.calendar') }}
-                </button>
-              </div>
-            }
+                <i class="bi bi-grid me-1"></i>{{ tr('posts.list') }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                [title]="tr('posts.calendarView')"
+                [class.active]="showCalendar()"
+                [attr.aria-pressed]="showCalendar()"
+                (click)="setScheduledView('calendar')"
+              >
+                <i class="bi bi-calendar3 me-1"></i>{{ tr('posts.calendar') }}
+              </button>
+            </div>
           </div>
 
           @if (showCalendar()) {
@@ -180,19 +178,43 @@
                           >
                             {{ day.date.getDate() }}
                           </div>
-                          @for (p of day.posts; track p.postId) {
-                            <a
-                              class="badge bg-label-primary d-block text-start text-truncate text-decoration-none mb-1"
-                              [routerLink]="['/posts', p.postId]"
-                              [title]="
-                                (p.postAt | date: 'short') +
-                                ' ' +
-                                (p.title || tr('posts.untitledPost'))
-                              "
-                            >
-                              {{ p.postAt | date: 'shortTime' }}
-                              {{ p.title || tr('posts.untitledPost') }}
-                            </a>
+                          @for (e of day.entries; track $index) {
+                            @if (e.kind === 'post') {
+                              <a
+                                class="badge bg-label-primary d-block text-start text-truncate text-decoration-none mb-1"
+                                [routerLink]="['/posts', e.post.postId]"
+                                [title]="
+                                  (e.at | date: 'short') +
+                                  ' ' +
+                                  (e.post.title || tr('posts.untitledPost'))
+                                "
+                              >
+                                {{ e.at | date: 'shortTime' }}
+                                {{ e.post.title || tr('posts.untitledPost') }}
+                              </a>
+                            } @else {
+                              <a
+                                class="badge bg-label-info d-block text-start text-truncate text-decoration-none mb-1"
+                                [class.fst-italic]="e.automation.estimated"
+                                [routerLink]="['/posts', e.post.postId]"
+                                [title]="
+                                  (e.automation.estimated ? '~' : '') +
+                                  (e.at | date: 'short') +
+                                  ' ' +
+                                  automationLabel(e.automation) +
+                                  ': ' +
+                                  (e.post.title || tr('posts.untitledPost')) +
+                                  (e.automation.estimated
+                                    ? '\n' + tr('posts.estimatedAutomationTime')
+                                    : '')
+                                "
+                              >
+                                <i class="bi" [class]="automationIcon(e.automation)"></i>
+                                {{ e.automation.estimated ? '~' : ''
+                                }}{{ e.at | date: 'shortTime' }}
+                                {{ e.post.title || tr('posts.untitledPost') }}
+                              </a>
+                            }
                           }
                         </td>
                       }
@@ -209,6 +231,31 @@
                 ></ng-container>
               }
             </div>
+            @if (upcomingAutomations().length > 0) {
+              <h6 class="mt-3 mb-2">{{ tr('posts.upcomingAutomations') }}</h6>
+              <ul class="list-unstyled mb-0">
+                @for (u of upcomingAutomations(); track $index) {
+                  <li class="d-flex align-items-center gap-2 small py-1">
+                    <i class="bi text-info" [class]="automationIcon(u.automation)"></i>
+                    <span
+                      class="text-nowrap"
+                      [class.fst-italic]="u.automation.estimated"
+                      [title]="u.automation.estimated ? tr('posts.estimatedAutomationTime') : ''"
+                    >
+                      {{ u.automation.estimated ? '~' : ''
+                      }}{{ u.automation.dueAt | date: 'medium' }}
+                      @if (u.automation.estimated) {
+                        <i class="bi bi-info-circle text-muted-2"></i>
+                      }
+                    </span>
+                    <span class="text-nowrap">{{ automationLabel(u.automation) }}</span>
+                    <a class="text-truncate" [routerLink]="['/posts', u.post.postId]">
+                      {{ u.post.title || tr('posts.untitledPost') }}
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
           }
         </div>
       </div>
