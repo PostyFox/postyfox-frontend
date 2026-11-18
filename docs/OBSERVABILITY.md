@@ -1,13 +1,12 @@
 # Browser Observability (OpenTelemetry)
 
 The SPA emits OpenTelemetry **traces** so the frontend is part of the same end-to-end distributed
-trace as the backend. A browser span (document load / user-triggered `HttpClient` call) becomes the
+trace as the backend. A browser span (a user-triggered `HttpClient` call) becomes the
 **parent** of the API server span, which in turn parents the RabbitMQ → worker → connectors-node
 spans. One `traceId` covers the whole `click → API → queue → worker → platform` journey.
 
 ## What's instrumented
 
-- **Document load + resource timing**: initial page load performance.
 - **`XMLHttpRequest`**: Angular `HttpClient` uses XHR (we don't enable `withFetch()`), so this is
   what captures every `/api` call.
 - **`fetch`**: any raw `fetch()` (belt-and-braces; most app traffic is XHR).
@@ -20,7 +19,7 @@ id. (Backend also stamps a searchable `PostId` on logs; see the core repo's obse
 
 | File | Role |
 |------|------|
-| `src/app/core/telemetry/browser-telemetry.ts` | `initBrowserTelemetry(cfg)`: sets up `WebTracerProvider` + `ZoneContextManager`, OTLP/HTTP exporter, and the XHR/fetch instrumentations. |
+| `src/app/core/telemetry/browser-telemetry.ts` | `initBrowserTelemetry(cfg)`: sets up a `TracerProvider` with a `BatchSpanProcessor`, `StackContextManager` (the app is zoneless, so there is no `ZoneContextManager`), W3C trace-context + baggage propagation, the OTLP/HTTP exporter, and the XHR/fetch instrumentations. |
 | `src/main.ts` | Calls `initBrowserTelemetry(environment.otel)` **before** `bootstrapApplication` (instrumentations must patch the globals before the app runs). |
 | `src/environments/environment*.ts` | The `otel` config block (`enabled`, `collectorUrl`, `serviceName`). |
 | `proxy.conf.json` | Forwards `/otlp/` to the edge for local dev. |
